@@ -104,4 +104,142 @@ export async function requestRoutes(app: FastifyInstance) {
             requests: result.rows,
         };
     });
+
+    app.patch("/requests/:requestId", async (request, reply) => {
+        const params = request.params as {
+            requestId: string;
+        };
+
+        const body = request.body as {
+            serviceType?: string;
+            description?: string;
+            structuredData?: Record<string, unknown>;
+            missingFields?: string[];
+            summaryAi?: string;
+            status?: string;
+        };
+
+        const existing = await db.query(
+            `
+    SELECT id
+    FROM requests
+    WHERE id = $1
+    LIMIT 1
+    `,
+            [params.requestId]
+        );
+
+        if (existing.rows.length === 0) {
+            return reply.status(404).send({
+                error: "request not found",
+            });
+        }
+
+        const result = await db.query(
+            `
+    UPDATE requests
+    SET
+      service_type = COALESCE($2, service_type),
+      description = COALESCE($3, description),
+
+      structured_data =
+        structured_data || $4::jsonb,
+
+      missing_fields =
+        CASE
+          WHEN $5::jsonb IS NULL THEN missing_fields
+          ELSE $5::jsonb
+        END,
+
+      summary_ai = COALESCE($6, summary_ai),
+      status = COALESCE($7, status),
+
+      updated_at = NOW(),
+      last_activity_at = NOW()
+
+    WHERE id = $1
+
+    RETURNING *
+    `,
+            [
+                params.requestId,
+                body.serviceType ?? null,
+                body.description ?? null,
+                JSON.stringify(body.structuredData ?? {}),
+                body.missingFields !== undefined
+                    ? JSON.stringify(body.missingFields)
+                    : null,
+                body.summaryAi ?? null,
+                body.status ?? null,
+            ]
+        );
+
+        return {
+            request: result.rows[0],
+        };
+    });
+
+    app.post("/requests/:requestId/handoff", async (request, reply) => {
+        const params = request.params as {
+            requestId: string;
+        };
+
+        const body = request.body as {
+            summaryAi?: string;
+        };
+
+        const client = await db.connect();
+
+        try {
+            await client.query("BEGIN");
+
+            const requestResult = await client.query(
+                `
+      UPDATE requests
+      SET
+        status = 'HUMAN',
+        summary_ai = COALESCE($2, summary_ai),
+        updated_at = NOW(),
+        last_activity_at = NOW()
+      WHERE id = $1
+      RETURNING *
+      `,
+                [params.requestId, body.summaryAi ?? null]
+            );
+
+            if (requestResult.rows.length === 0) {
+                await client.query("ROLLBACK");
+
+                return reply.status(404).send({
+                    error: "request not found",
+                });
+            }
+
+            const conversationResult = await client.query(
+                `
+      UPDATE conversations
+      SET
+        bot_enabled = false,
+        updated_at = NOW()
+      WHERE request_id = $1
+        AND bot_enabled = true
+      RETURNING *
+      `,
+                [params.requestId]
+            );
+
+            await client.query("COMMIT");
+
+            return {
+                request: requestResult.rows[0],
+                conversationsDisabled: conversationResult.rowCount,
+            };
+        } catch (error) {
+            await client.query("ROLLBACK");
+            throw error;
+        } finally {
+            client.release();
+        }
+    });
+
 }
