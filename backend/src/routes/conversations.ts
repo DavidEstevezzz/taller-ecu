@@ -75,27 +75,33 @@ export async function conversationRoutes(app: FastifyInstance) {
   });
 
   app.get(
-    "/customers/:customerId/conversations/active",
-    async (request) => {
-      const params = request.params as {
-        customerId: string;
-      };
+  "/customers/:customerId/conversations/active",
+  async (request) => {
+    const params = request.params as {
+      customerId: string;
+    };
 
-      const result = await db.query(
-        `
-        SELECT *
-        FROM conversations
-        WHERE customer_id = $1
-          AND bot_enabled = true
-        ORDER BY updated_at DESC
-        LIMIT 1
-        `,
-        [params.customerId]
-      );
+    const result = await db.query(
+      `
+      SELECT
+        c.*,
+        r.status AS request_status
+      FROM conversations c
+      INNER JOIN requests r
+        ON r.id = c.request_id
+      WHERE c.customer_id = $1
+        AND r.status IN ('COLLECTING', 'HUMAN')
+      ORDER BY c.updated_at DESC
+      LIMIT 1
+      `,
+      [params.customerId]
+    );
 
-      return {
-        conversation: result.rows[0] ?? null,
-      };
-    }
-  );
+    return {
+      conversation: result.rows[0] ?? null,
+    };
+  }
+);
+
+    
 }

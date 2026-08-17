@@ -5,6 +5,7 @@ import { vehicleRoutes } from "./routes/vehicles.js";
 import { requestRoutes } from "./routes/requests.js";
 import { conversationRoutes } from "./routes/conversations.js";
 import { messageRoutes } from "./routes/messages.js";
+import { whatsappRoutes } from "./routes/whatsapp.js";
 
 const app = Fastify({
   logger: true,
@@ -49,6 +50,10 @@ app.register(conversationRoutes, {
 
 app.register(messageRoutes, {
   prefix: "/api",
+});
+
+app.register(whatsappRoutes, {
+   prefix: "/api" 
 });
 
 const start = async () => {

@@ -184,7 +184,7 @@ export async function requestRoutes(app: FastifyInstance) {
             requestId: string;
         };
 
-        const body = request.body as {
+        const body = (request.body ?? {}) as {
             summaryAi?: string;
         };
 
@@ -240,6 +240,32 @@ export async function requestRoutes(app: FastifyInstance) {
         } finally {
             client.release();
         }
+    });
+
+    app.get("/requests/:requestId", async (request, reply) => {
+        const { requestId } = request.params as {
+            requestId: string;
+        };
+
+        const result = await db.query(
+            `
+    SELECT *
+    FROM requests
+    WHERE id = $1
+    LIMIT 1
+    `,
+            [requestId]
+        );
+
+        if (result.rows.length === 0) {
+            return reply.status(404).send({
+                error: "request not found",
+            });
+        }
+
+        return {
+            request: result.rows[0],
+        };
     });
 
 }
