@@ -1,61 +1,74 @@
 import type { FastifyInstance } from "fastify";
 import { db } from "../db.js";
+import {
+    createRequestBodySchema,
+    updateRequestBodySchema,
+    handoffBodySchema,
+    idParamSchema,
+} from "../schemas.js";
 
 export async function requestRoutes(app: FastifyInstance) {
-    app.post("/requests", async (request, reply) => {
-        const body = request.body as {
-            customerId?: string | number;
-            vehicleId?: string | number;
-            source?: string;
-            serviceType?: string;
-            description?: string;
-            structuredData?: Record<string, unknown>;
-            missingFields?: string[];
-        };
+    app.post(
+        "/requests",
+        {
+            schema: {
+                body: createRequestBodySchema,
+            },
+        },
+        async (request, reply) => {
+            const body = request.body as {
+                customerId?: string | number;
+                vehicleId?: string | number;
+                source?: string;
+                serviceType?: string;
+                description?: string;
+                structuredData?: Record<string, unknown>;
+                missingFields?: string[];
+            };
 
-        if (!body.customerId) {
-            return reply.status(400).send({
-                error: "customerId is required",
-            });
-        }
+            if (!body.customerId) {
+                return reply.status(400).send({
+                    error: "customerId is required",
+                });
+            }
 
-        const customer = await db.query(
-            `
+            const customer = await db.query(
+                `
       SELECT id
       FROM customers
       WHERE id = $1
       LIMIT 1
       `,
-            [body.customerId]
-        );
+                [body.customerId]
+            );
 
-        if (customer.rows.length === 0) {
-            return reply.status(404).send({
-                error: "customer not found",
-            });
-        }
+            if (customer.rows.length === 0) {
+                return reply.status(404).send({
+                    error: "customer not found",
+                });
+            }
 
-        if (body.vehicleId) {
-            const vehicle = await db.query(
-                `
+            if (body.vehicleId) {
+                const vehicle = await db.query(
+                    `
         SELECT id
         FROM vehicles
         WHERE id = $1
           AND customer_id = $2
         LIMIT 1
         `,
-                [body.vehicleId, body.customerId]
-            );
+                    [body.vehicleId, body.customerId]
+                );
 
-            if (vehicle.rows.length === 0) {
-                return reply.status(404).send({
-                    error: "vehicle not found for this customer",
-                });
+                if (vehicle.rows.length === 0) {
+                    return reply.status(404).send({
+                        error: "vehicle not found for this customer",
+                    });
+                }
             }
-        }
 
-        const result = await db.query(
-            `
+            const result = await db.query(
+                `
       INSERT INTO requests (
         customer_id,
         vehicle_id,
@@ -69,21 +82,21 @@ export async function requestRoutes(app: FastifyInstance) {
         VALUES ($1,$2,$3,$4,'COLLECTING',$5,$6::jsonb,$7::jsonb)
       RETURNING *
       `,
-            [
-                body.customerId,
-                body.vehicleId ?? null,
-                body.source ?? "whatsapp",
-                body.serviceType ?? null,
-                body.description ?? null,
-                JSON.stringify(body.structuredData ?? {}),
-                JSON.stringify(body.missingFields ?? []),
-            ]
-        );
+                [
+                    body.customerId,
+                    body.vehicleId ?? null,
+                    body.source ?? "whatsapp",
+                    body.serviceType ?? null,
+                    body.description ?? null,
+                    JSON.stringify(body.structuredData ?? {}),
+                    JSON.stringify(body.missingFields ?? []),
+                ]
+            );
 
-        return reply.status(201).send({
-            request: result.rows[0],
+            return reply.status(201).send({
+                request: result.rows[0],
+            });
         });
-    });
 
     app.get("/customers/:customerId/requests", async (request) => {
         const params = request.params as {
@@ -105,38 +118,46 @@ export async function requestRoutes(app: FastifyInstance) {
         };
     });
 
-    app.patch("/requests/:requestId", async (request, reply) => {
-        const params = request.params as {
-            requestId: string;
-        };
+    app.patch(
+        "/requests/:requestId",
+        {
+            schema: {
+                params: idParamSchema,
+                body: updateRequestBodySchema,
+            },
+        },
+        async (request, reply) => {
+            const params = request.params as {
+                requestId: string;
+            };
 
-        const body = request.body as {
-            serviceType?: string;
-            description?: string;
-            structuredData?: Record<string, unknown>;
-            missingFields?: string[];
-            summaryAi?: string;
-            status?: string;
-        };
+            const body = request.body as {
+                serviceType?: string;
+                description?: string;
+                structuredData?: Record<string, unknown>;
+                missingFields?: string[];
+                summaryAi?: string;
+                status?: string;
+            };
 
-        const existing = await db.query(
-            `
+            const existing = await db.query(
+                `
     SELECT id
     FROM requests
     WHERE id = $1
     LIMIT 1
     `,
-            [params.requestId]
-        );
+                [params.requestId]
+            );
 
-        if (existing.rows.length === 0) {
-            return reply.status(404).send({
-                error: "request not found",
-            });
-        }
+            if (existing.rows.length === 0) {
+                return reply.status(404).send({
+                    error: "request not found",
+                });
+            }
 
-        const result = await db.query(
-            `
+            const result = await db.query(
+                `
     UPDATE requests
     SET
       service_type = COALESCE($2, service_type),
@@ -161,40 +182,48 @@ export async function requestRoutes(app: FastifyInstance) {
 
     RETURNING *
     `,
-            [
-                params.requestId,
-                body.serviceType ?? null,
-                body.description ?? null,
-                JSON.stringify(body.structuredData ?? {}),
-                body.missingFields !== undefined
-                    ? JSON.stringify(body.missingFields)
-                    : null,
-                body.summaryAi ?? null,
-                body.status ?? null,
-            ]
-        );
+                [
+                    params.requestId,
+                    body.serviceType ?? null,
+                    body.description ?? null,
+                    JSON.stringify(body.structuredData ?? {}),
+                    body.missingFields !== undefined
+                        ? JSON.stringify(body.missingFields)
+                        : null,
+                    body.summaryAi ?? null,
+                    body.status ?? null,
+                ]
+            );
 
-        return {
-            request: result.rows[0],
-        };
-    });
+            return {
+                request: result.rows[0],
+            };
+        });
 
-    app.post("/requests/:requestId/handoff", async (request, reply) => {
-        const params = request.params as {
-            requestId: string;
-        };
+    app.post(
+        "/requests/:requestId/handoff",
+        {
+            schema: {
+                params: idParamSchema,
+                body: handoffBodySchema,
+            },
+        },
+        async (request, reply) => {
+            const params = request.params as {
+                requestId: string;
+            };
 
-        const body = (request.body ?? {}) as {
-            summaryAi?: string;
-        };
+            const body = (request.body ?? {}) as {
+                summaryAi?: string;
+            };
 
-        const client = await db.connect();
+            const client = await db.connect();
 
-        try {
-            await client.query("BEGIN");
+            try {
+                await client.query("BEGIN");
 
-            const requestResult = await client.query(
-                `
+                const requestResult = await client.query(
+                    `
       UPDATE requests
       SET
         status = 'HUMAN',
@@ -204,19 +233,19 @@ export async function requestRoutes(app: FastifyInstance) {
       WHERE id = $1
       RETURNING *
       `,
-                [params.requestId, body.summaryAi ?? null]
-            );
+                    [params.requestId, body.summaryAi ?? null]
+                );
 
-            if (requestResult.rows.length === 0) {
-                await client.query("ROLLBACK");
+                if (requestResult.rows.length === 0) {
+                    await client.query("ROLLBACK");
 
-                return reply.status(404).send({
-                    error: "request not found",
-                });
-            }
+                    return reply.status(404).send({
+                        error: "request not found",
+                    });
+                }
 
-            const conversationResult = await client.query(
-                `
+                const conversationResult = await client.query(
+                    `
       UPDATE conversations
       SET
         bot_enabled = false,
@@ -225,22 +254,22 @@ export async function requestRoutes(app: FastifyInstance) {
         AND bot_enabled = true
       RETURNING *
       `,
-                [params.requestId]
-            );
+                    [params.requestId]
+                );
 
-            await client.query("COMMIT");
+                await client.query("COMMIT");
 
-            return {
-                request: requestResult.rows[0],
-                conversationsDisabled: conversationResult.rowCount,
-            };
-        } catch (error) {
-            await client.query("ROLLBACK");
-            throw error;
-        } finally {
-            client.release();
-        }
-    });
+                return {
+                    request: requestResult.rows[0],
+                    conversationsDisabled: conversationResult.rowCount,
+                };
+            } catch (error) {
+                await client.query("ROLLBACK");
+                throw error;
+            } finally {
+                client.release();
+            }
+        });
 
     app.get("/requests/:requestId", async (request, reply) => {
         const { requestId } = request.params as {
@@ -267,5 +296,71 @@ export async function requestRoutes(app: FastifyInstance) {
             request: result.rows[0],
         };
     });
+
+    app.post(
+        "/requests/:requestId/close",
+        {
+            schema: {
+                params: idParamSchema,
+            },
+        },
+        async (request, reply) => {
+            const { requestId } = request.params as {
+                requestId: string;
+            };
+
+            const client = await db.connect();
+
+            try {
+                await client.query("BEGIN");
+
+                const result = await client.query(
+                    `
+        UPDATE requests
+        SET
+          status = 'CLOSED',
+          completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP),
+          updated_at = CURRENT_TIMESTAMP,
+          last_activity_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+        `,
+                    [requestId]
+                );
+
+                if (result.rows.length === 0) {
+                    await client.query("ROLLBACK");
+
+                    return reply.status(404).send({
+                        error: "request not found",
+                    });
+                }
+
+                const conversations = await client.query(
+                    `
+        UPDATE conversations
+        SET
+          bot_enabled = false,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE request_id = $1
+        RETURNING id
+        `,
+                    [requestId]
+                );
+
+                await client.query("COMMIT");
+
+                return {
+                    request: result.rows[0],
+                    conversationsDisabled: conversations.rowCount ?? 0,
+                };
+            } catch (error) {
+                await client.query("ROLLBACK");
+                throw error;
+            } finally {
+                client.release();
+            }
+        }
+    );
 
 }
