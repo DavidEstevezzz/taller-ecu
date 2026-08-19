@@ -145,6 +145,20 @@ export const createRequestBodySchema = {
 export const updateRequestBodySchema = {
   type: "object",
   properties: {
+    serviceType: {
+      type: ["string", "null"],
+      enum: [
+        "REPROGRAMMING",
+        "ECU_REPAIR",
+        "ECU_CLONING",
+        "OTHER",
+        null
+      ],
+    },
+    description: {
+      type: ["string", "null"],
+      maxLength: 10000,
+    },
     status: {
       type: "string",
       enum: ["COLLECTING", "HUMAN", "CLOSED"],
