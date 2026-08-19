@@ -15,6 +15,7 @@ import workflowErrorRoutes from "./routes/workflowErrors.js";
 import messageStatusRoutes from "./routes/messageStatuses.js";
 
 import { adminAuthRoutes } from "./routes/admin/auth.js";
+import { adminPanelRoutes } from "./routes/admin/panel.js";
 import { internalApiKeyHook } from "./plugins/internalApiKey.js";
 
 /*
@@ -93,6 +94,10 @@ export function buildApp(
 
   // API del panel: sesión por cookie, nunca INTERNAL_API_KEY.
   app.register(adminAuthRoutes, {
+    prefix: "/api/admin",
+  });
+
+  app.register(adminPanelRoutes, {
     prefix: "/api/admin",
   });
 

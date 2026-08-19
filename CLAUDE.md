@@ -119,15 +119,21 @@ Implementado pero **pendiente de probar**:
 - Análisis de imágenes y documentos recibidos desde Meta.
 - Estados reales de entrega enviados por Meta.
 
-Autenticación administrativa: **implementada en código, sin desplegar**.
+API del panel (`/api/admin/*`): **implementada y probada localmente, sin desplegar**.
 
-- El código de usuarios, sesiones y login está escrito y cubierto por pruebas.
+- Autenticación de sesión: login, logout y `me`.
+- Lectura: dashboard, listado de solicitudes con búsqueda y filtros, detalle de una
+  solicitud e historial de un cliente. Solo lectura: **no hay ningún endpoint de
+  escritura todavía**.
+- Todo está cubierto por pruebas que se ejecutan con dobles, sin PostgreSQL.
 - **Las migraciones de `users`, `sessions` y `login_attempts` están creadas pero
-  todavía no se han ejecutado**, ni en desarrollo ni en producción.
+  todavía no se han ejecutado**, ni en desarrollo ni en producción. Hasta que se
+  apliquen, nadie puede iniciar sesión y toda la API del panel es inalcanzable.
 - **El script CLI de alta del primer OWNER compila y tiene tipos verificados, pero no
   se ha probado nunca contra PostgreSQL.** Su primera ejecución real requiere
   atención.
-- Nada de esto está desplegado: no describas la autenticación como activa o en
+- **No existe todavía el frontend del panel.**
+- Nada de esto está desplegado: no describas la API del panel como activa o en
   producción.
 
 No describas ninguno de estos puntos pendientes como funcionando, ni en código, ni en
@@ -219,6 +225,35 @@ Detalles que forman parte del contrato:
 integración mínimas que protejan estos endpoints.** Es un requisito acordado, no una
 sugerencia; y es aún más importante dado que hoy la única red de seguridad son las
 pruebas sintéticas de texto.
+
+---
+
+## 4.1 API de lectura del panel
+
+Bajo `/api/admin`, **todas** exigen sesión administrativa; `x-internal-api-key` no
+sirve para acceder a ellas. Solo lectura.
+
+| Método | Ruta | Devuelve |
+|---|---|---|
+| GET | `/api/admin/dashboard` | totales, solicitudes por estado y tipo de servicio, actividad reciente |
+| GET | `/api/admin/requests` | listado paginado con búsqueda y filtros |
+| GET | `/api/admin/requests/:requestId` | solicitud + cliente + vehículo + conversaciones + mensajes |
+| GET | `/api/admin/customers/:customerId` | cliente + vehículos + solicitudes + resumen |
+
+Reglas que hay que mantener al ampliarla:
+
+- El guard `requireAdminUser` se aplica como hook del plugin, una sola vez: ninguna
+  ruta nueva puede olvidarlo.
+- **Todo valor del usuario viaja como parámetro posicional.** En el SQL solo se
+  interpolan identificadores de las listas cerradas de `src/panel/sql.ts` (columnas de
+  ordenación y sentido). Nunca concatenes texto recibido.
+- Las conversaciones de una solicitud se recuperan por `conversations.request_id`,
+  nunca por `customer_id`.
+- Los mapeadores de `src/panel/service.ts` eligen campo a campo lo que se expone: no
+  devuelvas filas crudas de PostgreSQL en una respuesta.
+- Los parámetros de query desconocidos se rechazan con 400 mediante un hook local. Esa
+  estrictez es deliberada y **no** debe implementarse tocando la configuración global
+  de ajv, que cambiaría el comportamiento de las rutas de n8n.
 
 ---
 

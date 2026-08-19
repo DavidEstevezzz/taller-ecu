@@ -108,14 +108,15 @@ taller-ecu/
 │       ├── app.ts               construye la aplicación Fastify
 │       ├── db.ts                pool de PostgreSQL
 │       ├── schemas.ts           esquemas JSON del contrato con n8n
-│       ├── schemas/adminAuth.ts esquemas de la API del panel
+│       ├── schemas/             adminAuth, adminPanel (esquemas del panel)
 │       ├── auth/                config, tokens, passwords, repository, service
+│       ├── panel/               sql, repository, service (API de lectura)
 │       ├── plugins/             internalApiKey, adminAuth
 │       ├── scripts/             create-owner (alta del primer OWNER)
 │       └── routes/              customers, vehicles, requests, conversations,
 │                                messages, whatsapp, messageLookup,
 │                                messageStatuses, workflowErrors,
-│                                admin/auth
+│                                admin/auth, admin/panel
 ├── n8n-workflows/
 │   └── workflows-export.json    3 workflows exportados
 └── scripts/
@@ -264,13 +265,42 @@ sesión por cookie); los endpoints de datos del panel están por hacer.
 
 ### API administrativa
 
-Implementada, pendiente de desplegar. No usa `INTERNAL_API_KEY` en ningún caso.
+Implementada y probada localmente, **sin desplegar**. No usa `INTERNAL_API_KEY` en
+ningún caso, y ninguna de estas rutas es accesible con esa cabecera.
+
+Autenticación:
 
 | Método | Ruta | Autenticación |
 |---|---|---|
 | POST | `/api/admin/auth/login` | ninguna (limitada a 5 fallos por email y 20 por IP en 15 min) |
 | POST | `/api/admin/auth/logout` | opcional; revoca la sesión presentada |
 | GET | `/api/admin/auth/me` | cookie de sesión |
+
+Lectura del panel (**todas exigen sesión administrativa**; no hay endpoints de
+escritura todavía):
+
+| Método | Ruta | Devuelve |
+|---|---|---|
+| GET | `/api/admin/dashboard` | totales, solicitudes por estado y tipo de servicio, actividad reciente |
+| GET | `/api/admin/requests` | listado paginado con búsqueda y filtros |
+| GET | `/api/admin/requests/:requestId` | solicitud + cliente + vehículo + conversaciones + mensajes |
+| GET | `/api/admin/customers/:customerId` | cliente + vehículos + solicitudes + resumen |
+
+Parámetros de `GET /api/admin/requests`:
+
+| Parámetro | Valores | Por defecto |
+|---|---|---|
+| `page` | entero ≥ 1 | 1 |
+| `pageSize` | entero 1–100 | 25 |
+| `search` | texto libre; busca en nombre, teléfono, marca, modelo, matrícula, VIN y descripción | — |
+| `status` | `COLLECTING`, `HUMAN`, `CLOSED` | — |
+| `serviceType` | `REPROGRAMMING`, `ECU_REPAIR`, `ECU_CLONING`, `OTHER` | — |
+| `from` / `to` | fecha ISO; filtra por fecha de creación | — |
+| `sort` | `lastActivityAt`, `createdAt`, `updatedAt`, `status`, `customerName` | `lastActivityAt` |
+| `order` | `asc`, `desc` | `desc` |
+
+Cualquier otro parámetro, o un valor fuera de estas listas, devuelve `400`.
+Las conversaciones del detalle se recuperan por `conversations.request_id`.
 
 El primer usuario se crea por consola, sin registro público. Una vez ejecutadas las
 migraciones:
@@ -320,9 +350,12 @@ significa que esté conectado a un WhatsApp real.
 
 ### Implementado en código, sin desplegar
 
-La autenticación administrativa del panel está escrita y cubierta por 29 pruebas:
-usuarios con rol `OWNER`/`EMPLOYEE`, login con Argon2id, sesiones en PostgreSQL con
-cookie `HttpOnly`, logout con revocación y limitación de intentos.
+La API del panel está escrita y cubierta por pruebas (94 en total):
+
+- **Autenticación**: usuarios con rol `OWNER`/`EMPLOYEE`, login con Argon2id, sesiones
+  en PostgreSQL con cookie `HttpOnly`, logout con revocación y limitación de intentos.
+- **Lectura**: dashboard, listado con búsqueda y filtros, detalle de solicitud e
+  historial de cliente.
 
 Ahora bien, **no está en marcha en ningún sitio**:
 
@@ -343,14 +376,15 @@ Ahora bien, **no está en marcha en ningún sitio**:
 
 ### Sin empezar
 
-Todo el frontend, y los endpoints de lectura del panel (listado, detalle, resumen).
+**Todo el frontend**: no existe el panel como interfaz, solo su API. Tampoco hay
+endpoints de escritura (cambio de estado, notas internas, urgencia).
 
 ### Siguientes fases
 
 | Fase | Contenido |
 |---|---|
 | **1** | ✅ *escrita, sin desplegar* — Pruebas de contrato de los endpoints que usa n8n, tabla `users`, sesión con cookie HttpOnly y Argon2id, script CLI para el primer usuario |
-| **2** | Endpoints de lectura del panel: listado con búsqueda y filtros, detalle agregado, resumen, ficha e historial del cliente |
+| **2** | ✅ *escrita, sin desplegar* — Endpoints de lectura del panel: listado con búsqueda y filtros, detalle agregado, resumen, ficha e historial del cliente |
 | **3** | Proyecto Next.js en `web/`, Dockerfile, servicio en compose, login funcional |
 | **4** | Panel en modo lectura: resumen, listado y detalle completo |
 | **5** | Panel en modo escritura: cambio de estado, notas internas, `is_urgent`, devolver la conversación al bot |
