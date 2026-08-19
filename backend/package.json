@@ -10,11 +10,14 @@
     "test": "vitest run",
     "migrate:create": "node-pg-migrate create",
     "migrate:up": "node-pg-migrate up",
-    "migrate:down": "node-pg-migrate down"
- },
+    "migrate:down": "node-pg-migrate down",
+    "create:owner": "tsx src/scripts/create-owner.ts"
+  },
   "dependencies": {
     "pg": "^8.0.0",
-    "fastify": "^5.0.0"
+    "fastify": "^5.0.0",
+    "@fastify/cookie": "^11.0.0",
+    "@node-rs/argon2": "^2.0.0"
   },
   "devDependencies": {
     "node-pg-migrate": "^9.0.0",

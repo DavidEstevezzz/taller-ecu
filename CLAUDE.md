@@ -119,6 +119,17 @@ Implementado pero **pendiente de probar**:
 - Análisis de imágenes y documentos recibidos desde Meta.
 - Estados reales de entrega enviados por Meta.
 
+Autenticación administrativa: **implementada en código, sin desplegar**.
+
+- El código de usuarios, sesiones y login está escrito y cubierto por pruebas.
+- **Las migraciones de `users`, `sessions` y `login_attempts` están creadas pero
+  todavía no se han ejecutado**, ni en desarrollo ni en producción.
+- **El script CLI de alta del primer OWNER compila y tiene tipos verificados, pero no
+  se ha probado nunca contra PostgreSQL.** Su primera ejecución real requiere
+  atención.
+- Nada de esto está desplegado: no describas la autenticación como activa o en
+  producción.
+
 No describas ninguno de estos puntos pendientes como funcionando, ni en código, ni en
 documentación, ni en mensajes de commit.
 
@@ -126,6 +137,11 @@ documentación, ni en mensajes de commit.
 
 `customers` (teléfono único) → `vehicles` → `requests` → `conversations` → `messages`
 → `message_status_events`. Más `workflow_errors`, independiente.
+
+Autenticación del panel (migraciones creadas, **sin ejecutar**):
+`users` (email único normalizado, `password_hash`, `role`, `is_active`) →
+`sessions` (`token_hash`, `expires_at`, `revoked_at`). Más `login_attempts`, que
+sostiene la limitación de intentos.
 
 Enumerados aplicados con CHECK constraints:
 - `requests.status` ∈ `COLLECTING`, `HUMAN`, `CLOSED`
@@ -140,10 +156,22 @@ acks de Meta que llegan antes que el mensaje al que pertenecen.
 
 ### Autenticación actual
 
-Un hook `onRequest` en `backend/src/server.ts` protege **todo** `/api/*` con una única
-clave estática compartida en la cabecera `x-internal-api-key`. Excepciones:
-`/api/whatsapp/webhook/verify` (usa su propio verify token de Meta) y `/health`
-(fuera de `/api/`). No hay usuarios, ni CORS, ni rate limiting, ni reverse proxy.
+Dos mecanismos separados que nunca se mezclan:
+
+**Máquina a máquina (n8n).** El hook `internalApiKeyHook`
+(`backend/src/plugins/internalApiKey.ts`, registrado desde `app.ts`) protege `/api/*`
+con una única clave estática compartida en la cabecera `x-internal-api-key`.
+Excepciones: `/api/whatsapp/webhook/verify` (usa su propio verify token de Meta),
+`/health` (fuera de `/api/`) y `/api/admin/` (usa sesión de usuario).
+
+**Panel (`/api/admin/*`).** Sesiones opacas guardadas en PostgreSQL. Contraseñas con
+Argon2id; el token de sesión viaja en una cookie `HttpOnly` y en la base de datos solo
+se guarda su SHA-256. Sesiones **absolutas de 12 horas**, sin renovación deslizante:
+cubren una jornada del taller con un único inicio de sesión y acotan la ventana de uso
+de una cookie robada. La API administrativa **nunca** acepta `INTERNAL_API_KEY`, y una
+sesión del panel **nunca** abre las rutas de n8n; hay pruebas en ambos sentidos.
+
+No hay CORS (todo es mismo origen) ni reverse proxy todavía.
 
 ---
 
@@ -178,6 +206,8 @@ No las renombres, no cambies sus prefijos, no reorganices todavía su registro e
 Detalles que forman parte del contrato:
 - La cabecera es exactamente `x-internal-api-key` (credencial `httpHeaderAuth`
   compartida en n8n).
+- El hook excluye `/api/admin/`, que se autentica por cookie de sesión. Esa exclusión
+  no afecta a ninguna ruta que use n8n.
 - Dentro de la red Docker, n8n llama a `http://backend:3000`.
 - `POST /api/messages` es idempotente vía `ON CONFLICT (provider_message_id)` y
   responde `{ created: false, duplicate: true }` en el segundo intento. Ese contrato
@@ -217,10 +247,11 @@ directamente.**
    web pública y el panel. Nada de dos proyectos frontend separados.
 2. **Las rutas actuales de n8n conservan URLs, cabeceras y comportamiento.** Sin
    renombrar, sin cambiar prefijos, sin reorganizar su registro por ahora.
-3. **Autenticación implementada en el backend Fastify:** cookie segura HttpOnly,
-   contraseñas con hash **Argon2**, nunca tokens en `localStorage`, nunca
-   `INTERNAL_API_KEY` en el navegador, sin registro público, primer usuario creado
-   mediante script CLI, roles iniciales **OWNER** y **EMPLOYEE**.
+3. **Autenticación implementada en el backend Fastify** — ya escrita y probada, pero
+   **sin desplegar**: cookie segura HttpOnly, contraseñas con hash **Argon2id**, nunca
+   tokens en `localStorage`, nunca `INTERNAL_API_KEY` en el navegador, sin registro
+   público, primer usuario creado mediante script CLI, roles **OWNER** y **EMPLOYEE**.
+   Sesiones absolutas de 12 horas; el token solo se guarda hasheado.
 4. **Mismo origen** en `jmreprocars.com`: panel en `/panel`, API administrativa en
    `/api/admin`. **No configures CORS abierto.**
 5. **Urgencia = columna booleana `is_urgent`**, por defecto `false`, editable desde el
@@ -272,12 +303,20 @@ bastan y bastarán durante años.
   re-creó como `1787048279926_..._v2.js` con contenido idéntico y los mismos nombres
   de constraint. **No la toques.** Pendiente: comprobar qué registra realmente la
   tabla `pgmigrations` en producción antes de decidir nada.
-- **`.env.example` incompleto.** Declara tres variables, mientras `compose.yml` exige
-  además `N8N_DB_NAME`, `N8N_DB_USER`, `N8N_DB_PASSWORD`, `N8N_ENCRYPTION_KEY`,
-  `WHATSAPP_VERIFY_TOKEN` e `INTERNAL_API_KEY`.
-- **Sin tests, sin CI, sin linter.** No hay red de seguridad para refactorizar.
-- **Builds no reproducibles**: el `Dockerfile` usa `npm install` y no hay lockfile en
-  el repositorio.
+- **Migraciones de autenticación sin ejecutar.** `users`, `sessions` y
+  `login_attempts` están escritas pero nunca se han aplicado. Hasta que se ejecuten,
+  el login devolverá errores de SQL contra tablas inexistentes.
+- **`trustProxy` pendiente.** La limitación de intentos de login usa `request.ip`.
+  Cuando se ponga el reverse proxy delante habrá que configurar `trustProxy` en
+  Fastify; si no, todas las peticiones parecerán venir de la IP del proxy y el límite
+  por IP bloqueará a todos los usuarios a la vez. Revisarlo en la fase del proxy.
+- **CSRF / validación de Origin pendiente.** Hoy la única defensa es la cookie
+  `SameSite=Lax`, suficiente mientras la API administrativa sea de solo lectura.
+  **Antes de añadir operaciones administrativas de escritura** (cambio de estado,
+  notas internas, urgencia) hay que revisar la protección CSRF: validación de la
+  cabecera `Origin` o token anti-CSRF.
+- **Sin CI y sin linter.** Ya hay pruebas de contrato y de autenticación, pero nadie
+  las ejecuta automáticamente: hay que lanzarlas a mano (§9).
 - **`INTERNAL_API_KEY` es una clave única compartida** sin rotación ni caducidad.
 - **La integración con Meta está sin validar.** Todo lo relativo a multimedia,
   transcripción, análisis de imágenes y documentos, y estados reales de entrega está
@@ -325,6 +364,13 @@ Listar migraciones por orden de aplicación:
 
 ```bash
 ls -1 /home/david/taller-ecu-dev/backend/migrations
+```
+
+Ejecutar las pruebas y el build del backend en un contenedor desechable, sin tocar
+producción, sin abrir puertos y sin base de datos (las pruebas usan dobles):
+
+```bash
+docker run --rm -e HOME=/tmp -e npm_config_cache=/tmp/.npm -v /home/david/taller-ecu-dev/backend:/app -v /app/node_modules -w /app node:24-alpine sh -c 'npm ci && npm test && npm run build && rm -rf /app/dist'
 ```
 
 Inspeccionar los workflows de n8n sin volcar 99 KB de JSON:

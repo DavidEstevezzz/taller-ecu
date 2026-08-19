@@ -78,6 +78,14 @@ customers ──┬── vehicles
 - **`message_status_events`** — histórico de acks de Meta, idempotente.
 - **`workflow_errors`** — fallos de n8n capturados por un error handler global.
 
+Autenticación del panel (migraciones escritas, **todavía sin ejecutar**):
+
+- **`users`** — email único normalizado, `password_hash` (Argon2id), `role`
+  (`OWNER` o `EMPLOYEE`), `is_active`.
+- **`sessions`** — `token_hash` (SHA-256 del token de la cookie), `expires_at`,
+  `revoked_at`.
+- **`login_attempts`** — sostiene la limitación de intentos de login.
+
 Migraciones con `node-pg-migrate` en `backend/migrations/`.
 
 ---
@@ -87,20 +95,27 @@ Migraciones con `node-pg-migrate` en `backend/migrations/`.
 ```
 taller-ecu/
 ├── compose.yml                  postgres + backend + n8n
-├── .env.example                 plantilla de variables (incompleta, ver §Riesgos)
+├── .env.example                 plantilla de variables (sin secretos)
 ├── CLAUDE.md                    guía permanente de trabajo en este repositorio
 ├── README.md
 ├── backend/
 │   ├── Dockerfile
 │   ├── package.json  tsconfig.json
-│   ├── migrations/              9 migraciones
+│   ├── migrations/              12 migraciones
+│   ├── test/                    pruebas de contrato y de autenticación
 │   └── src/
-│       ├── server.ts            arranque, hook de API key, registro de rutas
+│       ├── server.ts            punto de entrada: buildApp() + listen
+│       ├── app.ts               construye la aplicación Fastify
 │       ├── db.ts                pool de PostgreSQL
-│       ├── schemas.ts           esquemas JSON de validación
+│       ├── schemas.ts           esquemas JSON del contrato con n8n
+│       ├── schemas/adminAuth.ts esquemas de la API del panel
+│       ├── auth/                config, tokens, passwords, repository, service
+│       ├── plugins/             internalApiKey, adminAuth
+│       ├── scripts/             create-owner (alta del primer OWNER)
 │       └── routes/              customers, vehicles, requests, conversations,
 │                                messages, whatsapp, messageLookup,
-│                                messageStatuses, workflowErrors
+│                                messageStatuses, workflowErrors,
+│                                admin/auth
 ├── n8n-workflows/
 │   └── workflows-export.json    3 workflows exportados
 └── scripts/
@@ -153,7 +168,7 @@ Las reglas completas están en [CLAUDE.md](CLAUDE.md).
 ## Variables de entorno
 
 Van en un fichero `.env` en la raíz, que **nunca** se sube al repositorio.
-`.env.example` es la plantilla. Aquí solo se documentan los nombres y su propósito;
+`.env.example` es la plantilla y ya declara el conjunto completo. Aquí solo se documentan los nombres y su propósito;
 ningún valor real aparece en este repositorio.
 
 | Variable | Propósito |
@@ -170,6 +185,9 @@ ningún valor real aparece en este repositorio.
 
 El backend deriva `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` y
 `DATABASE_URL` desde `compose.yml`; no hace falta definirlas a mano.
+
+`NODE_ENV=production` lo fija el `Dockerfile` del backend. No es decorativo: es lo que
+activa el atributo `Secure` de la cookie de sesión del panel.
 
 Para ver qué espera el compose sin abrir ningún `.env`:
 
@@ -241,14 +259,38 @@ conversación completa, marca de urgencia, notas internas, cambio de estado e
 historial del cliente.
 
 **El panel consume el backend a través de `/api/admin`. Nunca se conecta a PostgreSQL
-directamente.**
+directamente.** La autenticación de esa API ya está implementada (login, logout y
+sesión por cookie); los endpoints de datos del panel están por hacer.
+
+### API administrativa
+
+Implementada, pendiente de desplegar. No usa `INTERNAL_API_KEY` en ningún caso.
+
+| Método | Ruta | Autenticación |
+|---|---|---|
+| POST | `/api/admin/auth/login` | ninguna (limitada a 5 fallos por email y 20 por IP en 15 min) |
+| POST | `/api/admin/auth/logout` | opcional; revoca la sesión presentada |
+| GET | `/api/admin/auth/me` | cookie de sesión |
+
+El primer usuario se crea por consola, sin registro público. Una vez ejecutadas las
+migraciones:
+
+```bash
+docker compose exec backend node dist/scripts/create-owner.js
+```
+
+El script pide email, nombre y contraseña con el eco desactivado; la contraseña nunca
+se acepta por argumento ni por variable de entorno, para que no acabe en el historial
+del shell ni en la tabla de procesos. **Todavía no se ha probado contra PostgreSQL.**
 
 ### Decisiones ya tomadas
 
 - Una sola aplicación Next.js para web y panel.
 - Autenticación en el backend Fastify: cookie **HttpOnly** segura, contraseñas con
-  hash **Argon2**, sin tokens en `localStorage`, sin registro público, primer usuario
-  creado por script CLI, roles **OWNER** y **EMPLOYEE**.
+  hash **Argon2id**, sin tokens en `localStorage`, sin registro público, primer usuario
+  creado por script CLI, roles **OWNER** y **EMPLOYEE**. Sesiones **absolutas de 12
+  horas**, sin renovación deslizante: cubren una jornada del taller con un único
+  inicio de sesión y acotan la ventana de uso de una cookie robada.
 - Mismo origen para web, panel y API. **Sin CORS abierto.**
 - `INTERNAL_API_KEY` no llega jamás al navegador.
 - Urgencia como columna booleana `is_urgent` (por defecto `false`), editable desde el
@@ -276,6 +318,20 @@ significa que esté conectado a un WhatsApp real.
   datos no disponibles y petición de atención humana.
 - Regresiones automáticas de texto superadas.
 
+### Implementado en código, sin desplegar
+
+La autenticación administrativa del panel está escrita y cubierta por 29 pruebas:
+usuarios con rol `OWNER`/`EMPLOYEE`, login con Argon2id, sesiones en PostgreSQL con
+cookie `HttpOnly`, logout con revocación y limitación de intentos.
+
+Ahora bien, **no está en marcha en ningún sitio**:
+
+- **Las migraciones de `users`, `sessions` y `login_attempts` no se han ejecutado**,
+  ni en desarrollo ni en producción.
+- **El script CLI de alta del primer OWNER compila y tiene los tipos verificados,
+  pero nunca se ha ejecutado contra PostgreSQL.**
+- Ningún usuario existe todavía, y por tanto nadie puede iniciar sesión.
+
 ### Implementado, pendiente de validar end-to-end con Meta
 
 - Conexión con la cuenta real de Meta/WhatsApp del cliente.
@@ -287,14 +343,13 @@ significa que esté conectado a un WhatsApp real.
 
 ### Sin empezar
 
-Todo el frontend. No hay usuarios ni autenticación de personas; la única protección de
-la API es una clave compartida pensada para máquinas.
+Todo el frontend, y los endpoints de lectura del panel (listado, detalle, resumen).
 
 ### Siguientes fases
 
 | Fase | Contenido |
 |---|---|
-| **1** | Pruebas de integración mínimas de los endpoints que usa n8n, tabla `users`, sesión con cookie HttpOnly y Argon2, script CLI para el primer usuario |
+| **1** | ✅ *escrita, sin desplegar* — Pruebas de contrato de los endpoints que usa n8n, tabla `users`, sesión con cookie HttpOnly y Argon2id, script CLI para el primer usuario |
 | **2** | Endpoints de lectura del panel: listado con búsqueda y filtros, detalle agregado, resumen, ficha e historial del cliente |
 | **3** | Proyecto Next.js en `web/`, Dockerfile, servicio en compose, login funcional |
 | **4** | Panel en modo lectura: resumen, listado y detalle completo |
@@ -307,13 +362,20 @@ y prueban backend y frontend de forma aislada.
 
 ### Riesgos pendientes
 
-- **`.env.example` está incompleto**: declara tres variables cuando `compose.yml`
-  exige nueve.
 - **Migración duplicada**: `1787047877216_add-business-check-constraints.js` usa
   sintaxis CommonJS en un paquete ESM y se re-creó como `..._v2.js`. No se toca hasta
   comprobar el historial real de migraciones en producción.
-- **Sin tests, sin CI y sin linter**, y builds no reproducibles (`npm install` sin
-  lockfile).
+- **Las migraciones de autenticación no se han ejecutado.** Hasta que se apliquen, el
+  login fallará contra tablas inexistentes.
+- **`trustProxy` pendiente**: la limitación de intentos de login usa `request.ip`.
+  Al instalar el reverse proxy habrá que configurar `trustProxy` en Fastify; de lo
+  contrario todas las peticiones parecerán venir de la IP del proxy y el límite por IP
+  bloqueará a todos los usuarios a la vez.
+- **CSRF pendiente de revisar**: hoy la defensa es la cookie `SameSite=Lax`, que basta
+  mientras la API administrativa sea de solo lectura. **Antes de añadir operaciones de
+  escritura** (cambio de estado, notas internas, urgencia) hay que revisar la
+  validación de `Origin` o añadir un token anti-CSRF.
+- **Sin CI y sin linter**: las pruebas existen pero hay que lanzarlas a mano.
 - **La integración con Meta sigue sin validar**, así que todo el tramo de multimedia,
   transcripción, análisis y estados de entrega puede requerir ajustes cuando se
   conecte la cuenta real.

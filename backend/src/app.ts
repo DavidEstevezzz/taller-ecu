@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import type { FastifyServerOptions } from "fastify";
+import cookie from "@fastify/cookie";
 import { db } from "./db.js";
 
 import { customerRoutes } from "./routes/customers.js";
@@ -13,6 +14,9 @@ import messageLookupRoutes from "./routes/messageLookup.js";
 import workflowErrorRoutes from "./routes/workflowErrors.js";
 import messageStatusRoutes from "./routes/messageStatuses.js";
 
+import { adminAuthRoutes } from "./routes/admin/auth.js";
+import { internalApiKeyHook } from "./plugins/internalApiKey.js";
+
 /*
  * Construye la aplicación Fastify sin escucharla.
  *
@@ -24,41 +28,9 @@ export function buildApp(
 ) {
   const app = Fastify(options);
 
-  app.addHook("onRequest", async (request, reply) => {
-    const url = request.raw.url ?? "";
+  app.register(cookie);
 
-    // Solo protegemos las rutas de API.
-    if (!url.startsWith("/api/")) {
-      return;
-    }
-
-    // La verificación del webhook de Meta usa su propio verify token.
-    if (url.startsWith("/api/whatsapp/webhook/verify")) {
-      return;
-    }
-
-    const expectedApiKey = process.env.INTERNAL_API_KEY;
-
-    if (!expectedApiKey) {
-      request.log.error("INTERNAL_API_KEY is not configured");
-
-      return reply.status(500).send({
-        error: "server_not_configured",
-      });
-    }
-
-    const header = request.headers["x-internal-api-key"];
-
-    const providedApiKey = Array.isArray(header)
-      ? header[0]
-      : header;
-
-    if (!providedApiKey || providedApiKey !== expectedApiKey) {
-      return reply.status(401).send({
-        error: "unauthorized",
-      });
-    }
-  });
+  app.addHook("onRequest", internalApiKeyHook);
 
   app.get("/health", async (_request, reply) => {
     try {
@@ -117,6 +89,11 @@ export function buildApp(
 
   app.register(messageStatusRoutes, {
     prefix: "/api",
+  });
+
+  // API del panel: sesión por cookie, nunca INTERNAL_API_KEY.
+  app.register(adminAuthRoutes, {
+    prefix: "/api/admin",
   });
 
   return app;
