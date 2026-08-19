@@ -7,6 +7,7 @@ import { conversationRoutes } from "./routes/conversations.js";
 import { messageRoutes } from "./routes/messages.js";
 import { whatsappRoutes } from "./routes/whatsapp.js";
 import messageLookupRoutes from "./routes/messageLookup.js";
+import workflowErrorRoutes from "./routes/workflowErrors.js";
 
 const app = Fastify({
   logger: true,
@@ -92,6 +93,8 @@ app.register(messageRoutes, {
 app.register(whatsappRoutes, {
    prefix: "/api" 
 });
+
+app.register(workflowErrorRoutes, { prefix: "/api" });
 
 const start = async () => {
   try {
