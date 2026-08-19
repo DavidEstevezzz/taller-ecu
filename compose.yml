@@ -87,6 +87,22 @@ services:
       GENERIC_TIMEZONE: Europe/Madrid
       TZ: Europe/Madrid
 
+      # Community packages no verificadas desactivadas por seguridad.
+      N8N_UNVERIFIED_PACKAGES_ENABLED: "false"
+
+      # Mantener hasta 5 minutos para tareas Code/runner.
+      N8N_RUNNERS_TASK_TIMEOUT: "300"
+
+      # Límites conservadores del nodo Compression.
+      N8N_COMPRESSION_NODE_MAX_DECOMPRESSED_SIZE_BYTES: "268435456"
+      N8N_COMPRESSION_NODE_MAX_ZIP_ENTRIES: "1000"
+
+      # Limpieza automática del historial de ejecuciones.
+      # 720 horas = 30 días.
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: "720"
+      EXECUTIONS_DATA_PRUNE_MAX_COUNT: "5000"
+
     depends_on:
       postgres:
         condition: service_healthy
