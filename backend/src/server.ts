@@ -1,13 +1,16 @@
 import Fastify from "fastify";
 import { db } from "./db.js";
+
 import { customerRoutes } from "./routes/customers.js";
 import { vehicleRoutes } from "./routes/vehicles.js";
 import { requestRoutes } from "./routes/requests.js";
 import { conversationRoutes } from "./routes/conversations.js";
 import { messageRoutes } from "./routes/messages.js";
 import { whatsappRoutes } from "./routes/whatsapp.js";
+
 import messageLookupRoutes from "./routes/messageLookup.js";
 import workflowErrorRoutes from "./routes/workflowErrors.js";
+import messageStatusRoutes from "./routes/messageStatuses.js";
 
 const app = Fastify({
   logger: true,
@@ -51,7 +54,9 @@ app.addHook("onRequest", async (request, reply) => {
 
 app.get("/health", async (_request, reply) => {
   try {
-    const result = await db.query("SELECT NOW() AS database_time");
+    const result = await db.query(
+      "SELECT NOW() AS database_time"
+    );
 
     return {
       status: "ok",
@@ -91,14 +96,23 @@ app.register(messageRoutes, {
 });
 
 app.register(whatsappRoutes, {
-   prefix: "/api" 
+  prefix: "/api",
 });
 
-app.register(workflowErrorRoutes, { prefix: "/api" });
+app.register(messageLookupRoutes, {
+  prefix: "/api",
+});
+
+app.register(workflowErrorRoutes, {
+  prefix: "/api",
+});
+
+app.register(messageStatusRoutes, {
+  prefix: "/api",
+});
 
 const start = async () => {
   try {
-    app.register(messageLookupRoutes, { prefix: "/api" });
     await app.listen({
       host: "0.0.0.0",
       port: 3000,
