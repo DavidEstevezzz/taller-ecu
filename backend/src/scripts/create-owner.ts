@@ -23,7 +23,68 @@ type MutableInterface = {
   muted: boolean;
 };
 
-function createPrompt() {
+type Prompt = {
+  ask: (question: string) => Promise<string>;
+  askHidden: (question: string) => Promise<string>;
+  close: () => void;
+};
+
+/*
+ * Entrada no interactiva (una tubería, por ejemplo en las pruebas de
+ * integración). readline en modo terminal no sirve aquí: consume el buffer
+ * de golpe, hace eco de lo que recibe —incluida la contraseña— y se cierra
+ * antes de la siguiente pregunta. Leemos el flujo entero y repartimos las
+ * líneas en orden, sin eco.
+ */
+function createPipedPrompt(): Prompt {
+  let pending: string[] | null = null;
+  let index = 0;
+
+  const readAll = async (): Promise<string[]> => {
+    const chunks: Buffer[] = [];
+
+    for await (const chunk of stdin) {
+      chunks.push(Buffer.from(chunk));
+    }
+
+    return Buffer.concat(chunks).toString("utf8").split(/\r?\n/);
+  };
+
+  const nextLine = async (): Promise<string> => {
+    if (pending === null) {
+      pending = await readAll();
+    }
+
+    return pending[index++] ?? "";
+  };
+
+  return {
+    ask: async (question: string) => {
+      stdout.write(question);
+
+      const answer = await nextLine();
+
+      stdout.write("\n");
+
+      return answer;
+    },
+
+    askHidden: async (question: string) => {
+      stdout.write(question);
+
+      const answer = await nextLine();
+
+      // Nunca se escribe la respuesta: es una contraseña.
+      stdout.write("\n");
+
+      return answer;
+    },
+
+    close: () => {},
+  };
+}
+
+function createInteractivePrompt(): Prompt {
   const rl = createInterface({
     input: stdin,
     output: stdout,
@@ -69,6 +130,10 @@ function createPrompt() {
     askHidden,
     close: () => rl.close(),
   };
+}
+
+function createPrompt(): Prompt {
+  return stdin.isTTY ? createInteractivePrompt() : createPipedPrompt();
 }
 
 function fail(message: string): never {
