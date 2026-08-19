@@ -6,6 +6,9 @@
 # Dependencies
 node_modules/
 
+# Build output
+backend/dist/
+
 # Logs
 *.log
 logs/
