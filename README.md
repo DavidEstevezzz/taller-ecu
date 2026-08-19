@@ -359,10 +359,11 @@ La API del panel está escrita y cubierta por pruebas (94 en total):
 
 Ahora bien, **no está en marcha en ningún sitio**:
 
-- **Las migraciones de `users`, `sessions` y `login_attempts` no se han ejecutado**,
-  ni en desarrollo ni en producción.
-- **El script CLI de alta del primer OWNER compila y tiene los tipos verificados,
-  pero nunca se ha ejecutado contra PostgreSQL.**
+- **Las 12 migraciones se han validado desde cero contra un PostgreSQL 17 desechable**,
+  pero **no se han ejecutado en producción**. Hasta que se apliquen allí, nadie puede
+  iniciar sesión.
+- El script CLI de alta del primer OWNER **ya se ha probado contra PostgreSQL 17** en
+  el entorno desechable de integración.
 - Ningún usuario existe todavía, y por tanto nadie puede iniciar sesión.
 
 ### Implementado, pendiente de validar end-to-end con Meta
@@ -396,9 +397,12 @@ y prueban backend y frontend de forma aislada.
 
 ### Riesgos pendientes
 
-- **Migración duplicada**: `1787047877216_add-business-check-constraints.js` usa
-  sintaxis CommonJS en un paquete ESM y se re-creó como `..._v2.js`. No se toca hasta
-  comprobar el historial real de migraciones en producción.
+- **Migración duplicada: resuelta.** `1787047877216_add-business-check-constraints.js`
+  y `1787048279926_..._v2.js` declaran los mismos siete nombres de constraint, y la
+  segunda abortaba con `already exists` (42710): ninguna instalación nueva podía
+  migrar. Ambas son ahora idempotentes, sin cambiar nombres ni definiciones, y se han
+  validado desde cero. En producción ya estaban registradas y no volverán a
+  ejecutarse.
 - **Las migraciones de autenticación no se han ejecutado.** Hasta que se apliquen, el
   login fallará contra tablas inexistentes.
 - **`trustProxy` pendiente**: la limitación de intentos de login usa `request.ip`.
@@ -415,6 +419,37 @@ y prueban backend y frontend de forma aislada.
   conecte la cuenta real.
 - **No existe entorno de desarrollo ejecutable**: ni base de datos de pruebas ni n8n
   aislado. Montarlo es una tarea pendiente.
+
+---
+
+## Prueba de integración
+
+Valida el backend completo contra un PostgreSQL 17 real y desechable, sin tocar
+producción:
+
+```bash
+./scripts/integration-test.sh
+```
+
+Levanta una base efímera en su propia red (`tallerecu-itest-*`), sin publicar puertos
+y con los datos en tmpfs; aplica todas las migraciones desde cero; crea el primer
+OWNER con el CLI real; y ejecuta las pruebas de `backend/test/integration/`. Todo se
+destruye al terminar, aunque algo falle.
+
+Un guardia aborta la ejecución si la base a la que se apunta no es claramente de
+pruebas, de modo que una variable mal puesta no pueda alcanzar producción.
+
+Qué se ha validado con SQL real: las 12 migraciones desde una base vacía, la creación
+del OWNER, login correcto e incorrecto, la cookie de sesión y su hash en la base,
+`/me`, el dashboard, el listado con filtros, búsqueda y paginación, el detalle con
+conversaciones seleccionadas por `request_id`, el orden cronológico de mensajes, el
+historial de cliente, el aislamiento entre clientes, y el logout con revocación.
+
+Verificada en ejecuciones consecutivas: cada una parte de una base vacía y deja el
+entorno sin rastro.
+
+**Esto no implica despliegue**: nada de esto se ha ejecutado en producción, y las
+migraciones de autenticación siguen sin aplicarse allí.
 
 ---
 

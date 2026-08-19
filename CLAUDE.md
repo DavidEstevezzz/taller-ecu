@@ -129,9 +129,9 @@ API del panel (`/api/admin/*`): **implementada y probada localmente, sin despleg
 - **Las migraciones de `users`, `sessions` y `login_attempts` están creadas pero
   todavía no se han ejecutado**, ni en desarrollo ni en producción. Hasta que se
   apliquen, nadie puede iniciar sesión y toda la API del panel es inalcanzable.
-- **El script CLI de alta del primer OWNER compila y tiene tipos verificados, pero no
-  se ha probado nunca contra PostgreSQL.** Su primera ejecución real requiere
-  atención.
+- **El script CLI de alta del primer OWNER ya se ha probado contra PostgreSQL** en el
+  entorno desechable de integración: crea el usuario con hash Argon2id y email
+  normalizado. Funciona tanto con terminal interactivo como con entrada por tubería.
 - **No existe todavía el frontend del panel.**
 - Nada de esto está desplegado: no describas la API del panel como activa o en
   producción.
@@ -338,9 +338,18 @@ bastan y bastarán durante años.
   re-creó como `1787048279926_..._v2.js` con contenido idéntico y los mismos nombres
   de constraint. **No la toques.** Pendiente: comprobar qué registra realmente la
   tabla `pgmigrations` en producción antes de decidir nada.
-- **Migraciones de autenticación sin ejecutar.** `users`, `sessions` y
-  `login_attempts` están escritas pero nunca se han aplicado. Hasta que se ejecuten,
-  el login devolverá errores de SQL contra tablas inexistentes.
+- **Migraciones duplicadas: RESUELTO.**
+  `1787047877216_add-business-check-constraints.js` y `1787048279926_..._v2.js`
+  declaran los mismos siete nombres de constraint, y la segunda en aplicarse abortaba
+  con `already exists` (42710): ninguna instalación nueva podía migrar desde cero. Lo
+  descubrió la prueba de integración (§9.1). Ambas se hicieron **idempotentes**
+  (`dropConstraint(..., { ifExists: true })` antes de cada `addConstraint`, también en
+  los `down`), sin cambiar nombres ni definiciones. Validado dos veces desde una base
+  vacía. En producción ambas están ya registradas y no volverán a ejecutarse.
+- **Migraciones de autenticación sin ejecutar en producción.** `users`, `sessions` y
+  `login_attempts` se han validado desde cero contra PostgreSQL 17 desechable, pero
+  **nunca se han aplicado en producción**. Hasta que se ejecuten allí, el login
+  devolverá errores de SQL contra tablas inexistentes.
 - **`trustProxy` pendiente.** La limitación de intentos de login usa `request.ip`.
   Cuando se ponga el reverse proxy delante habrá que configurar `trustProxy` en
   Fastify; si no, todas las peticiones parecerán venir de la IP del proxy y el límite
@@ -418,6 +427,28 @@ Para revisar si un cambio arrastra algo que no debería, usa `git diff --name-on
 abre solo los ficheros pertinentes. **No canalices `git diff` hacia un `grep` de
 secretos**: imprimiría en la terminal y en los logs justo los valores que se
 pretendía detectar.
+
+### 9.1 Prueba de integración contra PostgreSQL real
+
+```bash
+./scripts/integration-test.sh
+```
+
+Levanta un PostgreSQL 17 desechable (`tallerecu-itest-*`) en su propia red, sin
+publicar puertos y con los datos en tmpfs, aplica todas las migraciones desde cero,
+crea el primer OWNER con el CLI real y ejecuta `test/integration/`. Destruye todo al
+terminar, falle o no.
+
+Es seguro por construcción: nombres, red, base, usuario y contraseña son distintos de
+los de producción, y `test/integration/guard.ts` aborta la ejecución si `DB_HOST`,
+`DB_NAME`, `DB_USER` o `DATABASE_URL` no contienen `itest` o contienen cualquier
+identificador de producción.
+
+Estado: **pasa entera desde una base vacía**, con los archivos reales del
+repositorio: 12 migraciones, alta del OWNER con el CLI y 33 pruebas. Verificada en dos
+ejecuciones consecutivas.
+
+Nada de esto implica despliegue: las migraciones siguen sin ejecutarse en producción.
 
 ### No disponibles en este entorno
 

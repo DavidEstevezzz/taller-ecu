@@ -11,7 +11,8 @@
     "migrate:create": "node-pg-migrate create",
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
-    "create:owner": "tsx src/scripts/create-owner.ts"
+    "create:owner": "tsx src/scripts/create-owner.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "pg": "^8.0.0",
