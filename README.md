@@ -117,13 +117,29 @@ taller-ecu/
 │                                messages, whatsapp, messageLookup,
 │                                messageStatuses, workflowErrors,
 │                                admin/auth, admin/panel
+├── web/                         frontend Astro (público + panel)
+│   ├── astro.config.mjs
+│   ├── src/
+│   │   ├── config/              dominio y contenido provisional
+│   │   ├── styles/tokens.css    tokens de diseño (3 capas)
+│   │   ├── components/          públicos y admin/ (React)
+│   │   ├── layouts/             PublicLayout, AdminLayout
+│   │   ├── lib/api/             capa HTTP tipada del panel
+│   │   ├── assets/photos/       fotografías (ver docs/image-sources.md)
+│   │   └── pages/               index, servicios, 404, robots.txt, admin/
+│   └── test/                    pruebas de cliente HTTP, login y dashboard
+├── docs/
+│   ├── site-architecture.md
+│   ├── frontend-design.md
+│   └── seo-foundation.md
 ├── n8n-workflows/
 │   └── workflows-export.json    3 workflows exportados
 └── scripts/
     └── backup-postgres.sh       SOLO para producción, no ejecutar en desarrollo
 ```
 
-Todavía no existe nada de frontend. Se añadirá en `web/`.
+El frontend en `web/` cubre la portada pública, el login y el resumen del panel.
+**No está desplegado.**
 
 ---
 
@@ -245,7 +261,8 @@ completo está en [CLAUDE.md](CLAUDE.md).
 ## Plan de la web y el panel
 
 Ambos se construyen **dentro de este mismo repositorio**, como una única aplicación
-Next.js (App Router + TypeScript) en `web/`.
+**Astro 5 + TypeScript + React (islas) + Tailwind 4** en `web/`. La web pública es
+estática y no necesita servidor propio; el panel se resuelve con islas de React.
 
 ### Web pública (`jmreprocars.com`)
 
@@ -315,7 +332,7 @@ del shell ni en la tabla de procesos. **Todavía no se ha probado contra Postgre
 
 ### Decisiones ya tomadas
 
-- Una sola aplicación Next.js para web y panel.
+- Una sola aplicación Astro para web y panel.
 - Autenticación en el backend Fastify: cookie **HttpOnly** segura, contraseñas con
   hash **Argon2id**, sin tokens en `localStorage`, sin registro público, primer usuario
   creado por script CLI, roles **OWNER** y **EMPLOYEE**. Sesiones **absolutas de 12
@@ -375,10 +392,48 @@ Ahora bien, **no está en marcha en ningún sitio**:
 - Análisis de imágenes y documentos recibidos desde Meta.
 - Estados reales de entrega enviados por Meta.
 
+### Frontend: primera porción vertical
+
+Aplicación **Astro 5 + TypeScript + React + Tailwind 4** en `web/`, **sin
+desplegar**:
+
+- Portada pública en `/`, hub de servicios en `/servicios` y **página completa de
+  `/servicios/reprogramacion`**, con el configurador orientativo de
+  Tuning-shop.com incrustado bajo activación explícita. Es la **única petición a
+  terceros** de toda la web, y está documentada en
+  [embed-tuning-shop.md](docs/embed-tuning-shop.md). Estáticas, con
+  **~2,4 kB de JavaScript en línea** que solo aporta movimiento: revelado al
+  entrar en pantalla, trazado de la pista del proceso, paralaje del despiece e
+  índice activo. **Ninguna línea es necesaria para leer la página**, y todo se
+  desactiva con `prefers-reduced-motion`. Sin librería de animación.
+- Identidad visual propia: un **despiece de centralita** dibujado a medida como
+  firma de la portada, y un diagrama por servicio, todos calculados desde la
+  misma proyección (`src/lib/iso.ts`). Ningún dibujo lleva cifras ni códigos
+  inventados.
+- Acceso al panel en `/admin/login`.
+- Resumen del panel en `/admin`, consumiendo `GET /api/admin/dashboard`.
+- Fundamentos SEO, sistema de tokens y componentes básicos.
+
+Documentación: [arquitectura del sitio](docs/site-architecture.md),
+[el configurador de Tuning-shop.com](docs/embed-tuning-shop.md),
+[dirección visual](docs/frontend-design.md),
+[identidad de marca](docs/brand-foundation.md),
+[procedencia de las imágenes](docs/image-sources.md),
+[fundamentos SEO](docs/seo-foundation.md).
+
+Para previsualizar contra un backend **aislado** (nunca el de producción):
+
+```bash
+DEV_API_PROXY_TARGET=http://127.0.0.1:3100 npm run dev
+```
+
+Sin esa variable no se configura ningún proxy y la web pública funciona igual.
+
 ### Sin empezar
 
-**Todo el frontend**: no existe el panel como interfaz, solo su API. Tampoco hay
-endpoints de escritura (cambio de estado, notas internas, urgencia).
+Las páginas individuales de cada servicio, el listado y el detalle de solicitudes
+en el panel, y todos los endpoints de escritura (cambio de estado, notas
+internas, urgencia).
 
 ### Siguientes fases
 
@@ -386,8 +441,8 @@ endpoints de escritura (cambio de estado, notas internas, urgencia).
 |---|---|
 | **1** | ✅ *escrita, sin desplegar* — Pruebas de contrato de los endpoints que usa n8n, tabla `users`, sesión con cookie HttpOnly y Argon2id, script CLI para el primer usuario |
 | **2** | ✅ *escrita, sin desplegar* — Endpoints de lectura del panel: listado con búsqueda y filtros, detalle agregado, resumen, ficha e historial del cliente |
-| **3** | Proyecto Next.js en `web/`, Dockerfile, servicio en compose, login funcional |
-| **4** | Panel en modo lectura: resumen, listado y detalle completo |
+| **3** | ✅ *escrita, sin desplegar* — Proyecto en `web/` (Astro, no Next.js), login funcional, tokens y SEO |
+| **4** | Panel en modo lectura: **resumen hecho**; faltan listado y detalle |
 | **5** | Panel en modo escritura: cambio de estado, notas internas, `is_urgent`, devolver la conversación al bot |
 | **6** | Web pública: las siete páginas, SEO y JSON-LD |
 | **7** | Reverse proxy, TLS, DNS y despliegue |
@@ -419,6 +474,9 @@ y prueban backend y frontend de forma aislada.
   conecte la cuenta real.
 - **No existe entorno de desarrollo ejecutable**: ni base de datos de pruebas ni n8n
   aislado. Montarlo es una tarea pendiente.
+- **El frontend no está desplegado** y depende de datos del cliente todavía sin
+  confirmar (logo, fotos, dirección, horario, precios). Ver
+  [site-architecture.md](docs/site-architecture.md) §11.
 
 ---
 

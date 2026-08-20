@@ -1,0 +1,89 @@
+---
+import { SITE, SITE_URL } from "../config/site";
+
+/**
+ * Metadatos de una página. Único sitio donde se construyen título,
+ * descripción, canónica, Open Graph y Twitter Card.
+ *
+ * El dominio sale siempre de src/config/domain.mjs: no se escribe a mano.
+ */
+interface Props {
+  title: string;
+  description?: string;
+  /** Ruta canónica sin dominio, p. ej. "/servicios". */
+  path?: string;
+  /** Panel privado y páginas de error. */
+  noindex?: boolean;
+  /** Imagen social; ruta relativa al dominio. */
+  image?: string;
+}
+
+const {
+  title,
+  description = SITE.description,
+  path,
+  noindex = false,
+  image,
+} = Astro.props;
+
+/*
+ * Canonical normalizada.
+ *
+ * Con build.format "file", Astro.url.pathname trae ".html" durante la
+ * compilación ("/admin.html"). La URL pública no lo lleva, así que se
+ * limpia aquí: si no, la canónica apuntaría a una dirección que el
+ * servidor no sirve.
+ *
+ * Política del sitio: sin barra final, salvo la portada, que es "/".
+ */
+function normalisePath(value: string): string {
+  let result = value;
+
+  if (result.endsWith("/index.html")) {
+    result = result.slice(0, -"index.html".length);
+  } else if (result.endsWith(".html")) {
+    result = result.slice(0, -".html".length);
+  }
+
+  if (result.length > 1 && result.endsWith("/")) {
+    result = result.slice(0, -1);
+  }
+
+  return result === "" ? "/" : result;
+}
+
+const canonical = new URL(normalisePath(path ?? Astro.url.pathname), SITE_URL)
+  .href;
+const fullTitle = title === SITE.name ? title : `${title} · ${SITE.name}`;
+const imageUrl = image ? new URL(image, SITE_URL).href : undefined;
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+
+{
+  noindex && (
+    <meta name="robots" content="noindex, nofollow" />
+  )
+}
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content={SITE.name} />
+<meta property="og:locale" content="es_ES" />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+{imageUrl && <meta property="og:image" content={imageUrl} />}
+
+<meta name="twitter:card" content={imageUrl ? "summary_large_image" : "summary"} />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+{imageUrl && <meta name="twitter:image" content={imageUrl} />}
+
+<!-- Favicon provisional: sustituir junto con el logo definitivo. -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<meta name="theme-color" content="#12171c" />

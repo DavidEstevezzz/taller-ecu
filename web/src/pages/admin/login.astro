@@ -1,0 +1,27 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import LoginForm from "../../components/admin/LoginForm.tsx";
+import BrandMark from "../../components/BrandMark.astro";
+---
+
+<AdminLayout title="Acceso al panel">
+  <div class="flex min-h-dvh items-center justify-center px-4 py-12">
+    <div class="w-full max-w-sm">
+      <div class="mb-8 text-center">
+        <BrandMark href="/" class="justify-center" />
+        <h1 class="mt-6 text-xl font-semibold text-ink">Acceso al panel</h1>
+        <p class="mt-2 text-sm text-ink-muted">
+          Uso interno. Si no tienes cuenta, no hay registro público.
+        </p>
+      </div>
+
+      <div class="border border-border bg-surface p-6">
+        <LoginForm client:load />
+      </div>
+
+      <p class="mt-6 text-center text-xs text-ink-muted">
+        <a href="/" class="underline hover:text-ink">Volver a la web pública</a>
+      </p>
+    </div>
+  </div>
+</AdminLayout>

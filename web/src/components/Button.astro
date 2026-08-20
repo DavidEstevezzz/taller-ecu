@@ -1,0 +1,75 @@
+---
+/**
+ * Botón/enlace de acción. Tokens de componente definidos aquí, derivados
+ * siempre de la capa semántica.
+ */
+interface Props {
+  href?: string;
+  variant?: "primary" | "secondary" | "ghost" | "onAccent" | "onDark";
+  size?: "md" | "lg";
+  class?: string;
+  external?: boolean;
+  [key: string]: unknown;
+}
+
+const {
+  href,
+  variant = "primary",
+  size = "md",
+  class: className = "",
+  external = false,
+  ...rest
+} = Astro.props;
+
+const base =
+  "inline-flex items-center justify-center gap-2 rounded-md font-medium " +
+  "transition-colors duration-(--duration-base) ease-(--ease-out) " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 " +
+  "focus-visible:outline-(--color-focus) cursor-pointer " +
+  "disabled:cursor-not-allowed disabled:opacity-45";
+
+const variants = {
+  primary:
+    "bg-accent text-on-accent hover:bg-accent-hover " +
+    "border border-transparent",
+  secondary:
+    "bg-surface text-ink border border-border-strong " +
+    "hover:border-ink hover:bg-surface-sunken",
+  ghost:
+    "bg-transparent text-ink border border-transparent " +
+    "hover:bg-surface-sunken",
+  // Para usar sobre el fondo cobre de la llamada final.
+  onAccent:
+    "bg-surface text-accent-hover border border-transparent " +
+    "hover:bg-canvas focus-visible:outline-(--color-surface)",
+  // Acción secundaria sobre grafito: el cobre oscuro no contrasta ahí.
+  onDark:
+    "bg-transparent text-ink-inverse border border-border-inverse " +
+    "hover:border-ink-inverse-muted hover:bg-surface-inverse-raised " +
+    "focus-visible:outline-(--color-accent-on-dark)",
+};
+
+// Altura mínima 44px: objetivo táctil según la guía de la skill.
+const sizes = {
+  md: "min-h-11 px-4 text-sm",
+  lg: "min-h-12 px-6 text-base",
+};
+
+const classes = `${base} ${variants[variant]} ${sizes[size]} ${className}`;
+
+const externalAttrs = external
+  ? { target: "_blank", rel: "noopener noreferrer" }
+  : {};
+---
+
+{
+  href ? (
+    <a href={href} class={classes} {...externalAttrs} {...rest}>
+      <slot />
+    </a>
+  ) : (
+    <button class={classes} {...rest}>
+      <slot />
+    </button>
+  )
+}

@@ -1,0 +1,68 @@
+---
+import Seo from "../components/Seo.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import { SITE } from "../config/site";
+import "@fontsource/ibm-plex-sans/400.css";
+import "@fontsource/ibm-plex-sans/500.css";
+import "@fontsource/ibm-plex-sans/600.css";
+import "@fontsource/ibm-plex-sans-condensed/latin-600.css";
+import "@fontsource/ibm-plex-sans-condensed/latin-700.css";
+import "@fontsource/jetbrains-mono/500.css";
+import "../styles/tokens.css";
+
+interface Props {
+  title: string;
+  description?: string;
+  path?: string;
+  /** Páginas que no deben indexarse, como la 404. */
+  noindex?: boolean;
+}
+
+const { title, description, path, noindex = false } = Astro.props;
+---
+
+<!doctype html>
+<html lang={SITE.lang}>
+  <head>
+    <Seo
+      title={title}
+      description={description}
+      path={path}
+      noindex={noindex}
+    />
+
+    <!--
+      Dos interruptores para el movimiento, puestos antes de pintar para que
+      no haya parpadeo. `js` dice que hay JavaScript; `js-anim` dice además
+      que el visitante no ha pedido menos movimiento. Todo lo que arranca
+      oculto se esconde SOLO bajo `js-anim`: sin este script, la página se
+      sirve entera y visible.
+    -->
+    <script is:inline>
+      (function () {
+        var root = document.documentElement;
+        root.classList.add("js");
+
+        try {
+          if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            root.classList.add("js-anim");
+          }
+        } catch (error) {
+          /* Sin matchMedia se queda sin animar, que es el lado seguro. */
+        }
+      })();
+    </script>
+  </head>
+  <body class="flex min-h-dvh flex-col">
+    <SiteHeader />
+    <main id="contenido" class="flex-1">
+      <slot />
+    </main>
+    <SiteFooter />
+
+    <script>
+      import "../scripts/motion";
+    </script>
+  </body>
+</html>

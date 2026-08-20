@@ -1,0 +1,35 @@
+---
+import Seo from "../components/Seo.astro";
+import { SITE } from "../config/site";
+import "@fontsource/ibm-plex-sans/400.css";
+import "@fontsource/ibm-plex-sans/500.css";
+import "@fontsource/ibm-plex-sans/600.css";
+import "@fontsource/jetbrains-mono/500.css";
+import "../styles/tokens.css";
+
+/**
+ * Layout del panel privado.
+ *
+ * Dos garantías:
+ *  1. `noindex, nofollow` siempre. Además queda fuera del sitemap
+ *     (filtro en astro.config.mjs) y bloqueado en robots.txt.
+ *  2. El HTML inicial NO contiene datos: la sesión se comprueba en cliente
+ *     contra la API antes de pintar nada. La seguridad real es la del
+ *     backend; esto solo evita exponer la interfaz.
+ */
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang={SITE.lang}>
+  <head>
+    <Seo title={title} path={Astro.url.pathname} noindex />
+  </head>
+  <body class="min-h-dvh bg-surface-sunken">
+    <slot />
+  </body>
+</html>

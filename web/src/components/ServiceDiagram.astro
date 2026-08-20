@@ -1,0 +1,379 @@
+---
+import { px, py, topFace, sideFaces, box, trace, grid } from "../lib/iso";
+
+/**
+ * Un dibujo por servicio, en la misma proyección que el despiece del hero.
+ *
+ * Existen porque los tres servicios NO son una secuencia: son tres
+ * intervenciones distintas sobre la misma pieza. Numerarlos 01/02/03 decía
+ * algo falso. Tres dibujos distintos dicen lo verdadero de un vistazo:
+ *
+ *   reprogramacion  el software entra en una unidad cerrada
+ *   reparacion-ecu  la unidad se abre y se interviene un componente
+ *   clonacion-ecu   lo que hay dentro de una unidad pasa a otra
+ */
+interface Props {
+  variant: "reprogramacion" | "reparacion-ecu" | "clonacion-ecu";
+  id: string;
+  class?: string;
+}
+
+const { variant, id, class: className = "" } = Astro.props;
+
+/* Medidas comunes: una unidad compacta, con el mismo chaflán del logotipo. */
+const W = 200;
+const D = 124;
+const C = 24;
+const T = 24;
+
+/* Holgura de la placa dentro de la carcasa. */
+const IN = 22;
+
+const NAMES = {
+  reprogramacion: "Reprogramación",
+  "reparacion-ecu": "Reparación de ECU",
+  "clonacion-ecu": "Clonación de ECU",
+} as const;
+
+const DESCRIPTIONS = {
+  reprogramacion:
+    "Dibujo de una centralita cerrada con un plano de datos descendiendo " +
+    "hacia ella: el mapa nuevo entra en la unidad.",
+  "reparacion-ecu":
+    "Dibujo de una centralita abierta, con la tapa retirada a un lado y la " +
+    "placa a la vista; un componente aparece rodeado.",
+  "clonacion-ecu":
+    "Dibujo de dos centralitas equivalentes con el contenido de la primera " +
+    "pasando a la segunda.",
+} as const;
+
+/*
+ * Encuadre propio por variante, todos con la misma proporción 1,4:1.
+ * Un viewBox común dejaba a los tres dibujos flotando en distinta cantidad
+ * de aire, y las tres tarjetas parecían de tamaños distintos.
+ */
+const VIEW_BOX = {
+  reprogramacion: "18 26 501 358",
+  "reparacion-ecu": "2 -6 564 402",
+  "clonacion-ecu": "42 10 524 374",
+} as const;
+
+const titleId = `${id}-t`;
+const descId = `${id}-d`;
+---
+
+<svg
+  viewBox={VIEW_BOX[variant]}
+  class={`svc-diagram ${className}`}
+  role="img"
+  aria-labelledby={`${titleId} ${descId}`}
+  fill="none"
+  data-variant={variant}
+>
+  <title id={titleId}>{`Diagrama: ${NAMES[variant]}`}</title>
+  <desc id={descId}>{DESCRIPTIONS[variant]}</desc>
+
+  <defs>
+    <marker
+      id={`${id}-head`}
+      viewBox="0 0 12 12"
+      refX="9"
+      refY="6"
+      markerWidth="7"
+      markerHeight="7"
+      orient="auto-start-reverse"
+    >
+      <path d="M 1 1 L 10 6 L 1 11 z" class="arrow-head" />
+    </marker>
+  </defs>
+
+  {
+    variant === "reprogramacion" && (
+      <>
+        {/* Unidad cerrada, abajo */}
+        <g class="part" style="--step: 0">
+          {sideFaces(230, 200, W, D, C, T).map((d) => (
+            <path d={d} class="face-side" />
+          ))}
+          <path d={topFace(230, 200, W, D, C)} class="face-top" />
+          <path d={trace(230, 200, 40, 34, [[1, 130]])} class="etch" />
+          <path d={trace(230, 200, 40, 58, [[1, 130]])} class="etch" />
+        </g>
+
+        {/* El mapa que entra: retícula de cobre, sin un solo valor escrito */}
+        <g class="part" style="--step: 2">
+          <path d={topFace(230, 44, W - 36, D - 36, 0)} class="soft-fill" />
+          {grid(230, 44, W - 36, D - 36, 7, 5).map((d) => (
+            <path d={d} class="soft-line" />
+          ))}
+          <path d={topFace(230, 44, W - 36, D - 36, 0)} class="soft-edge" />
+        </g>
+
+        {/* Flecha de escritura */}
+        <g class="part" style="--step: 3">
+          <path
+            d="M 268 184 L 268 252"
+            class="arrow"
+            marker-end={`url(#${id}-head)`}
+          />
+        </g>
+      </>
+    )
+  }
+
+  {
+    variant === "reparacion-ecu" && (
+      <>
+        {/* Tapa retirada a un lado */}
+        <g class="part" style="--step: 2">
+          {sideFaces(352, 8, W, D, C, 14).map((d) => (
+            <path d={d} class="face-side" />
+          ))}
+          <path d={topFace(352, 8, W, D, C)} class="face-top" />
+          <path d={trace(352, 8, 40, 36, [[1, 130]])} class="etch" />
+        </g>
+
+        {/* Carcasa abierta con la placa dentro */}
+        <g class="part" style="--step: 0">
+          {sideFaces(140, 196, W, D, C, T).map((d) => (
+            <path d={d} class="face-side" />
+          ))}
+          <path d={topFace(140, 196, W, D, C)} class="face-top" />
+          <path
+            d={topFace(px(140, 12, 12), py(196, 12, 12), W - 24, D - 24, 0)}
+            class="face-recess"
+          />
+        </g>
+
+        <g class="part" style="--step: 1">
+          {sideFaces(140, 196 + IN, W - IN * 2, D - IN * 2, 0, 6).map((d) => (
+            <path d={d} class="board-side" />
+          ))}
+          <path
+            d={topFace(140, 196 + IN, W - IN * 2, D - IN * 2, 0)}
+            class="board-top"
+          />
+
+          {[
+            trace(140, 218, 30, 22, [
+              [1, 44],
+              [2, 30],
+            ]),
+            trace(140, 218, 96, 58, [
+              [2, -28],
+              [1, 46],
+            ]),
+            trace(140, 218, 60, 62, [[1, 70]]),
+          ].map((d) => (
+            <path d={d} class="board-trace" />
+          ))}
+
+          {[
+            box(140, 218, 22, 34, 34, 24, 8),
+            box(140, 218, 108, 20, 30, 26, 8),
+            box(140, 218, 74, 22, 40, 32, 11),
+          ].map((c) => (
+            <g>
+              {c.sides.map((d) => (
+                <path d={d} class="part-side" />
+              ))}
+              <path d={c.top} class="part-top" />
+            </g>
+          ))}
+        </g>
+
+        {/* El componente que se interviene, rodeado. Sin línea de guía: no
+            había ningún rótulo al final y el trazo moría en el aire. */}
+        <g class="part" style="--step: 3">
+          <ellipse
+            cx={px(140, 94, 38)}
+            cy={py(218, 94, 38)}
+            rx="46"
+            ry="30"
+            class="ring"
+          />
+        </g>
+      </>
+    )
+  }
+
+  {
+    variant === "clonacion-ecu" && (
+      <>
+        {/* Unidad de origen */}
+        <g class="part" style="--step: 0">
+          {sideFaces(150, 208, 150, 92, 18, 20).map((d) => (
+            <path d={d} class="face-side" />
+          ))}
+          <path d={topFace(150, 208, 150, 92, 18)} class="face-top" />
+          <path d={trace(150, 208, 30, 28, [[1, 90]])} class="etch" />
+        </g>
+
+        {/* Unidad de recambio, equivalente */}
+        <g class="part" style="--step: 1">
+          {sideFaces(400, 208, 150, 92, 18, 20).map((d) => (
+            <path d={d} class="face-side" />
+          ))}
+          <path d={topFace(400, 208, 150, 92, 18)} class="face-top" />
+          <path d={trace(400, 208, 30, 28, [[1, 90]])} class="etch" />
+        </g>
+
+        {/* Lo que se copia: la misma configuración, entre las dos */}
+        <g class="part" style="--step: 2">
+          <path d={topFace(258, 46, 110, 68, 0)} class="soft-fill" />
+          {grid(258, 46, 110, 68, 5, 4).map((d) => (
+            <path d={d} class="soft-line" />
+          ))}
+          <path d={topFace(258, 46, 110, 68, 0)} class="soft-edge" />
+        </g>
+
+        <g class="part" style="--step: 3">
+          <path
+            d="M 190 238 L 190 148 L 246 118"
+            class="arrow"
+            marker-end={`url(#${id}-head)`}
+          />
+          <path
+            d="M 352 122 L 420 156 L 420 238"
+            class="arrow"
+            marker-end={`url(#${id}-head)`}
+          />
+        </g>
+      </>
+    )
+  }
+</svg>
+
+<style>
+  .svc-diagram {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* Exactamente los mismos materiales que el despiece del hero: los tres
+     dibujos son ventanas al mismo banco de trabajo, no una segunda paleta. */
+  .face-top {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-graphite-500);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  .face-side {
+    fill: var(--jm-graphite-800);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  .face-recess {
+    fill: var(--jm-graphite-850);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.25;
+  }
+
+  .etch {
+    stroke: var(--jm-graphite-600);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .soft-fill {
+    fill: color-mix(in srgb, var(--jm-copper-500) 10%, transparent);
+  }
+
+  .soft-line {
+    stroke: color-mix(in srgb, var(--jm-copper-300) 42%, transparent);
+    stroke-width: 1;
+  }
+
+  .soft-edge {
+    fill: none;
+    stroke: var(--jm-copper-400);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  .board-top {
+    fill: var(--jm-graphite-850);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+
+  .board-side {
+    fill: var(--jm-graphite-950);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .board-trace {
+    stroke: var(--jm-copper-500);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .part-top {
+    fill: var(--jm-graphite-600);
+    stroke: var(--jm-graphite-400);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .part-side {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-graphite-500);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .arrow {
+    stroke: var(--jm-copper-400);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .arrow-head {
+    fill: var(--jm-copper-400);
+    stroke: none;
+  }
+
+  .ring {
+    stroke: var(--jm-copper-400);
+    stroke-width: 2;
+    stroke-dasharray: 6 5;
+    fill: none;
+  }
+
+  .leader {
+    stroke: var(--jm-copper-400);
+    stroke-width: 1.5;
+  }
+
+  .leader-pad {
+    fill: var(--jm-copper-400);
+  }
+
+  /*
+   * Las piezas se montan cuando el dibujo entra en pantalla. El interruptor
+   * `.is-visible` lo pone el script de revelado; sin JavaScript, y con
+   * movimiento reducido, el dibujo se sirve ya montado.
+   */
+  :global(.js-anim) .part {
+    opacity: 0;
+    transform: translateY(16px);
+    transition:
+      opacity var(--duration-reveal) var(--ease-settle),
+      transform var(--duration-reveal) var(--ease-settle);
+    transition-delay: calc(var(--step) * 110ms);
+  }
+
+  :global(.js-anim) .svc-diagram.is-visible .part {
+    opacity: 1;
+    transform: none;
+  }
+</style>

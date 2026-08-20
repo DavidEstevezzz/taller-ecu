@@ -1,0 +1,166 @@
+---
+import BrandMark from "./BrandMark.astro";
+import WhatsAppLink from "./WhatsAppLink.astro";
+import { SERVICES } from "../config/site";
+
+const path = Astro.url.pathname;
+
+/*
+ * La cabecera solo enseña destinos que son una página pública de verdad.
+ *
+ * «Cómo trabajamos» y «Preguntas» se han quitado: eran anclas dentro de
+ * /servicios disfrazadas de páginas, y competían con ellas en la barra
+ * principal. Siguen alcanzables desde el pie y desde el propio contenido.
+ *
+ * De los tres servicios, solo Reprogramación tiene página propia, así que solo
+ * él aparece aquí; los otros dos son secciones de /servicios. Tampoco hay
+ * desplegable: con dos destinos reales, un menú que se abre para enseñar uno
+ * solo es peor que una lista plana. Cuando existan las otras dos páginas se
+ * replantea.
+ *
+ * "Trabajos" existe en la arquitectura pero NO se muestra hasta que haya
+ * casos reales autorizados. Ver docs/site-architecture.md §4.
+ */
+const links = [
+  { href: "/servicios", label: "Servicios" },
+  ...SERVICES.filter((service) => service.page !== null).map((service) => ({
+    href: service.page!,
+    label: service.name,
+  })),
+] as const;
+
+/*
+ * Coincidencia exacta y nada más. Con `startsWith` la página de reprogramación
+ * marcaba «Servicios» y «Reprogramación» a la vez, y `aria-current="page"`
+ * significa esta página, no esta sección.
+ */
+function isCurrent(href: string): boolean {
+  if (href.includes("#")) {
+    return false;
+  }
+
+  return path === href || path === `${href}/`;
+}
+---
+
+<!--
+  La cabecera va siempre en grafito, no en papel.
+
+  Dos motivos, y ninguno es estético a secas: los heros de las dos páginas
+  públicas son oscuros, así que una barra clara encima partía la composición
+  en dos justo en el primer pantallazo; y sobre grafito la marca —cobre sobre
+  oscuro— tiene la presencia que le faltaba. Con el pie también oscuro, la
+  página queda enmarcada arriba y abajo, como el frontal de un equipo.
+-->
+<header
+  class="on-dark sticky top-0 z-(--z-header) border-b border-border-inverse bg-surface-bench/92 backdrop-blur-md"
+>
+  <a
+    href="#contenido"
+    class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-(--z-modal) focus:rounded-md focus:bg-surface focus:px-4 focus:py-2 focus:text-sm focus:text-ink focus:shadow-md"
+  >
+    Saltar al contenido
+  </a>
+
+  <div
+    class="mx-auto flex max-w-(--container-wide) items-center justify-between gap-6 px-5 py-4 sm:px-8 lg:px-10 xl:px-14"
+  >
+    <BrandMark tone="inverse" />
+
+    <nav aria-label="Principal" class="hidden items-center gap-1 md:flex">
+      {
+        links.map((link) => (
+          <a
+            href={link.href}
+            aria-current={isCurrent(link.href) ? "page" : undefined}
+            class="relative rounded-md px-3.5 py-2.5 text-sm text-ink-inverse-muted transition-colors duration-(--duration-base) hover:text-ink-inverse aria-[current=page]:font-medium aria-[current=page]:text-ink-inverse"
+          >
+            {link.label}
+            {/* La página actual se marca con un pad de cobre, no con un fondo */}
+            {isCurrent(link.href) && (
+              <span
+                class="absolute inset-x-3.5 -bottom-px h-0.5 bg-accent-on-dark"
+                aria-hidden="true"
+              />
+            )}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <WhatsAppLink size="md" label="WhatsApp" class="hidden sm:inline-flex" />
+
+      <!--
+        Navegación móvil con <details>: funciona sin JavaScript, es accesible
+        por teclado de serie y no necesita ninguna librería.
+      -->
+      <details class="relative md:hidden">
+        <summary
+          class="flex min-h-11 min-w-11 cursor-pointer list-none items-center justify-center rounded-md border border-border-inverse px-3 text-sm text-ink-inverse marker:hidden [&::-webkit-details-marker]:hidden"
+          aria-label="Abrir menú de navegación"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            class="size-5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            aria-hidden="true"
+          >
+            <path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"></path>
+          </svg>
+        </summary>
+
+        <nav
+          aria-label="Principal (móvil)"
+          class="absolute right-0 mt-3 w-64 rounded-md border border-border-inverse bg-surface-inverse p-2 shadow-lg"
+        >
+          {
+            links.map((link) => (
+              <a
+                href={link.href}
+                aria-current={isCurrent(link.href) ? "page" : undefined}
+                class="block rounded-md px-3 py-3 text-sm text-ink-inverse hover:bg-surface-inverse-raised aria-[current=page]:font-medium"
+              >
+                {link.label}
+              </a>
+            ))
+          }
+
+          <div class="my-2 h-px bg-border-inverse" role="presentation"></div>
+
+          <p class="px-3 pb-1 pt-2 label-technical text-ink-subtle">
+            Dentro de servicios
+          </p>
+
+          {
+            SERVICES.filter((service) => service.page === null).map((service) => (
+              <a
+                href={service.href}
+                class="block rounded-md px-3 py-3 text-sm text-ink-inverse-muted hover:bg-surface-inverse-raised hover:text-ink-inverse"
+              >
+                {service.name}
+              </a>
+            ))
+          }
+
+          <a
+            href="/servicios#proceso"
+            class="block rounded-md px-3 py-3 text-sm text-ink-inverse-muted hover:bg-surface-inverse-raised hover:text-ink-inverse"
+          >
+            Cómo trabajamos
+          </a>
+          <a
+            href="/servicios#preguntas"
+            class="block rounded-md px-3 py-3 text-sm text-ink-inverse-muted hover:bg-surface-inverse-raised hover:text-ink-inverse"
+          >
+            Preguntas habituales
+          </a>
+
+          <WhatsAppLink class="mt-2 w-full" label="WhatsApp" />
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>

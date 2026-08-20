@@ -1,0 +1,418 @@
+---
+import { Image } from "astro:assets";
+
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import WhatsAppLink from "../../components/WhatsAppLink.astro";
+import FinalCta from "../../components/FinalCta.astro";
+import MapLayer from "../../components/MapLayer.astro";
+import PowerConfigurator from "../../components/PowerConfigurator.astro";
+import {
+  SERVICES,
+  SERVICE_DETAILS,
+  REPRO_INTAKE,
+  REPRO_MESSAGE,
+  LEGAL_NOTICE,
+} from "../../config/site";
+import { TUNING_SHOP } from "../../config/embeds";
+
+import bayImage from "../../assets/photos/equipo-diagnosis-motor.jpg";
+
+const detail = SERVICE_DETAILS.reprogramacion;
+
+/** Enlace lateral a los otros dos servicios (docs/site-architecture.md §6). */
+const OTHERS = SERVICES.filter((service) => service.slug !== "reprogramacion");
+
+/* Qué es y qué no es. La columna de la derecha existe porque las confusiones
+   habituales son tan informativas como la definición. */
+const IS_NOT = [
+  {
+    title: "No es una caja intermedia",
+    body: "No se intercala ningún módulo entre los sensores y la centralita. Se trabaja sobre el software que la unidad ya tiene.",
+  },
+  {
+    title: "No es un valor de catálogo",
+    body: "Dos vehículos con el mismo motor pueden admitir cosas distintas según su estado, su historial y su propia unidad.",
+  },
+  {
+    title: "No borra lo que había",
+    body: "Se parte de la gestión original del fabricante y se ajusta. No es sustituirla por un mapa genérico.",
+  },
+];
+---
+
+<PublicLayout
+  title="Reprogramación de centralitas ECU"
+  description="Qué es una reprogramación de centralita, cuándo tiene sentido y qué hace falta para valorarla. Con un configurador orientativo por marca y motorización."
+  path="/servicios/reprogramacion"
+>
+  <!-- ═══════════════════════════════════════════════════════════════
+       HERO — el banco de trabajo, con la capa de software abierta
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="on-dark relative overflow-hidden bg-surface-bench"
+    aria-labelledby="titulo-repro"
+  >
+    <div
+      class="grid-technical-inverse absolute inset-0 opacity-25"
+      aria-hidden="true"
+    >
+    </div>
+    <div
+      class="pointer-events-none absolute inset-0 bg-[radial-gradient(85%_110%_at_12%_10%,transparent_25%,var(--color-surface-bench)_100%)]"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div
+      class="relative mx-auto max-w-(--container-wide) px-5 pb-16 pt-8 sm:px-8 lg:px-10 lg:pb-20 lg:pt-10 xl:px-14"
+    >
+      <nav aria-label="Migas de pan">
+        <ol class="flex flex-wrap items-center gap-2.5 text-sm text-ink-inverse-muted">
+          <li>
+            <a href="/" class="underline-offset-4 hover:text-accent-on-dark hover:underline">
+              Inicio
+            </a>
+          </li>
+          <li aria-hidden="true" class="text-ink-subtle">/</li>
+          <li>
+            <a
+              href="/servicios"
+              class="underline-offset-4 hover:text-accent-on-dark hover:underline"
+            >
+              Servicios
+            </a>
+          </li>
+          <li aria-hidden="true" class="text-ink-subtle">/</li>
+          <li aria-current="page" class="text-ink-inverse">Reprogramación</li>
+        </ol>
+      </nav>
+
+      <div
+        class="mt-12 grid items-center gap-12 lg:grid-cols-[minmax(0,52fr)_minmax(0,48fr)] lg:gap-10"
+      >
+        <div>
+          <p class="label-technical text-accent-on-dark">Capa de software</p>
+
+          <h1
+            id="titulo-repro"
+            class="display mt-5 text-display text-ink-inverse text-balance"
+          >
+            Reprogramación de centralita
+          </h1>
+
+          <p class="mt-7 max-w-xl text-lead text-ink-inverse-muted">
+            Se ajusta el mapa que gobierna la gestión del motor, sobre el
+            software original de la propia unidad. Sin abrir la centralita y sin
+            intercalar nada entre ella y el vehículo.
+          </p>
+
+          <div class="mt-10 flex flex-wrap items-center gap-3">
+            <a
+              href="#configurador"
+              class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent px-6 text-base font-medium text-on-accent transition-colors duration-(--duration-base) hover:bg-accent-hover"
+            >
+              Ver cifras orientativas
+              <span aria-hidden="true">↓</span>
+            </a>
+            <WhatsAppLink
+              size="lg"
+              variant="onDark"
+              label="Consultar mi caso"
+              message={REPRO_MESSAGE}
+            />
+          </div>
+        </div>
+
+        <div>
+          <MapLayer id="repro-map" class="mx-auto max-w-[38rem] lg:max-w-none" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       QUÉ ES
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="bg-canvas" aria-labelledby="titulo-que-es">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="reveal lg:col-span-5">
+          <p class="label-technical text-accent">Qué es</p>
+          <h2
+            id="titulo-que-es"
+            class="display mt-5 text-h2 text-ink text-balance"
+          >
+            Una centralita lleva dentro un mapa, y el mapa se puede ajustar.
+          </h2>
+        </div>
+
+        <div class="lg:col-span-7">
+          <div class="reveal max-w-(--container-prose) space-y-5 text-lead text-ink-muted">
+            <p>
+              La centralita decide, en cada instante, cuánto combustible inyecta,
+              con qué avance y con qué presión de soplado, entre otras cosas. Esas
+              decisiones no son fórmulas sueltas: salen de unas tablas de valores
+              —el mapa— que el fabricante calibró para un uso, un mercado y unas
+              condiciones concretas.
+            </p>
+            <p>
+              Reprogramar es <strong class="font-medium text-ink"
+                >modificar zonas de ese mapa</strong
+              > sobre la propia calibración original, y volver a escribirlo en la
+              unidad. La centralita sigue siendo la suya y sigue gobernando el motor
+              como siempre; lo que cambia es cómo responde en las zonas que se han
+              tocado.
+            </p>
+          </div>
+
+          <dl class="mt-14 grid gap-x-12 gap-y-9 sm:grid-cols-3">
+            {
+              IS_NOT.map((item, i) => (
+                <div
+                  class="reveal border-t border-border pt-5"
+                  style={`--reveal-delay: ${i * 80}ms`}
+                >
+                  <span
+                    class="block h-0.5 w-8 -translate-y-[calc(1.25rem+1px)] bg-accent"
+                    aria-hidden="true"
+                  />
+                  <dt class="display text-h3 text-ink">{item.title}</dt>
+                  <dd class="mt-2.5 text-sm leading-relaxed text-ink-muted">
+                    {item.body}
+                  </dd>
+                </div>
+              ))
+            }
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CUÁNDO TIENE SENTIDO — con la fotografía a sangre
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="border-y border-border bg-surface"
+    aria-labelledby="titulo-cuando"
+  >
+    <div class="grid items-stretch lg:grid-cols-2">
+      <div
+        class="reveal flex flex-col justify-center px-5 py-16 sm:px-8 lg:py-24 lg:pl-[max(2.5rem,calc((100vw-90rem)/2+3.5rem))] lg:pr-14 xl:pl-[max(3.5rem,calc((100vw-90rem)/2+3.5rem))]"
+      >
+        <p class="label-technical text-accent">Cuándo tiene sentido</p>
+        <h2
+          id="titulo-cuando"
+          class="display mt-5 max-w-xl text-h2 text-ink text-balance"
+        >
+          Cuándo puede ayudarte, y qué conviene saber antes.
+        </h2>
+
+        <ul class="mt-9 space-y-4">
+          {
+            detail.when.map((item) => (
+              <li class="flex gap-3.5 text-ink">
+                <span
+                  class="mt-2.5 h-px w-4 shrink-0 bg-accent"
+                  aria-hidden="true"
+                />
+                <span class="leading-relaxed">{item}</span>
+              </li>
+            ))
+          }
+        </ul>
+
+        <p
+          class="mt-9 max-w-(--container-prose) border-l-2 border-border-strong pl-5 text-sm leading-relaxed text-ink-muted"
+        >
+          El punto de partida es el vehículo, no el catálogo: su estado
+          mecánico, su mantenimiento y lo que se le haya hecho antes deciden
+          qué es razonable. Por eso ninguna cifra vista de antemano —tampoco las
+          del configurador de aquí abajo— vale como respuesta sobre un coche
+          concreto.
+        </p>
+      </div>
+
+      <div class="relative min-h-[20rem] lg:min-h-[32rem]">
+        <Image
+          src={bayImage}
+          alt="Equipo de diagnosis conectado y apoyado sobre el vano motor de un vehículo en el taller"
+          widths={[720, 960, 1400]}
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          class="absolute inset-0 h-full w-full object-cover"
+          loading="lazy"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EL CONFIGURADOR — el momento protagonista de la página
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    id="configurador"
+    class="on-dark relative scroll-mt-24 overflow-hidden bg-surface-inverse"
+    aria-labelledby="titulo-configurador"
+  >
+    <div
+      class="grid-technical-inverse absolute inset-0 opacity-20"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div
+      class="relative mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="reveal max-w-3xl">
+        <p class="label-technical text-accent-on-dark">Antes de escribir</p>
+        <h2
+          id="titulo-configurador"
+          class="display mt-5 text-h2 text-ink-inverse text-balance"
+        >
+          Mira qué se maneja para tu motorización.
+        </h2>
+        <p class="mt-6 max-w-(--container-prose) text-lead text-ink-inverse-muted">
+          Este listado lo mantiene {TUNING_SHOP.provider} y recoge cifras de
+          origen y estimadas <strong class="font-medium text-ink-inverse"
+            >por motorización, en general</strong
+          >. Es un punto de partida para la conversación, no una respuesta sobre
+          tu vehículo.
+        </p>
+      </div>
+
+      <div class="reveal mt-12">
+        <PowerConfigurator headingId="titulo-configurador-caja" />
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DE LA CIFRA GENÉRICA A TU VEHÍCULO
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="bg-canvas" aria-labelledby="titulo-confirmar">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="reveal lg:col-span-4">
+          <p class="label-technical text-accent">El siguiente paso</p>
+          <h2
+            id="titulo-confirmar"
+            class="display mt-5 text-h2 text-ink text-balance"
+          >
+            De una cifra genérica a una respuesta sobre tu coche.
+          </h2>
+          <p class="mt-6 text-lead text-ink-muted">
+            El configurador no sabe nada de tu vehículo, y nosotros tampoco
+            hasta que nos lo cuentes. Con estos cinco datos podemos decirte qué
+            se puede hacer con el tuyo.
+          </p>
+
+          <WhatsAppLink
+            class="mt-9"
+            size="lg"
+            label="Abrir WhatsApp con la plantilla"
+            message={REPRO_MESSAGE}
+          />
+
+          <p class="mt-4 text-xs leading-relaxed text-ink-muted">
+            La plantilla va vacía a propósito: el configurador es de otra web y
+            no nos comunica lo que has seleccionado, así que los datos los
+            escribes tú.
+          </p>
+        </div>
+
+        <ul
+          class="grid gap-px border border-border bg-border sm:grid-cols-2 lg:col-span-8"
+        >
+          {
+            REPRO_INTAKE.map((item, i) => (
+              <li
+                class="reveal flex gap-5 bg-surface p-7 lg:p-8"
+                style={`--reveal-delay: ${i * 70}ms`}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  class="mt-0.5 size-5 shrink-0 text-accent"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.75"
+                  aria-hidden="true"
+                >
+                  <rect x="3.5" y="3.5" width="17" height="17" rx="1" />
+                  <path
+                    d="m8 12 3 3 5-6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <div>
+                  <h3 class="display text-h3 text-ink">{item.label}</h3>
+                  <p class="mt-2.5 text-sm leading-relaxed text-ink-muted">
+                    {item.body}
+                  </p>
+                </div>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <p
+        class="reveal mt-12 max-w-(--container-prose) text-xs leading-relaxed text-ink-muted"
+      >
+        {LEGAL_NOTICE}
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       LOS OTROS DOS SERVICIOS — enlace lateral, no callejón sin salida
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="border-t border-border bg-surface-sunken"
+    aria-labelledby="titulo-otros"
+  >
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-16 sm:px-8 lg:px-10 lg:py-20 xl:px-14"
+    >
+      <h2 id="titulo-otros" class="display text-h3 text-ink">
+        ¿No es esto lo que necesitas?
+      </h2>
+
+      <div class="mt-8 grid gap-px border border-border bg-border sm:grid-cols-2">
+        {
+          OTHERS.map((service) => (
+            <a
+              href={service.href}
+              class="group flex flex-col bg-surface p-7 transition-colors duration-(--duration-base) hover:bg-canvas lg:p-8"
+            >
+              <span class="label-technical text-accent">{service.depth}</span>
+              <span class="display mt-3 text-h3 text-ink">{service.name}</span>
+              <span class="mt-3 text-sm leading-relaxed text-ink-muted">
+                {service.description}
+              </span>
+              <span class="mt-5 inline-flex items-center gap-2 text-sm font-medium text-accent">
+                Ver en la página de servicios
+                <span
+                  class="transition-transform duration-(--duration-base) group-hover:translate-x-1"
+                  aria-hidden="true"
+                >
+                  →
+                </span>
+              </span>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <FinalCta
+    title="¿Quieres saber qué admite tu vehículo?"
+    body="Cuéntanos marca, modelo, motor y cómo lo usas. Te decimos qué se puede hacer y qué no, sin prometerte una cifra de antemano."
+    message={REPRO_MESSAGE}
+  />
+</PublicLayout>

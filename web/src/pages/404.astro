@@ -1,0 +1,48 @@
+---
+import PublicLayout from "../layouts/PublicLayout.astro";
+import Button from "../components/Button.astro";
+import WhatsAppLink from "../components/WhatsAppLink.astro";
+import { SERVICES } from "../config/site";
+---
+
+<PublicLayout
+  title="Página no encontrada"
+  description="La página que buscas no existe o ha cambiado de dirección."
+  noindex
+>
+  <section class="mx-auto max-w-(--container-wide) px-5 py-24 sm:px-8 lg:px-10 lg:py-32 xl:px-14">
+    <p class="label-technical text-accent">Error 404</p>
+
+    <h1 class="display mt-5 text-display text-ink text-balance">
+      Esta página no existe.
+    </h1>
+
+    <p class="mt-6 max-w-(--container-prose) text-lead text-ink-muted">
+      Puede que la dirección haya cambiado o que el enlace esté mal escrito.
+      Desde aquí puedes seguir:
+    </p>
+
+    <div class="mt-10 flex flex-wrap gap-3">
+      <Button href="/" size="lg">Ir al inicio</Button>
+      <WhatsAppLink variant="secondary" size="lg" label="Preguntar por WhatsApp" />
+    </div>
+
+    <nav aria-label="Servicios" class="mt-16 border-t border-border pt-8">
+      <h2 class="label-technical text-ink-muted">Servicios</h2>
+      <ul class="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+        {
+          SERVICES.map((service) => (
+            <li>
+              <a
+                href={service.href}
+                class="text-sm text-accent hover:text-accent-hover"
+              >
+                {service.name}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </section>
+</PublicLayout>

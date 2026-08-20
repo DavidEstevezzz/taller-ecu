@@ -1,0 +1,495 @@
+---
+/**
+ * Despiece de una centralita — la firma visual del sitio.
+ *
+ * Es un dibujo, no una fotografía ni un dato: proyección dimétrica 2:1
+ * («isométrica» de videojuego), con la geometría calculada aquí arriba en
+ * lugar de escrita a mano, para que las caras encajen de verdad.
+ *
+ * Dice lo que ninguna foto de banco de imágenes puede decir de este taller:
+ * que la pieza tiene profundidad y que se trabaja en todas sus capas, en vez
+ * de sustituir la caja entera.
+ *
+ * Las cuatro capas son las de una centralita real —tapa, software, placa,
+ * carcasa con conector—. No hay ninguna cifra, ninguna medida ni ningún
+ * código: sería inventarse datos técnicos.
+ */
+import { px, py, topFace, sideFaces, box, trace, grid } from "../lib/iso";
+
+interface Props {
+  class?: string;
+  /** Identificador único: title y desc necesitan uno propio por página. */
+  id?: string;
+}
+
+const { class: className = "", id = "ecu" } = Astro.props;
+
+/* ── Medidas ──────────────────────────────────────────────── */
+const OX = 300; // origen horizontal común a todas las capas
+const W = 430; // arista larga de la carcasa
+const D = 268; // arista corta
+const C = 54; // chaflán
+
+// La placa va encajada dentro de la carcasa: 35 unidades de holgura por lado.
+const INSET = 35;
+const BW = W - INSET * 2;
+const BD = D - INSET * 2;
+
+// Alturas de despiece. Se separan de arriba abajo: tapa, software, placa, base.
+const Y_LID = 62;
+const Y_SOFT = 206;
+const Y_BOARD = 330;
+const Y_BASE = 452;
+
+const boardOy = Y_BOARD + INSET;
+const softOy = Y_SOFT + INSET;
+
+const lidSides = sideFaces(OX, Y_LID, W, D, C, 15);
+const baseSides = sideFaces(OX, Y_BASE, W, D, C, 36);
+const boardSides = sideFaces(OX, boardOy, BW, BD, 0, 7);
+
+/* Componentes sobre la placa. El grande del centro es el microcontrolador;
+   los demás, integrados y condensadores. Ninguno lleva serigrafía inventada. */
+const mcu = box(OX, boardOy, 118, 62, 108, 74, 13);
+const chipA = box(OX, boardOy, 30, 34, 52, 40, 9);
+const chipB = box(OX, boardOy, 254, 40, 62, 34, 9);
+const chipC = box(OX, boardOy, 44, 130, 74, 30, 8);
+const capA = box(OX, boardOy, 258, 132, 26, 26, 22);
+const capB = box(OX, boardOy, 296, 118, 22, 22, 18);
+
+/* Pistas de cobre. Recorridos ortogonales sobre los ejes del tablero, como
+   los de una placa real: nunca en diagonal libre. */
+const traces = [
+  trace(OX, boardOy, 82, 78, [
+    [1, -30],
+    [2, 46],
+    [1, -22],
+  ]),
+  trace(OX, boardOy, 226, 84, [
+    [1, 40],
+    [2, -32],
+    [1, 26],
+  ]),
+  trace(OX, boardOy, 168, 136, [
+    [2, 44],
+    [1, 92],
+    [2, -30],
+  ]),
+  trace(OX, boardOy, 140, 62, [
+    [2, -34],
+    [1, -70],
+  ]),
+  trace(OX, boardOy, 208, 62, [
+    [2, -30],
+    [1, 96],
+    [2, 24],
+  ]),
+];
+
+/* Pads de contacto al borde de la placa. */
+const pads = [
+  [46, 176],
+  [70, 176],
+  [94, 176],
+  [118, 176],
+  [142, 176],
+  [166, 176],
+];
+
+/* Retícula del plano de software: un mapa de calibración dibujado como lo que
+   es, una tabla de valores, sin escribir ningún valor dentro. */
+const softLines = grid(OX, softOy, BW, BD, 8, 6);
+
+/* Bloque del conector, sobre la carcasa, junto al chaflán. */
+const connector = box(OX, Y_BASE, 300, 96, 96, 92, 40);
+const connectorPins = Array.from({ length: 5 }, (_, i) => i);
+
+/* ── Rótulos ──────────────────────────────────────────────────
+   Tres capas nombradas. Sin numerar: son profundidades, no pasos. */
+const LABEL_X = 782;
+const LEADER_END = 762;
+
+const labels = [
+  {
+    key: "software",
+    text: "Software",
+    note: "El mapa del motor",
+    from: [px(OX, BW, 0), py(softOy, BW, 0)] as const,
+  },
+  {
+    key: "placa",
+    text: "Placa",
+    note: "Componentes y pistas",
+    from: [px(OX, BW, 0), py(boardOy, BW, 0)] as const,
+  },
+  {
+    key: "carcasa",
+    text: "Carcasa",
+    note: "La unidad y el conector",
+    from: [px(OX, W, C), py(Y_BASE, W, C)] as const,
+  },
+];
+
+const titleId = `${id}-title`;
+const descId = `${id}-desc`;
+---
+
+<div class={`ecu-stage ${className}`} data-ecu-stage>
+  <svg
+    viewBox="0 0 952 880"
+    class="ecu-svg"
+    role="img"
+    aria-labelledby={`${titleId} ${descId}`}
+    fill="none"
+  >
+    <title id={titleId}>Despiece de una centralita</title>
+    <desc id={descId}>
+      Dibujo técnico de una centralita separada en sus capas: la tapa, el
+      software que contiene, la placa de circuito con sus componentes y pistas,
+      y la carcasa con el conector.
+    </desc>
+
+    <!-- ── Tapa ── -->
+    <g class="ecu-layer" style="--from-y: 190px; --depth: 1.35; --step: 3">
+      <g class="ecu-parallax">
+        {lidSides.map((d) => <path d={d} class="face-side" />)}
+        <path d={topFace(OX, Y_LID, W, D, C)} class="face-top" />
+        <!-- Nervios de refuerzo y hueco de la placa de características -->
+        <path
+          d={trace(OX, Y_LID, 60, 46, [[1, 310]])}
+          class="etch"
+        />
+        <path
+          d={trace(OX, Y_LID, 60, 78, [[1, 310]])}
+          class="etch"
+        />
+        <path d={topFace(px(OX, 92, 150), py(Y_LID, 92, 150), 120, 62, 0)} class="etch-plate" />
+      </g>
+    </g>
+
+    <!-- ── Software: no es una pieza, es una retícula ── -->
+    <g class="ecu-layer" style="--from-y: 84px; --depth: 1; --step: 2">
+      <g class="ecu-parallax">
+        <path d={topFace(OX, softOy, BW, BD, 0)} class="soft-fill" />
+        {softLines.map((d) => <path d={d} class="soft-line" />)}
+        <path d={topFace(OX, softOy, BW, BD, 0)} class="soft-edge" />
+      </g>
+    </g>
+
+    <!-- ── Placa ── -->
+    <g class="ecu-layer" style="--from-y: -26px; --depth: 0.6; --step: 1">
+      <g class="ecu-parallax">
+        {boardSides.map((d) => <path d={d} class="board-side" />)}
+        <path d={topFace(OX, boardOy, BW, BD, 0)} class="board-top" />
+
+        {traces.map((d) => <path d={d} class="board-trace" />)}
+        {
+          pads.map(([u, v]) => (
+            <ellipse
+              cx={px(OX, u!, v!)}
+              cy={py(boardOy, u!, v!)}
+              rx="7"
+              ry="3.5"
+              class="board-pad"
+            />
+          ))
+        }
+
+        {
+          [chipA, chipB, chipC, capA, capB, mcu].map((c) => (
+            <g>
+              {c.sides.map((d) => (
+                <path d={d} class="part-side" />
+              ))}
+              <path d={c.top} class="part-top" />
+            </g>
+          ))
+        }
+
+        <!-- Patillas del microcontrolador: lo que se suelda y lo que se repara -->
+        {
+          Array.from({ length: 6 }, (_, i) => {
+            const u = 128 + i * 18;
+            return (
+              <path
+                d={trace(OX, boardOy, u, 62, [[2, -14]])}
+                class="part-pin"
+              />
+            );
+          })
+        }
+        {
+          Array.from({ length: 6 }, (_, i) => {
+            const v = 72 + i * 12;
+            return (
+              <path
+                d={trace(OX, boardOy, 226, v, [[1, 14]])}
+                class="part-pin"
+              />
+            );
+          })
+        }
+      </g>
+    </g>
+
+    <!-- ── Carcasa y conector ── -->
+    <g class="ecu-layer" style="--from-y: -148px; --depth: 0.25; --step: 0">
+      <g class="ecu-parallax">
+        {baseSides.map((d) => <path d={d} class="face-side" />)}
+        <path d={topFace(OX, Y_BASE, W, D, C)} class="face-top" />
+        <!-- Rebaje interior donde asienta la placa -->
+        <path
+          d={topFace(px(OX, 24, 24), py(Y_BASE, 24, 24), W - 48, D - 48, 0)}
+          class="face-recess"
+        />
+
+        {connector.sides.map((d) => <path d={d} class="part-side" />)}
+        <path d={connector.top} class="part-top" />
+        {
+          connectorPins.map((i) => {
+            const u = 316 + i * 16;
+            return (
+              <path
+                d={trace(OX, Y_BASE, u, 96, [[2, 88]])}
+                class="connector-pin"
+              />
+            );
+          })
+        }
+      </g>
+    </g>
+
+    <!-- ── Rótulos de profundidad ── -->
+    <g class="ecu-labels">
+      {
+        labels.map((label, i) => (
+          <g class="ecu-label" style={`--step: ${i}`}>
+            <path
+              d={`M ${label.from[0]} ${label.from[1]} L ${LEADER_END - 10} ${label.from[1]}`}
+              class="leader"
+            />
+            <circle
+              cx={LEADER_END}
+              cy={label.from[1]}
+              r="4"
+              class="leader-pad"
+            />
+            <text x={LABEL_X} y={label.from[1] - 4} class="label-name">
+              {label.text}
+            </text>
+            <text x={LABEL_X} y={label.from[1] + 18} class="label-note">
+              {label.note}
+            </text>
+          </g>
+        ))
+      }
+    </g>
+  </svg>
+</div>
+
+<style>
+  .ecu-stage {
+    position: relative;
+    width: 100%;
+  }
+
+  .ecu-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  /* ── Materiales ──────────────────────────────────────────
+     Todo sale de los tokens: ni un color suelto. */
+  .face-top {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-graphite-500);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+
+  .face-side {
+    fill: var(--jm-graphite-800);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+
+  .face-recess {
+    fill: var(--jm-graphite-800);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1;
+  }
+
+  .etch {
+    stroke: var(--jm-graphite-600);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .etch-plate {
+    fill: var(--jm-graphite-800);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.25;
+  }
+
+  /* Plano de software: solo línea de cobre, sin masa. Es lo intangible. */
+  .soft-fill {
+    fill: color-mix(in srgb, var(--jm-copper-500) 9%, transparent);
+  }
+
+  .soft-line {
+    stroke: color-mix(in srgb, var(--jm-copper-300) 42%, transparent);
+    stroke-width: 1;
+  }
+
+  .soft-edge {
+    fill: none;
+    stroke: var(--jm-copper-400);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  /* Placa */
+  .board-top {
+    fill: var(--jm-graphite-850);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+
+  .board-side {
+    fill: var(--jm-graphite-950);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .board-trace {
+    stroke: var(--jm-copper-500);
+    stroke-width: 2.25;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .board-pad {
+    fill: var(--jm-copper-400);
+  }
+
+  .part-top {
+    fill: var(--jm-graphite-600);
+    stroke: var(--jm-graphite-400);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .part-side {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-graphite-500);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .part-pin,
+  .connector-pin {
+    stroke: var(--jm-copper-300);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .connector-pin {
+    stroke-width: 3;
+  }
+
+  /* ── Rótulos ─────────────────────────────────────────── */
+  .leader {
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.25;
+    stroke-dasharray: 4 4;
+  }
+
+  .leader-pad {
+    fill: var(--jm-copper-400);
+  }
+
+  .label-name {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    fill: var(--color-ink-inverse);
+  }
+
+  .label-note {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    fill: var(--jm-graphite-400);
+  }
+
+  /* ── Coreografía ─────────────────────────────────────────
+     El despiece se abre al cargar: las capas parten agrupadas y se separan
+     de abajo arriba. Es CSS puro y `fill-mode: both`, así que funciona sin
+     JavaScript y, con movimiento reducido, aparece ya separado. */
+  .ecu-layer {
+    animation: ecu-separate var(--duration-assembly) var(--ease-settle) both;
+    animation-delay: calc(var(--step) * 110ms);
+  }
+
+  @keyframes ecu-separate {
+    from {
+      transform: translateY(var(--from-y));
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .ecu-label {
+    animation: ecu-label-in var(--duration-reveal) var(--ease-out) both;
+    animation-delay: calc(620ms + var(--step) * 120ms);
+  }
+
+  @keyframes ecu-label-in {
+    from {
+      opacity: 0;
+      transform: translateX(-14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .board-trace {
+    animation: trace-in var(--duration-draw) var(--ease-out) both;
+    animation-delay: 500ms;
+    stroke-dasharray: 220;
+  }
+
+  @keyframes trace-in {
+    from {
+      stroke-dashoffset: 220;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  /*
+   * Paralaje por puntero. Cada capa se desplaza en proporción a su altura en
+   * el despiece, así que la pieza tiene volumen cuando mueves el ratón.
+   * Solo con puntero fino, solo con JavaScript, y solo si no se ha pedido
+   * menos movimiento: las variables las escribe el script y valen 0 si no.
+   */
+  .ecu-parallax {
+    transform: translate(
+      calc(var(--ecu-px, 0) * var(--depth, 1) * 1px),
+      calc(var(--ecu-py, 0) * var(--depth, 1) * 1px)
+    );
+    transition: transform 420ms var(--ease-out);
+  }
+</style>

@@ -132,7 +132,8 @@ API del panel (`/api/admin/*`): **implementada y probada localmente, sin despleg
 - **El script CLI de alta del primer OWNER ya se ha probado contra PostgreSQL** en el
   entorno desechable de integración: crea el usuario con hash Argon2id y email
   normalizado. Funciona tanto con terminal interactivo como con entrada por tubería.
-- **No existe todavía el frontend del panel.**
+- **El frontend existe pero no está desplegado**: portada pública, login y
+  resumen del panel. Ver `docs/frontend-design.md`.
 - Nada de esto está desplegado: no describas la API del panel como activa o en
   producción.
 
@@ -278,8 +279,11 @@ directamente.**
 
 ## 6. Decisiones técnicas aprobadas
 
-1. **Una sola aplicación Next.js** (App Router + TypeScript) en `web/`, que sirve la
-   web pública y el panel. Nada de dos proyectos frontend separados.
+1. **Una sola aplicación en `web/`** para la web pública y el panel. Nada de dos
+   proyectos frontend separados. **Implementada con Astro 5 + TypeScript estricto +
+   React (islas) + Tailwind 4**, no con Next.js: la web pública es estática y no
+   necesita servidor propio, y el panel se resuelve con islas de React. Evita añadir
+   un runtime de servidor que hoy no hace falta (§6.1).
 2. **Las rutas actuales de n8n conservan URLs, cabeceras y comportamiento.** Sin
    renombrar, sin cambiar prefijos, sin reorganizar su registro por ahora.
 3. **Autenticación implementada en el backend Fastify** — ya escrita y probada, pero
@@ -310,6 +314,80 @@ GraphQL, sin ORM, sin monorepo con workspaces, sin gestor de estado global, sin
 funcionalidades especulativas. Si una solución parece elegante pero añade una pieza de
 infraestructura, casi seguro es la equivocada. Paginación y consultas SQL directas
 bastan y bastarán durante años.
+
+---
+
+### 6.1 Frontend (`web/`)
+
+Astro 5, TypeScript estricto, React solo donde hay interacción, Tailwind 4 con
+tokens propios. Sin SSR: `output: "static"`.
+
+- **Los tokens de diseño son la única fuente de color, tamaño, sombra y
+  movimiento** (`web/src/styles/tokens.css`, tres capas). Ningún valor suelto en
+  una plantilla.
+- **El dominio se escribe una sola vez**, en `web/src/config/domain.mjs`. Nunca
+  repitas `https://jmreprocars.com` en un componente.
+- **El contenido pendiente de confirmar vive en `web/src/config/site.ts`**, marcado
+  con `PENDIENTE`. No lo repartas por las páginas.
+- **Todos los metadatos pasan por `Seo.astro`.** Ninguna página escribe etiquetas
+  sueltas.
+- **La marca se dibuja solo en `BrandMark.astro`.** El logo definitivo está
+  pendiente; sustituir ese componente debe bastar.
+- **`/admin` lleva `noindex`, queda fuera del sitemap y bloqueado en robots.**
+  Son señales para buscadores: la seguridad real es la sesión del backend.
+- **La capa HTTP del panel es `web/src/lib/api/`**: base relativa `/api`,
+  `credentials: "include"`, sin tokens en `localStorage`. No dupliques `fetch` en
+  un componente.
+- **La web pública lleva ~2,4 kB de JavaScript en línea**, y ni una línea es
+  necesaria para leerla: `web/src/scripts/motion.ts` solo añade revelado al
+  entrar en pantalla, el trazado de la pista del proceso, el paralaje del
+  despiece y el marcado del índice de `/servicios`. **Sin librería de
+  animación**: IntersectionObserver y rAF bastan. Si añades una isla de React a
+  una página pública, justifica por qué.
+- **Nada que haya que leer puede empezar oculto.** El interruptor `js-anim` lo
+  pone un script en línea del `<head>` y solo se activa si hay JavaScript **y**
+  el visitante no ha pedido menos movimiento; todas las reglas que ocultan algo
+  cuelgan de él. Sin JavaScript, o con movimiento reducido, la página se sirve
+  entera y visible. Está verificado con capturas reales en ambos modos.
+- **Los dibujos de centralita se calculan, no se escriben a mano.** La
+  proyección vive en `web/src/lib/iso.ts` y la usan `EcuExploded.astro` (la
+  firma del hero) y `ServiceDiagram.astro` (uno por servicio). Si tocas la
+  geometría, tócala ahí: hay un solo sistema de ejes en todo el sitio.
+- **Ningún dibujo lleva cifras, códigos ni medidas.** Un mapa de calibración se
+  representa como la retícula que es, sin escribir un solo valor: inventar datos
+  técnicos está prohibido también en un SVG.
+- **Los tres servicios no se numeran.** Son alternativas, no una secuencia; se
+  distinguen por la capa sobre la que actúan (`depth` en `site.ts`) y por su
+  dibujo. El único 01–04 del sitio es el del proceso, que sí es una secuencia.
+- **La cabecera solo enseña destinos que sean una página pública real.** Nada de
+  anclas disfrazadas de página compitiendo en la barra principal. Lo decide el
+  campo `page` de cada servicio en `site.ts`; las secciones internas viven en el
+  pie y en enlaces contextuales.
+- **Una sola petición a terceros en toda la web pública**, y está declarada en
+  `web/src/config/embeds.ts`: el configurador de Tuning-shop.com de
+  `/servicios/reprogramacion`. Reglas que no se negocian: **no se carga hasta que
+  el visitante lo activa** (deja cookie de tercero), la atribución al proveedor no
+  se oculta, el aviso de que sus cifras son orientativas vive en NUESTRO HTML y no
+  dentro del marco, y no se toca el DOM interior del marco. Si hace falta otra
+  excepción, va en ese archivo y se documenta. Ver `docs/embed-tuning-shop.md`.
+- **Las cifras del proveedor no se afirman nunca como propias.** No son
+  mediciones nuestras, no salen de un banco, no confirman compatibilidad y no son
+  un presupuesto. Tampoco se copian a nuestro HTML ni se generan páginas por
+  vehículo.
+- **Las imágenes van en `web/src/assets/photos/` y se usan con `astro:assets`.**
+  Nunca hotlinking. Registra procedencia y licencia en `docs/image-sources.md`.
+- **El servidor de desarrollo no habla con ningún backend salvo que se lo pidas.**
+  `DEV_API_PROXY_TARGET=http://127.0.0.1:3100 npm run dev`, y solo destinos
+  locales. Sin la variable no hay proxy: así `npm run dev` no puede alcanzar el
+  backend real de `127.0.0.1:3000` por descuido.
+- **No inventes datos del cliente**: ni cifras, ni premios, ni plazos, ni precios,
+  ni testimonios, ni dirección. Ver `docs/site-architecture.md` §11.
+
+En desarrollo, `/api` se redirige al backend con el proxy de Vite, para que la
+cookie de sesión se comporte igual que en producción (mismo origen).
+
+**El frontend no está desplegado.** No hay servidor, ni dominio apuntando, ni
+build publicado.
 
 ---
 
@@ -408,6 +486,13 @@ Listar migraciones por orden de aplicación:
 
 ```bash
 ls -1 /home/david/taller-ecu-dev/backend/migrations
+```
+
+Frontend: instalar, comprobar tipos, probar y compilar en contenedor desechable
+(el host no tiene Node):
+
+```bash
+docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e npm_config_cache=/tmp/.npm -e CI=true -v /home/david/taller-ecu-dev/web:/app -w /app node:24-alpine sh -c 'npm ci && npm run check && npm test && npm run build'
 ```
 
 Ejecutar las pruebas y el build del backend en un contenedor desechable, sin tocar
