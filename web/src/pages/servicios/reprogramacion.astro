@@ -328,9 +328,18 @@ const IS_NOT = [
           class="grid gap-px border border-border bg-border sm:grid-cols-2 lg:col-span-8"
         >
           {
+            /* Cinco entradas en una rejilla de dos columnas dejaban una sexta
+               casilla vacía pintada del color del borde, y se leía como
+               contenido que falta. El último punto ocupa las dos columnas: es
+               además el que más decide del cinco, así que la fila ancha lo
+               subraya en vez de rellenar un hueco. */
             REPRO_INTAKE.map((item, i) => (
               <li
-                class="reveal flex gap-5 bg-surface p-7 lg:p-8"
+                class={`reveal flex gap-5 bg-surface p-7 lg:p-8 ${
+                  i === REPRO_INTAKE.length - 1 && REPRO_INTAKE.length % 2 === 1
+                    ? "sm:col-span-2"
+                    : ""
+                }`}
                 style={`--reveal-delay: ${i * 70}ms`}
               >
                 <svg
@@ -350,7 +359,9 @@ const IS_NOT = [
                 </svg>
                 <div>
                   <h3 class="display text-h3 text-ink">{item.label}</h3>
-                  <p class="mt-2.5 text-sm leading-relaxed text-ink-muted">
+                  <p
+                    class="mt-2.5 max-w-(--container-prose) text-sm leading-relaxed text-ink-muted"
+                  >
                     {item.body}
                   </p>
                 </div>
@@ -395,7 +406,9 @@ const IS_NOT = [
                 {service.description}
               </span>
               <span class="mt-5 inline-flex items-center gap-2 text-sm font-medium text-accent">
-                Ver en la página de servicios
+                {service.page
+                  ? `Ver la página de ${service.nameLower}`
+                  : "Ver en la página de servicios"}
                 <span
                   class="transition-transform duration-(--duration-base) group-hover:translate-x-1"
                   aria-hidden="true"

@@ -1,0 +1,388 @@
+---
+import { px, py, topFace, sideFaces, box, trace } from "../lib/iso";
+
+/**
+ * El recorrido de una señal, y el punto donde deja de llegar.
+ *
+ * Es el dibujo propio de `/servicios/reparacion-ecu`. Dice de un vistazo lo
+ * que la página explica con palabras: **antes de sustituir la unidad hay que
+ * localizar dónde se pierde**. La señal entra por la izquierda, cruza la
+ * placa, se interrumpe en un punto marcado, y a partir de ahí el recorrido
+ * sigue dibujado —pero muerto— hasta el otro extremo.
+ *
+ * Misma proyección dimétrica y mismos materiales que el resto del sitio
+ * (`src/lib/iso.ts`), pero con una proporción apaisada que no tiene ningún
+ * otro diagrama: aquí lo que importa es el recorrido, no la pieza.
+ *
+ * Reglas que cumple, como todos los dibujos del sitio:
+ *
+ * - **Ninguna cifra, ninguna referencia, ningún código.** Inventar datos
+ *   técnicos está prohibido también en un SVG.
+ * - **No representa ninguna unidad concreta ni ninguna avería real.** Es un
+ *   esquema, y el pie de la figura lo dice.
+ * - Los rótulos **no van dentro del SVG**: van en HTML, debajo, donde se leen
+ *   a cualquier tamaño, se pueden seleccionar y no encogen con el dibujo.
+ */
+interface Props {
+  class?: string;
+  id?: string;
+}
+
+const { class: className = "", id = "fault-trace" } = Astro.props;
+
+/* ── Medidas ──────────────────────────────────────────────── */
+const W = 280; // arista larga de la carcasa
+const D = 176; // arista corta
+const C = 32; // chaflán, el mismo gesto del logotipo
+const T = 28; // altura de la carcasa
+const IN = 24; // holgura de la placa dentro de la carcasa
+
+const BW = W - IN * 2;
+const BD = D - IN * 2;
+
+const OX = 300; // origen de la carcasa
+const OY = 150;
+const BOY = OY + IN; // origen de la placa (px(OX, IN, IN) === OX)
+
+/* ── El recorrido ─────────────────────────────────────────────
+   Tres tramos: el que entra, el que muere en el punto marcado y el que ya
+   no lleva nada. Todos ortogonales sobre los ejes del tablero, como en una
+   placa real; nunca en diagonal libre. */
+
+/** Entra desde fuera del dibujo, cruza la placa y se detiene en el punto. */
+const live = trace(OX, BOY, -76, 74, [[1, 190]]);
+
+/** A partir del punto marcado el recorrido sigue, pero ya no lleva señal. */
+const dead = trace(OX, BOY, 124, 74, [
+  [2, 50],
+  [1, 108],
+]);
+
+/** Y sale del dibujo por el otro extremo, igual de muerto. */
+const deadOut = trace(OX, BOY, 232, 124, [[1, 70]]);
+
+/* Puntos notables, en coordenadas de pantalla. */
+const IN_PAD = [px(OX, 0, 74), py(BOY, 0, 74)] as const;
+const BREAK = [px(OX, 119, 74), py(BOY, 119, 74)] as const;
+const OUT_PAD = [px(OX, 302, 124), py(BOY, 302, 124)] as const;
+
+/* Componentes sobre la placa. Se dibujan después de las pistas, de modo que
+   las tapan como lo haría un componente real montado encima.
+   Dejan libre el corredor por el que pasa el recorrido: el punto marcado
+   tiene que verse sobre placa despejada, o se lee como que la pista se mete
+   debajo de un componente en vez de interrumpirse. */
+const parts = [
+  box(OX, BOY, 26, 14, 46, 32, 9),
+  box(OX, BOY, 96, 12, 44, 30, 9),
+  box(OX, BOY, 160, 58, 54, 46, 11),
+  box(OX, BOY, 26, 90, 44, 28, 8),
+];
+
+const titleId = `${id}-title`;
+const descId = `${id}-desc`;
+---
+
+<figure class={`fault-trace ${className}`}>
+  <svg
+    viewBox="106 126 500 296"
+    class="fault-trace-svg"
+    role="img"
+    aria-labelledby={`${titleId} ${descId}`}
+    fill="none"
+  >
+    <title id={titleId}>Recorrido de una señal sobre una placa</title>
+    <desc id={descId}>
+      Dibujo esquemático de una centralita abierta. Una pista de cobre entra
+      por la izquierda, cruza la placa y se interrumpe en un punto marcado con
+      un círculo; a partir de ahí el recorrido continúa dibujado en gris,
+      indicando que la señal ya no llega al otro extremo.
+    </desc>
+
+    <!-- ── Carcasa abierta ── -->
+    <g>
+      {sideFaces(OX, OY, W, D, C, T).map((d) => <path d={d} class="face-side" />)}
+      <path d={topFace(OX, OY, W, D, C)} class="face-top" />
+      <path
+        d={topFace(px(OX, 12, 12), py(OY, 12, 12), W - 24, D - 24, 0)}
+        class="face-recess"
+      />
+    </g>
+
+    <!-- ── Placa ── -->
+    <g>
+      {
+        sideFaces(OX, BOY, BW, BD, 0, 7).map((d) => (
+          <path d={d} class="board-side" />
+        ))
+      }
+      <path d={topFace(OX, BOY, BW, BD, 0)} class="board-top" />
+    </g>
+
+    <!-- ── Lo que ya no lleva señal ──
+         Se dibuja primero para que el tramo vivo quede por delante. -->
+    <g class="after-break">
+      <path d={dead} class="trace-dead" />
+      <path d={deadOut} class="trace-dead" />
+      <circle cx={OUT_PAD[0]} cy={OUT_PAD[1]} r="7" class="pad-dead" />
+    </g>
+
+    <!-- ── Lo que sí llega ──
+         Un solo trazo continuo: el de entrada y el de la placa se dibujan
+         como uno, porque son el mismo recorrido. -->
+    <path d={live} class="trace-live trace-draw" />
+    <circle cx={IN_PAD[0]} cy={IN_PAD[1]} r="6" class="pad-live" />
+
+    <!-- ── Componentes ── -->
+    <g>
+      {
+        parts.map((part) => (
+          <g>
+            {part.sides.map((d) => (
+              <path d={d} class="part-side" />
+            ))}
+            <path d={part.top} class="part-top" />
+          </g>
+        ))
+      }
+    </g>
+
+    <!-- ── El punto localizado ── -->
+    <g class="after-break break-mark">
+      <ellipse
+        cx={BREAK[0]}
+        cy={BREAK[1]}
+        rx="34"
+        ry="23"
+        class="break-ring"
+      />
+    </g>
+  </svg>
+
+  <!--
+    Los rótulos van aquí, no dentro del SVG: texto HTML real, legible a
+    cualquier ancho y seleccionable. Es la lectura del dibujo, así que
+    conserva su orden.
+  -->
+  <figcaption class="fault-trace-legend">
+    <ol class="legend-list">
+      <li class="legend-item">
+        <span class="legend-mark legend-mark--live" aria-hidden="true"></span>
+        <span>
+          <b class="legend-title">Entra la señal</b>
+          <span class="legend-note">Por donde llega desde el vehículo</span>
+        </span>
+      </li>
+      <li class="legend-item">
+        <span class="legend-mark legend-mark--break" aria-hidden="true"></span>
+        <span>
+          <b class="legend-title">Aquí se pierde</b>
+          <span class="legend-note">El punto que hay que localizar</span>
+        </span>
+      </li>
+      <li class="legend-item">
+        <span class="legend-mark legend-mark--dead" aria-hidden="true"></span>
+        <span>
+          <b class="legend-title">Ya no llega</b>
+          <span class="legend-note">Lo que el vehículo nota como avería</span>
+        </span>
+      </li>
+    </ol>
+
+    <p class="legend-caption">
+      Dibujo esquemático. No representa ninguna unidad concreta ni ninguna
+      avería real.
+    </p>
+  </figcaption>
+</figure>
+
+<style>
+  .fault-trace {
+    display: block;
+    width: 100%;
+    margin: 0;
+  }
+
+  .fault-trace-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* ── Materiales ──────────────────────────────────────────
+     Exactamente los del despiece y los diagramas de servicio: este dibujo
+     es otra ventana al mismo banco de trabajo, no una segunda paleta. */
+  .face-top {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-graphite-500);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  .face-side {
+    fill: var(--jm-graphite-800);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  .face-recess {
+    fill: var(--jm-graphite-850);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.25;
+  }
+
+  .board-top {
+    fill: var(--jm-graphite-850);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+
+  .board-side {
+    fill: var(--jm-graphite-950);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .part-top {
+    fill: var(--jm-graphite-600);
+    stroke: var(--jm-graphite-400);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .part-side {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-graphite-500);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  /* El tramo vivo va en cobre; el muerto, en el gris de las piezas. El
+     contraste entre los dos es todo el argumento del dibujo. */
+  .trace-live {
+    stroke: var(--jm-copper-500);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .trace-dead {
+    stroke: var(--jm-graphite-600);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 7 6;
+  }
+
+  .pad-live {
+    fill: var(--jm-copper-400);
+  }
+
+  .pad-dead {
+    fill: none;
+    stroke: var(--jm-graphite-600);
+    stroke-width: 2.5;
+  }
+
+  .break-ring {
+    fill: none;
+    stroke: var(--jm-copper-400);
+    stroke-width: 2.25;
+    stroke-dasharray: 6 5;
+  }
+
+  /*
+   * El recorrido se traza al entrar en pantalla, una sola vez. Primero llega
+   * la señal, después aparece el punto donde se pierde y lo que queda detrás.
+   * Narra el orden en el que se mira un fallo; no es un bucle ni un adorno.
+   *
+   * `.trace-draw` y su interruptor `.is-visible` son los mismos que usa la
+   * pista del proceso (tokens.css y scripts/motion.ts). Sin JavaScript, o
+   * con movimiento reducido, el dibujo se sirve ya completo.
+   */
+  :global(.js-anim) .after-break {
+    opacity: 0;
+    transition: opacity var(--duration-reveal) var(--ease-out);
+  }
+
+  :global(.js-anim) svg:has(.trace-draw.is-visible) .after-break {
+    opacity: 1;
+    transition-delay: 1100ms;
+  }
+
+  :global(.js-anim) svg:has(.trace-draw.is-visible) .break-mark {
+    transition-delay: 1400ms;
+  }
+
+  /* ── Leyenda ─────────────────────────────────────────────── */
+  .fault-trace-legend {
+    margin-top: 1.75rem;
+  }
+
+  .legend-list {
+    display: grid;
+    gap: 1rem 1.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--color-border-inverse);
+    padding-top: 1.25rem;
+  }
+
+  @media (min-width: 40rem) {
+    .legend-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .legend-item {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .legend-mark {
+    margin-top: 0.4rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    flex: none;
+    border-radius: var(--radius-pill);
+  }
+
+  .legend-mark--live {
+    background-color: var(--color-accent-on-dark);
+  }
+
+  .legend-mark--break {
+    border: 2px dashed var(--color-accent-on-dark);
+  }
+
+  .legend-mark--dead {
+    border: 2px solid var(--jm-graphite-500);
+  }
+
+  .legend-title {
+    display: block;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--color-ink-inverse);
+  }
+
+  .legend-note {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  .legend-caption {
+    margin-top: 1.25rem;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: var(--jm-graphite-400);
+  }
+</style>

@@ -132,7 +132,8 @@ API del panel (`/api/admin/*`): **implementada y probada localmente, sin despleg
 - **El script CLI de alta del primer OWNER ya se ha probado contra PostgreSQL** en el
   entorno desechable de integración: crea el usuario con hash Argon2id y email
   normalizado. Funciona tanto con terminal interactivo como con entrada por tubería.
-- **El frontend existe pero no está desplegado**: portada pública, login y
+- **El frontend existe pero no está desplegado**: portada pública, hub de
+  servicios, `/servicios/reprogramacion`, `/servicios/reparacion-ecu`, login y
   resumen del panel. Ver `docs/frontend-design.md`.
 - Nada de esto está desplegado: no describas la API del panel como activa o en
   producción.
@@ -338,12 +339,16 @@ tokens propios. Sin SSR: `output: "static"`.
 - **La capa HTTP del panel es `web/src/lib/api/`**: base relativa `/api`,
   `credentials: "include"`, sin tokens en `localStorage`. No dupliques `fetch` en
   un componente.
-- **La web pública lleva ~2,4 kB de JavaScript en línea**, y ni una línea es
-  necesaria para leerla: `web/src/scripts/motion.ts` solo añade revelado al
-  entrar en pantalla, el trazado de la pista del proceso, el paralaje del
-  despiece y el marcado del índice de `/servicios`. **Sin librería de
-  animación**: IntersectionObserver y rAF bastan. Si añades una isla de React a
-  una página pública, justifica por qué.
+- **La web pública lleva 2,4 kB de JavaScript en línea** —3,8 kB en
+  `/servicios/reparacion-ecu`—, y **ninguna línea es necesaria para leerla**:
+  `web/src/scripts/motion.ts` añade revelado al entrar en pantalla, el trazado
+  de la pista del proceso, el paralaje del despiece y el marcado del índice de
+  `/servicios`; `web/src/scripts/fault-isolation.ts` monta el grupo de pestañas
+  de síntoma / causa / intervención. Sin ese último, los tres pasos se sirven
+  seguidos y no se pierde una palabra. **Sin librería de animación**:
+  IntersectionObserver, rAF y transiciones CSS bastan; GSAP se ha evaluado y
+  descartado tres veces. Si añades una isla de React a una página pública,
+  justifica por qué.
 - **Nada que haya que leer puede empezar oculto.** El interruptor `js-anim` lo
   pone un script en línea del `<head>` y solo se activa si hay JavaScript **y**
   el visitante no ha pedido menos movimiento; todas las reglas que ocultan algo
@@ -351,18 +356,24 @@ tokens propios. Sin SSR: `output: "static"`.
   entera y visible. Está verificado con capturas reales en ambos modos.
 - **Los dibujos de centralita se calculan, no se escriben a mano.** La
   proyección vive en `web/src/lib/iso.ts` y la usan `EcuExploded.astro` (la
-  firma del hero) y `ServiceDiagram.astro` (uno por servicio). Si tocas la
-  geometría, tócala ahí: hay un solo sistema de ejes en todo el sitio.
-- **Ningún dibujo lleva cifras, códigos ni medidas.** Un mapa de calibración se
-  representa como la retícula que es, sin escribir un solo valor: inventar datos
-  técnicos está prohibido también en un SVG.
+  firma del hero), `ServiceDiagram.astro` (uno por servicio), `MapLayer.astro`,
+  `FaultTrace.astro` y `FaultIsolation.astro`. Si tocas la geometría, tócala
+  ahí: hay un solo sistema de ejes en todo el sitio.
+- **Ningún dibujo lleva cifras, códigos ni medidas, y ninguno representa una
+  unidad o una avería concretas.** Un mapa de calibración se representa como la
+  retícula que es, sin escribir un solo valor: inventar datos técnicos está
+  prohibido también en un SVG. Los dibujos que podrían confundirse con un caso
+  real llevan el pie que lo desmiente.
 - **Los tres servicios no se numeran.** Son alternativas, no una secuencia; se
   distinguen por la capa sobre la que actúan (`depth` en `site.ts`) y por su
   dibujo. El único 01–04 del sitio es el del proceso, que sí es una secuencia.
 - **La cabecera solo enseña destinos que sean una página pública real.** Nada de
   anclas disfrazadas de página compitiendo en la barra principal. Lo decide el
   campo `page` de cada servicio en `site.ts`; las secciones internas viven en el
-  pie y en enlaces contextuales.
+  pie y en enlaces contextuales. **Rellenar `page` sin escribir la página rompe
+  la regla**, así que hay una prueba que lo impide
+  (`web/test/site-config.test.ts`). Por debajo de 1024 px la barra pasa al menú
+  `<details>`, que funciona sin JavaScript.
 - **Una sola petición a terceros en toda la web pública**, y está declarada en
   `web/src/config/embeds.ts`: el configurador de Tuning-shop.com de
   `/servicios/reprogramacion`. Reglas que no se negocian: **no se carga hasta que
@@ -381,7 +392,12 @@ tokens propios. Sin SSR: `output: "static"`.
   locales. Sin la variable no hay proxy: así `npm run dev` no puede alcanzar el
   backend real de `127.0.0.1:3000` por descuido.
 - **No inventes datos del cliente**: ni cifras, ni premios, ni plazos, ni precios,
-  ni testimonios, ni dirección. Ver `docs/site-architecture.md` §11.
+  ni testimonios, ni dirección. Ver `docs/site-architecture.md` §11. En la
+  página de reparación esto se extiende a lo que se puede prometer de un
+  trabajo: **no se afirma que una unidad sea reparable, ni un porcentaje de
+  éxito, ni que se evite la sustitución**. Se dice «se revisa», «puede ser
+  reparable», «se valora» y «hay que confirmar el caso», y hay una prueba que
+  vigila las fórmulas prohibidas.
 
 En desarrollo, `/api` se redirige al backend con el proxy de Vite, para que la
 cookie de sesión se comporte igual que en producción (mismo origen).

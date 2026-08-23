@@ -5,9 +5,20 @@ Console, ni analítica, ni métricas de usuarios reales, ni enlaces entrantes, n
 contenido definitivo. Lo único que se ha revisado es el código del repositorio y
 los archivos que genera `npm run build` en local, con la skill `seo-audit`.
 
-Fecha de la revisión: 2026-08-20. Build revisado: **6 páginas** (4 públicas
-—portada, `/servicios`, `/servicios/reprogramacion` y la 404— más las dos del
-panel, que van `noindex`).
+Fecha de la revisión: 2026-08-20; ampliada el 2026-08-23 al añadirse
+`/servicios/reparacion-ecu`. Build revisado: **7 páginas** (5 públicas
+—portada, `/servicios`, `/servicios/reprogramacion`,
+`/servicios/reparacion-ecu` y la 404— más las dos del panel, que van
+`noindex`).
+
+**La ampliación no se hizo con la skill `seo-audit`: no está disponible en el
+entorno remoto donde se escribió la página.** Se hicieron a mano las
+comprobaciones equivalentes sobre el HTML generado y con un navegador real
+—`title`, `description`, canónica, Open Graph, Twitter Card, un solo `h1`,
+jerarquía de encabezados sin saltos, presencia en el sitemap, resolución de
+todos los enlaces y anclas internos, ausencia de peticiones externas y ausencia
+de scroll horizontal a 375, 768, 1024, 1440 y 1920 px—, y quedan registradas
+aquí. Lo que la skill habría aportado por encima de eso no se ha hecho.
 
 ---
 
@@ -49,11 +60,14 @@ ningún componente ni plantilla.
 
 ### Estructura
 
-- Un solo `<h1>` por página. **Verificado en las cuatro páginas públicas.**
+- Un solo `<h1>` por página. **Verificado en las cinco páginas públicas.**
 - Jerarquía secuencial verificada en el HTML generado: `h1 → h2 → h3`, sin
   saltos de nivel. Comprobado recorriendo todos los encabezados del DOM.
-- **Navegación principal formada solo por páginas reales** (`/servicios` y
-  `/servicios/reprogramacion`). Ver [site-architecture.md](site-architecture.md) §4.
+- **Navegación principal formada solo por páginas reales** (`/servicios`,
+  `/servicios/reprogramacion` y `/servicios/reparacion-ecu`). Ver
+  [site-architecture.md](site-architecture.md) §4. Desde 2026-08-23 hay además
+  una prueba que lo sostiene: `web/test/site-config.test.ts` falla si un
+  servicio declara página propia sin que el archivo exista.
 - Migas de pan en el nivel 2, reflejando la ruta: Inicio › Servicios ›
   Reprogramación.
 - HTML semántico: `header`, `nav`, `main`, `section`, `article`, `footer`, `ol`
@@ -118,6 +132,18 @@ haya imagen social. El componente cambia solo cuando se le pasa una.
 
 **No hay datos estructurados.** Es deliberado (§5).
 
+**`/servicios/reparacion-ecu` es la página con más contenido propio del sitio.**
+Medido con navegador real sobre el texto de `<main>` y con JavaScript
+desactivado: **1.301 palabras**, frente a 848 de reprogramación, 686 de la
+portada y 630 de `/servicios` (medidas de la misma forma, por eso difieren en
+unas pocas de las de más abajo, contadas sobre el HTML generado). Con
+JavaScript se ven 1.133 de una vez, porque el bloque de tres pasos muestra uno
+cada vez; los tres están en el HTML que ve un rastreador, que es lo que cuenta.
+
+**No se han creado páginas por marca, modelo, avería ni código DTC**, y no se
+van a crear: serían plantillas sin contenido propio, que es exactamente lo que
+Google trata como contenido de bajo valor.
+
 **El contenido del configurador de `/servicios/reprogramacion` no es contenido
 nuestro.** Vive en un `<iframe>` de `tuning-shop.com`, que además lo marca
 `noindex, nofollow` por su cuenta. No aporta nada a nuestro posicionamiento, y
@@ -128,7 +154,8 @@ Ver [embed-tuning-shop.md](embed-tuning-shop.md) §5.
 
 **El marco no existe en el HTML inicial.** Se crea solo si el visitante activa el
 configurador, así que un rastreador nunca lo ve. Verificado con navegador real:
-cero peticiones externas al cargar cualquiera de las tres páginas públicas.
+cero peticiones externas al cargar cualquiera de las cuatro páginas públicas
+—comprobado de nuevo el 2026-08-23, ya con la página de reparación dentro.
 
 ---
 
@@ -139,7 +166,7 @@ ni LCP real, ni datos de campo.
 
 | Aspecto | Situación | Riesgo |
 |---|---|---|
-| Sitio estático | Astro genera HTML plano; la web pública no envía JavaScript | Bajo |
+| Sitio estático | Astro genera HTML plano; la web pública envía 2,4 kB de JavaScript en línea (3,8 kB en reparación de ECU), y ninguna línea hace falta para leerla | Bajo |
 | JS en el panel | ~187 KB (58 KB gzip) de React, solo bajo `/admin` | Ninguno para SEO: el panel no se indexa |
 | Fuentes | Autoalojadas con `@fontsource`, no desde Google Fonts | Bajo. Evita además enviar la IP del visitante a Google, que en la UE es un problema de RGPD |
 | CLS | Sin imágenes todavía; sin contenido que se inyecte tarde | Bajo hoy. **Sube en cuanto haya fotos**: toda imagen deberá llevar `width`, `height` y `alt` |

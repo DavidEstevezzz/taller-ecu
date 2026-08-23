@@ -3,6 +3,12 @@
 Documenta las decisiones visuales del frontend, de dónde salen y qué queda
 pendiente de tu aprobación. **Nada de esto está desplegado.**
 
+> **Nota sobre las skills.** Las secciones que las citan —`ui-ux-pro-max`,
+> `brand`, `design-system`, `ui-styling`— se escribieron cuando estaban
+> disponibles. La página de `/servicios/reparacion-ecu` (2026-08-23) **se hizo
+> sin ellas**: no existen en el entorno remoto donde se escribió. Sus decisiones
+> salen de lo que ya estaba documentado aquí, no de una consulta nueva.
+
 ---
 
 ## 1. Dirección visual
@@ -185,7 +191,7 @@ recomendaciones, no órdenes: varias contradecían el encargo.
 | **Inter para títulos y Playfair Display para el cuerpo** | Playfair es una serif de display: como fuente de cuerpo es una mala recomendación, y una serif editorial no encaja con electrónica del automóvil |
 | **«Insignias de seguridad, certificaciones, estadísticas, precios transparentes»** | No tenemos ninguna. Inventarlas estaba prohibido explícitamente |
 | **«No certifications» como antipatrón** | La skill considera un fallo no mostrar certificaciones. Preferimos no mostrarlas a fabricarlas |
-| **GSAP + ScrollTrigger para las animaciones** | Se volvió a evaluar al ampliar el movimiento, y se volvió a descartar. Lo que hay —montaje del despiece, trazado de la pista, revelado, paralaje— sale en **2,4 kB de JavaScript en línea** con IntersectionObserver y rAF. GSAP son ~70 kB para hacer lo mismo, en un sitio que recibe 10–20 conversaciones al día |
+| **GSAP + ScrollTrigger para las animaciones** | Evaluado y descartado tres veces: al diseñar, al ampliar el movimiento y al montar el cerco de la página de reparación. Todo lo que hay —montaje del despiece, trazado de la pista, revelado, paralaje y el cerco que se estrecha— sale en **2,4 kB de JavaScript en línea** (3,8 kB en la página de reparación) con IntersectionObserver, rAF y transiciones CSS. GSAP son ~70 kB para hacer lo mismo, en un sitio que recibe 10–20 conversaciones al día |
 | **Carrusel de logotipos de clientes** | No hay clientes que se puedan mostrar. El encargo pedía no meter un carrusel por obligación |
 | **Tema oscuro para el panel** | Se usa de día en un taller. Light-first es más legible. Los tokens dejan el tema oscuro preparado para más adelante |
 | **Fira Code / Fira Sans para el panel** | Dos familias más, cuando IBM Plex + JetBrains ya cubren texto y datos |
@@ -329,6 +335,18 @@ Cuatro movimientos, cada uno con una función declarada:
 4. **Paralaje por puntero sobre el despiece**: cada capa se desplaza en
    proporción a su altura, 9 px como máximo la de arriba. Da volumen a la pieza
    cuando mueves el ratón. Solo con puntero fino.
+5. **El cerco que se estrecha**, en `/servicios/reparacion-ecu`. Es el único
+   movimiento del sitio que dispara la persona, no el scroll: al pasar de
+   «Síntoma» a «Causa» y a «Intervención», un mismo círculo pasa de rodear la
+   unidad entera a ajustarse a un componente, y la tapa se levanta y se queda
+   como contorno. Dice el argumento de la página —el cerco se estrecha— sin una
+   palabra. Si no se encogiera, el dibujo no diría nada que no dijera el texto,
+   y entonces sobraría.
+
+**Sigue sin haber librería de animación.** El cerco son dos propiedades CSS
+personalizadas y una transición de `transform`; lo único en JavaScript es el
+patrón de pestañas —flechas, Inicio, Fin y `aria-selected`—, que son treinta
+líneas de teclado y no las resuelve GSAP.
 
 Lo que **no** se hizo, y es tan importante como lo que sí: sin pantalla de
 carga, sin secuestro del scroll, sin partículas, sin cursor propio, sin texto
@@ -353,6 +371,15 @@ estado final en vez de desaparecer.
 Verificado con capturas reales: **sin JavaScript la portada es idéntica**, y con
 movimiento reducido no queda ni un elemento por debajo de opacidad 0,9.
 
+**El grupo de pestañas de `/servicios/reparacion-ecu` es la única pieza del sitio
+que necesita JavaScript para funcionar, y por eso no existe sin él.** Los tres
+botones están ocultos por CSS hasta que `html.js` aparece; sin JavaScript los
+tres pasos se sirven seguidos, separados por una línea, y no se pierde ni una
+palabra. Medido sobre el HTML generado con el navegador y JavaScript desactivado:
+1.301 palabras en `<main>`, frente a las 1.133 que se ven de una vez con las
+pestañas montadas. Con movimiento reducido las pestañas siguen cambiando —es
+navegación, no decoración—; lo que se colapsa es el recorrido del cerco.
+
 ## 5. Componentes (skill `ui-styling`)
 
 | Componente | Tipo | Notas |
@@ -369,6 +396,8 @@ movimiento reducido no queda ni un elemento por debajo de opacidad 0,9.
 | **`ProcessTrack`** | Astro | Los cuatro pasos sobre una pista de cobre que se traza. Compartido por portada y `/servicios` |
 | **`MapLayer`** | Astro | La capa de software abierta: dos retículas sobre la unidad cerrada. Profundiza el diagrama de reprogramación de `/servicios`. **Sin un solo valor, sin curvas y sin escalas** |
 | **`PowerConfigurator`** | Astro | El configurador de Tuning-shop.com bajo activación explícita, con su aviso permanente fuera del marco y su estado de fallo. Ver [embed-tuning-shop.md](embed-tuning-shop.md) |
+| **`FaultTrace`** | Astro | El recorrido de una señal sobre una placa, con el punto donde se interrumpe. Firma de `/servicios/reparacion-ecu`. Proporción apaisada, que no tiene ningún otro diagrama, y **rótulos en HTML, no dentro del SVG** |
+| **`FaultIsolation`** | Astro | Síntoma, causa e intervención sobre un solo dibujo: **el mismo cerco recorre tres tamaños** mientras la tapa se levanta. La pieza distintiva de la página de reparación |
 | `LoginForm` | React | Estados, errores, foco gestionado |
 | `AdminShell` | React | Sesión, navegación, cabecera, logout |
 | `Dashboard` | React | Cifras, estados de carga, error y vacío |
@@ -396,7 +425,7 @@ herramienta.
 | Color | Bandas de grafito, acento de cobre | Casi todo neutro; el color solo marca estado |
 | Tipografía | Titulares grandes, medida controlada | Tamaños pequeños, cifras tabulares |
 | Movimiento | Coreografía: montaje, trazado, revelado, paralaje | Prácticamente ninguno |
-| JavaScript | **~2,4 kB en línea**, todo prescindible | React, solo bajo `/admin` |
+| JavaScript | **2,4 kB en línea** en portada, `/servicios` y reprogramación; **3,8 kB** en reparación de ECU, que añade el grupo de pestañas | React, solo bajo `/admin` |
 | Objetivo | Que escriban por WhatsApp | Ver el estado del trabajo en dos segundos |
 | Indexación | Sí | `noindex`, fuera del sitemap, `Disallow` |
 
@@ -439,6 +468,15 @@ Por orden de compromiso: lo primero es lo que más cambia si no convence.
    visto bueno.
 8. **Tema claro en el panel.** Si se usa en un taller con poca luz, el tema
    oscuro está preparado en los tokens.
+9. **El cerco de tres pasos de `/servicios/reparacion-ecu`.** Es la única pieza
+   del sitio que se maneja, no que se mira. Está montada como grupo de pestañas
+   accesible y sin ella la página se lee igual, pero es una decisión de
+   interacción que conviene ver funcionando antes de darla por buena.
+10. **`/servicios/reparacion-ecu` no lleva ninguna fotografía.** Su identidad la
+    llevan los dos dibujos originales. Las tres fotos del banco de imágenes ya
+    están cada una en su página y repetir una habría sido peor; el hueco natural
+    es una foto real del taller cuando llegue. Ver
+    [image-sources.md](image-sources.md).
 
 ## 9. Contenido provisional, y dónde vive
 
@@ -450,6 +488,10 @@ Todo lo pendiente está centralizado en `web/src/config/site.ts`, marcado con
 - Servicios: los tres confirmados, con descripciones provisionales.
 - Pasos del proceso: descritos sin prometer plazos.
 - Aviso legal sobre anulaciones: recuperado de la web actual del cliente.
+- Reparación de ECU: motivos de consulta, ficha de datos y plantilla de WhatsApp
+  viven en `REPAIR_REASONS`, `REPAIR_INTAKE` y `REPAIR_MESSAGE`. Nada de lo que
+  hay ahí promete precio, plazo, garantía ni que una unidad concreta se pueda
+  reparar; hay una prueba que lo comprueba (`web/test/site-config.test.ts`).
 - Sección de trabajos: **retirada de la portada**. El recuadro punteado que
   anunciaba que todavía no hay casos restaba credibilidad en lugar de dar
   transparencia. En su lugar va **«Cuatro cosas y podemos empezar»** (`INTAKE`),

@@ -76,10 +76,10 @@ export const SERVICES = [
     name: "Reparación de ECU",
     nameLower: "reparación de ECU",
     short: "Diagnóstico y reparación electrónica",
-    page: null as string | null,
+    page: "/servicios/reparacion-ecu" as string | null,
     description:
-      "Centralitas que no arrancan, entran en modo emergencia o dan errores persistentes. Reparación del componente, no sustitución a ciegas.",
-    href: "/servicios#reparacion-ecu",
+      "Centralitas que no arrancan, entran en modo emergencia o dan errores persistentes. Se localiza el origen del fallo antes de sustituir la unidad.",
+    href: "/servicios/reparacion-ecu",
   },
   {
     slug: "clonacion-ecu",
@@ -285,6 +285,106 @@ export const INTAKE_MESSAGE = [
   "Matrícula o bastidor:",
   "Síntoma y desde cuándo:",
   "Códigos de error:",
+  "Qué se ha probado ya:",
+].join("\n");
+
+/**
+ * Motivos de consulta habituales para una reparación de centralita.
+ *
+ * Son motivos para REVISAR, nunca un diagnóstico ni una promesa de arreglo:
+ * ninguno de ellos demuestra por sí solo que la unidad esté averiada. La
+ * página lo dice con esas mismas palabras junto a la lista.
+ */
+export const REPAIR_REASONS = [
+  {
+    title: "El vehículo no arranca",
+    body: "Gira el motor y no llega a hacerlo, o directamente no responde al dar el contacto.",
+  },
+  {
+    title: "Modo emergencia o potencia limitada",
+    body: "La gestión se refugia en un modo degradado y el vehículo circula con la potencia recortada.",
+  },
+  {
+    title: "Fallos persistentes o intermitentes",
+    body: "Tirones, cortes o paradas que aparecen en frío, en caliente o al cabo de un rato.",
+  },
+  {
+    title: "Errores que vuelven tras borrarlos",
+    body: "El código se borra, el vehículo funciona un momento y el mismo error reaparece.",
+  },
+  {
+    title: "Humedad, golpe o problema eléctrico",
+    body: "Agua en el alojamiento, un impacto, una batería mal conectada o un arranque con pinzas.",
+  },
+  {
+    title: "Una unidad ya comprobada",
+    body: "Otro taller ha hecho ya las comprobaciones de rigor y el rastro apunta a la centralita.",
+  },
+] as const;
+
+/**
+ * Qué información ayuda a valorar una reparación.
+ *
+ * Coincide con lo que el asistente de WhatsApp pregunta después, así que
+ * ordenarlo antes acorta la conversación. `optional` marca los datos que NO
+ * bloquean una primera valoración: la página lo dice explícitamente para que
+ * nadie desmonte nada solo para contestar un mensaje.
+ */
+export const REPAIR_INTAKE = [
+  {
+    label: "Marca, modelo y año",
+    body: "Los tres juntos identifican la gestión que monta el vehículo.",
+    optional: false,
+  },
+  {
+    label: "Motor",
+    body: "La denominación del motor, o su código si lo tienes a mano.",
+    optional: false,
+  },
+  {
+    label: "Síntoma",
+    body: "Qué hace el vehículo, desde cuándo y en qué condiciones aparece.",
+    optional: false,
+  },
+  {
+    label: "¿Arranca y funciona?",
+    body: "Si arranca, si circula, o si no responde en absoluto. Acota mucho el punto de partida.",
+    optional: false,
+  },
+  {
+    label: "Códigos de error",
+    body: "Los que se hayan leído, tal cual salen del equipo de diagnosis.",
+    optional: true,
+  },
+  {
+    label: "Referencia de la centralita",
+    body: "La de la etiqueta, o una foto de ella, si la unidad está a la vista.",
+    optional: true,
+  },
+  {
+    label: "Qué se ha probado ya",
+    body: "Comprobaciones hechas y piezas sustituidas. Evita repetir lo ya descartado.",
+    optional: false,
+  },
+] as const;
+
+/**
+ * Plantilla que se precarga en WhatsApp desde la página de reparación.
+ *
+ * Los campos son los mismos que la conversación acaba pidiendo y coinciden
+ * con lo que el asistente extrae para una solicitud de tipo ECU_REPAIR. Los
+ * dos últimos van marcados como opcionales a propósito: sin ellos también se
+ * puede empezar, y nadie debería desmontar nada para rellenarlos.
+ */
+export const REPAIR_MESSAGE = [
+  "Hola. Quería consultar la reparación de una centralita.",
+  "",
+  "Marca, modelo y año:",
+  "Motor:",
+  "Síntoma y desde cuándo:",
+  "¿Arranca y funciona?:",
+  "Códigos de error (si los tengo):",
+  "Referencia de la centralita (si la veo):",
   "Qué se ha probado ya:",
 ].join("\n");
 

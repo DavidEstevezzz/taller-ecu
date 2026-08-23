@@ -1,0 +1,482 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import WhatsAppLink from "../../components/WhatsAppLink.astro";
+import FinalCta from "../../components/FinalCta.astro";
+import FaultTrace from "../../components/FaultTrace.astro";
+import FaultIsolation from "../../components/FaultIsolation.astro";
+import {
+  SERVICES,
+  REPAIR_REASONS,
+  REPAIR_INTAKE,
+  REPAIR_MESSAGE,
+} from "../../config/site";
+
+/** Enlace lateral a los otros dos servicios (docs/site-architecture.md §6). */
+const OTHERS = SERVICES.filter((service) => service.slug !== "reparacion-ecu");
+
+/*
+ * De dónde puede venir el mismo síntoma.
+ *
+ * Está aquí porque es el argumento central de la página: un fallo no señala
+ * una pieza. Todo lo que se afirma es general y comprobable; no describe
+ * ningún caso concreto ni promete que ninguno se resuelva.
+ */
+const ELSEWHERE = [
+  {
+    title: "Cableado y conectores",
+    body: "Un contacto flojo, un conector con humedad o un cable rozado producen lecturas que la centralita anota como fallo.",
+  },
+  {
+    title: "Alimentación y masas",
+    body: "Con tensión insuficiente o una masa en mal estado, la gestión se comporta de forma extraña sin estar averiada.",
+  },
+  {
+    title: "Sensores y actuadores",
+    body: "Lo que la centralita sabe es lo que le llega. Un sensor fuera de rango se registra como error igual que una avería interna.",
+  },
+  {
+    title: "Una causa mecánica",
+    body: "A veces la electrónica está informando correctamente de un problema que no es suyo, y el error es el mensajero.",
+  },
+];
+
+/* Tres datos del hero, todos verificables: describen a quién se atiende y
+   cómo se empieza, sin prometer plazo, precio ni resultado. */
+const HERO_FACTS = [
+  { t: "Para quién", d: "Particulares y otros talleres" },
+  { t: "Sobre qué", d: "La propia unidad, a nivel de componente" },
+  { t: "Cómo empieza", d: "Con una consulta por WhatsApp" },
+];
+---
+
+<PublicLayout
+  title="Reparación de centralitas ECU"
+  description="Reparación de centralitas ECU: cómo se localiza el origen del fallo antes de sustituir la unidad, qué información ayuda a valorar un caso y cómo consultarlo por WhatsApp."
+  path="/servicios/reparacion-ecu"
+>
+  <!-- ═══════════════════════════════════════════════════════════════
+       HERO — el recorrido de la señal, y dónde deja de llegar
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="on-dark relative overflow-hidden bg-surface-bench"
+    aria-labelledby="titulo-reparacion"
+  >
+    <div
+      class="grid-technical-inverse absolute inset-0 opacity-25"
+      aria-hidden="true"
+    >
+    </div>
+    <div
+      class="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_115%_at_10%_5%,transparent_22%,var(--color-surface-bench)_100%)]"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div
+      class="relative mx-auto max-w-(--container-wide) px-5 pb-14 pt-8 sm:px-8 lg:px-10 lg:pb-16 lg:pt-10 xl:px-14"
+    >
+      <nav aria-label="Migas de pan">
+        <ol
+          class="flex flex-wrap items-center gap-2.5 text-sm text-ink-inverse-muted"
+        >
+          <li>
+            <a
+              href="/"
+              class="underline-offset-4 hover:text-accent-on-dark hover:underline"
+            >
+              Inicio
+            </a>
+          </li>
+          <li aria-hidden="true" class="text-ink-subtle">/</li>
+          <li>
+            <a
+              href="/servicios"
+              class="underline-offset-4 hover:text-accent-on-dark hover:underline"
+            >
+              Servicios
+            </a>
+          </li>
+          <li aria-hidden="true" class="text-ink-subtle">/</li>
+          <li aria-current="page" class="text-ink-inverse">
+            Reparación de ECU
+          </li>
+        </ol>
+      </nav>
+
+      <div
+        class="mt-12 grid items-center gap-12 lg:grid-cols-[minmax(0,44fr)_minmax(0,56fr)] lg:gap-12"
+      >
+        <div>
+          <p class="label-technical text-accent-on-dark">Capa de placa</p>
+
+          <h1
+            id="titulo-reparacion"
+            class="display mt-5 text-display text-ink-inverse text-balance"
+          >
+            Reparación de centralitas ECU
+          </h1>
+
+          <p class="mt-7 max-w-xl text-lead text-ink-inverse-muted">
+            Un fallo, un código de avería o un vehículo que no arranca no
+            demuestran por sí solos que la centralita esté averiada. Primero se
+            revisan los síntomas y la información que ya hay; después se mira
+            dónde se pierde la señal.
+          </p>
+
+          <div class="mt-10 flex flex-wrap items-center gap-3">
+            <a
+              href="#aislamiento"
+              class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent px-6 text-base font-medium text-on-accent transition-colors duration-(--duration-base) hover:bg-accent-hover"
+            >
+              Cómo se localiza un fallo
+              <span aria-hidden="true">↓</span>
+            </a>
+            <WhatsAppLink
+              size="lg"
+              variant="onDark"
+              label="Consultar mi caso"
+              message={REPAIR_MESSAGE}
+            />
+          </div>
+        </div>
+
+        <div>
+          <FaultTrace id="hero-fault" class="mx-auto max-w-[42rem] lg:max-w-none" />
+        </div>
+      </div>
+
+      <!-- Raíl inferior: tres datos, ninguno prometido. -->
+      <dl
+        class="mt-14 grid gap-x-10 gap-y-6 border-t border-border-inverse pt-6 sm:grid-cols-3"
+      >
+        {
+          HERO_FACTS.map((item) => (
+            <div>
+              <dt class="label-technical text-accent-on-dark">{item.t}</dt>
+              <dd class="mt-2.5 text-sm text-ink-inverse-muted">{item.d}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EL PUNTO DE PARTIDA — un fallo no es un diagnóstico
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="bg-canvas" aria-labelledby="titulo-partida">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="reveal lg:col-span-5">
+          <p class="label-technical text-accent">El punto de partida</p>
+          <h2
+            id="titulo-partida"
+            class="display mt-5 text-h2 text-ink text-balance"
+          >
+            Un fallo dice dónde mirar, no qué sustituir.
+          </h2>
+        </div>
+
+        <div class="lg:col-span-7">
+          <div
+            class="reveal max-w-(--container-prose) space-y-5 text-lead text-ink-muted"
+          >
+            <p>
+              Un código de avería es una anotación de la propia centralita:
+              registra que un valor se salió de lo esperado. Apunta a un
+              circuito o a una función, no a una pieza culpable. Y un vehículo
+              que no arranca dice todavía menos, porque es el resultado y no la
+              causa.
+            </p>
+            <p>
+              Por eso el primer paso no es abrir nada ni encargar una unidad
+              nueva. <strong class="font-medium text-ink"
+                >Se revisan los síntomas y la información disponible</strong
+              >, y solo cuando lo que se ve sigue apuntando a la centralita
+              tiene sentido mirarla por dentro.
+            </p>
+            <p>
+              Cuando el problema se localiza ahí y es reparable, intervenir
+              sobre el punto localizado puede tener más sentido que sustituir la
+              caja completa. Es una posibilidad, no una regla:
+              <strong class="font-medium text-ink"
+                >cada caso hay que confirmarlo por separado</strong
+              >.
+            </p>
+          </div>
+
+          <p class="reveal mt-12 label-technical text-ink-muted">
+            El mismo síntoma puede venir de otro sitio
+          </p>
+
+          <dl class="mt-6 grid gap-x-12 gap-y-9 sm:grid-cols-2">
+            {
+              ELSEWHERE.map((item, i) => (
+                <div
+                  class="reveal border-t border-border pt-5"
+                  style={`--reveal-delay: ${i * 80}ms`}
+                >
+                  <span
+                    class="block h-0.5 w-8 -translate-y-[calc(1.25rem+1px)] bg-accent"
+                    aria-hidden="true"
+                  />
+                  <dt class="display text-h3 text-ink">{item.title}</dt>
+                  <dd class="mt-2.5 text-sm leading-relaxed text-ink-muted">
+                    {item.body}
+                  </dd>
+                </div>
+              ))
+            }
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EL CERCO QUE SE ESTRECHA — la pieza propia de esta página
+       ═══════════════════════════════════════════════════════════════ -->
+  <FaultIsolation id="aislamiento" headingId="titulo-aislamiento" />
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MOTIVOS DE CONSULTA
+       Una lista dividida por líneas, no una rejilla de tarjetas: son seis
+       motivos que se leen seguidos, no seis cosas que se comparan.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="bg-canvas" aria-labelledby="titulo-motivos">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="lg:col-span-7">
+          <div class="reveal">
+            <p class="label-technical text-accent">Motivos de consulta</p>
+            <h2
+              id="titulo-motivos"
+              class="display mt-5 text-h2 text-ink text-balance"
+            >
+              Cuándo merece la pena preguntar.
+            </h2>
+          </div>
+
+          <ul class="mt-10 divide-y divide-border border-y border-border">
+            {
+              REPAIR_REASONS.map((reason, i) => (
+                <li
+                  class="reveal flex gap-5 py-6"
+                  style={`--reveal-delay: ${i * 60}ms`}
+                >
+                  <span
+                    class="mt-3 h-px w-6 shrink-0 bg-accent"
+                    aria-hidden="true"
+                  />
+                  <div>
+                    <b class="display text-h3 font-semibold text-ink">
+                      {reason.title}
+                    </b>
+                    <p class="mt-2 text-sm leading-relaxed text-ink-muted">
+                      {reason.body}
+                    </p>
+                  </div>
+                </li>
+              ))
+            }
+          </ul>
+
+          <p
+            class="reveal mt-8 max-w-(--container-prose) border-l-2 border-border-strong pl-5 text-sm leading-relaxed text-ink-muted"
+          >
+            Ninguno de estos síntomas confirma por sí solo que la centralita
+            esté averiada. Son motivos para revisarlo, no un diagnóstico.
+          </p>
+        </div>
+
+        <div class="lg:col-span-5">
+          <div class="reveal lg:sticky lg:top-32">
+            <div class="border border-border bg-surface p-7 lg:p-8">
+              <p class="label-technical text-accent">Sin promesas</p>
+              <h3 class="display mt-4 text-h3 text-ink">
+                Lo que se confirma caso a caso
+              </h3>
+              <div class="mt-4 space-y-4 text-sm leading-relaxed text-ink-muted">
+                <p>
+                  Si una unidad concreta es reparable, qué implicaría y en qué
+                  condiciones, no se puede afirmar de antemano. Se valora con
+                  los datos del vehículo y, cuando hace falta, con la unidad
+                  delante.
+                </p>
+                <p>
+                  Preferimos decir que un caso no tiene salida antes que
+                  prometer un resultado. Atendemos tanto a particulares como a
+                  talleres que necesitan cerrar la parte electrónica de una
+                  avería.
+                </p>
+              </div>
+
+              <WhatsAppLink
+                class="mt-7 w-full"
+                size="lg"
+                label="Contar el síntoma"
+                message={REPAIR_MESSAGE}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       QUÉ AYUDA A VALORARLO — la ficha, como una hoja de datos
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="border-y border-border bg-surface"
+    aria-labelledby="titulo-datos"
+  >
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="lg:col-span-5">
+          <div class="reveal">
+            <p class="label-technical text-accent">Antes de escribir</p>
+            <h2
+              id="titulo-datos"
+              class="display mt-5 text-h2 text-ink text-balance"
+            >
+              Con estos datos se puede empezar a valorarlo.
+            </h2>
+            <p class="mt-6 max-w-(--container-prose) text-lead text-ink-muted">
+              Es lo mismo que la conversación acaba preguntando, así que
+              enviarlo de una vez acorta el camino. Si te falta algo, escribe
+              igualmente: se completa por el camino.
+            </p>
+
+            <WhatsAppLink
+              class="mt-9"
+              size="lg"
+              label="Abrir WhatsApp con la plantilla"
+              message={REPAIR_MESSAGE}
+            />
+          </div>
+
+          <!-- Las dos advertencias que evitan que alguien haga de más. -->
+          <div class="mt-10 space-y-5">
+            <div class="reveal border-l-2 border-accent bg-canvas p-5">
+              <h3 class="display text-h3 text-ink">
+                ¿No ves la referencia de la centralita?
+              </h3>
+              <p class="mt-2.5 text-sm leading-relaxed text-ink-muted">
+                Escríbenos igual. La referencia ayuda a identificar la unidad,
+                pero no es imprescindible para una primera valoración: con
+                marca, modelo, motor y síntoma ya se puede empezar.
+              </p>
+            </div>
+
+            <div class="reveal border-l-2 border-accent bg-canvas p-5">
+              <h3 class="display text-h3 text-ink">
+                No desmontes nada para contestar
+              </h3>
+              <p class="mt-2.5 text-sm leading-relaxed text-ink-muted">
+                No hace falta que quites la centralita ni que abras nada solo
+                para responder a un mensaje. Si en algún momento hiciera falta,
+                se dice antes.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!--
+          Ficha de datos: etiqueta a la izquierda, explicación a la derecha,
+          una línea por fila. Se parece a lo que se va a rellenar, que es
+          justo lo que hace que se entienda de un vistazo.
+        -->
+        <div class="lg:col-span-7">
+          <dl
+            class="reveal divide-y divide-border border-y border-border sm:border sm:border-border"
+          >
+            {
+              REPAIR_INTAKE.map((field) => (
+                <div class="grid gap-1.5 px-0 py-5 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] sm:gap-6 sm:px-6">
+                  <dt class="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                    <span class="font-mono text-sm font-medium text-ink">
+                      {field.label}
+                    </span>
+                    {field.optional && (
+                      <span class="label-technical rounded-sm bg-surface-sunken px-1.5 py-0.5 text-ink-muted">
+                        Si lo tienes
+                      </span>
+                    )}
+                  </dt>
+                  <dd class="text-sm leading-relaxed text-ink-muted">
+                    {field.body}
+                  </dd>
+                </div>
+              ))
+            }
+          </dl>
+
+          <p
+            class="reveal mt-6 max-w-(--container-prose) text-xs leading-relaxed text-ink-muted"
+          >
+            Las fotos ayudan más de lo que parece: la etiqueta de la unidad, lo
+            que muestre el equipo de diagnosis y, si la centralita ya está
+            fuera, el estado de la placa.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       LOS OTROS DOS SERVICIOS — enlace lateral, no callejón sin salida
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="border-t border-border bg-surface-sunken"
+    aria-labelledby="titulo-otros"
+  >
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-16 sm:px-8 lg:px-10 lg:py-20 xl:px-14"
+    >
+      <h2 id="titulo-otros" class="display text-h3 text-ink">
+        ¿No es esto lo que necesitas?
+      </h2>
+
+      <div class="mt-8 grid gap-px border border-border bg-border sm:grid-cols-2">
+        {
+          OTHERS.map((service) => (
+            <a
+              href={service.href}
+              class="group flex flex-col bg-surface p-7 transition-colors duration-(--duration-base) hover:bg-canvas lg:p-8"
+            >
+              <span class="label-technical text-accent">{service.depth}</span>
+              <span class="display mt-3 text-h3 text-ink">{service.name}</span>
+              <span class="mt-3 text-sm leading-relaxed text-ink-muted">
+                {service.description}
+              </span>
+              <span class="mt-5 inline-flex items-center gap-2 text-sm font-medium text-accent">
+                {service.page
+                  ? `Ver la página de ${service.nameLower}`
+                  : "Ver en la página de servicios"}
+                <span
+                  class="transition-transform duration-(--duration-base) group-hover:translate-x-1"
+                  aria-hidden="true"
+                >
+                  →
+                </span>
+              </span>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <FinalCta
+    title="Cuéntanos qué está haciendo el vehículo."
+    body="Con la marca, el modelo, el motor y el síntoma se puede empezar a valorarlo. Si no tienes a la vista la referencia de la centralita, escribe igualmente."
+    message={REPAIR_MESSAGE}
+  />
+</PublicLayout>

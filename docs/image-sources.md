@@ -89,6 +89,14 @@ Cada página pública conserva **una sola fotografía protagonista**, más la de
 hero de la portada usada como ambiente. Cuando lleguen fotos reales del taller,
 son las que deben ocupar esos huecos.
 
+**`/servicios/reparacion-ecu` no lleva ninguna.** No es un descuido: las tres
+que hay están ya cada una en su sitio, y la única que encajaría —las manos
+soldando sobre una placa— es la protagonista de la portada. Repetirla habría
+delatado que el banco de imágenes se está estirando. La página se sostiene con
+sus dos dibujos originales, que además son más honestos: nadie puede confundir
+un esquema con un trabajo del taller. **El hueco es para una fotografía real de
+JM Repro Cars**, y es el primer sitio donde debería ir cuando llegue.
+
 **Cada imagen se revisó visualmente antes de incorporarla**, no solo por su
 descripción. Ninguna tiene aspecto generado por IA, ninguna muestra una acción
 técnicamente absurda, y en ninguna hay rostros reconocibles, matrículas legibles

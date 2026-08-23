@@ -12,11 +12,16 @@ const path = Astro.url.pathname;
  * /servicios disfrazadas de páginas, y competían con ellas en la barra
  * principal. Siguen alcanzables desde el pie y desde el propio contenido.
  *
- * De los tres servicios, solo Reprogramación tiene página propia, así que solo
- * él aparece aquí; los otros dos son secciones de /servicios. Tampoco hay
- * desplegable: con dos destinos reales, un menú que se abre para enseñar uno
- * solo es peor que una lista plana. Cuando existan las otras dos páginas se
- * replantea.
+ * Solo aparecen los servicios que ya tienen página propia —hoy Reprogramación
+ * y Reparación de ECU—; Clonación sigue siendo una sección de /servicios.
+ * Tampoco hay desplegable: con tres destinos reales y cortos, la lista plana
+ * los enseña todos de una vez, y un menú que hay que abrir para ver dos hijos
+ * esconde información en lugar de ordenarla. Se replantea cuando exista el
+ * tercero.
+ *
+ * La barra completa deja de caber cómodamente por debajo de 1024 px, así que
+ * ahí pasa el relevo al menú desplegable: antes el corte estaba en 768 y con
+ * un enlace más se apretaba contra la marca y el botón de WhatsApp.
  *
  * "Trabajos" existe en la arquitectura pero NO se muestra hasta que haya
  * casos reales autorizados. Ver docs/site-architecture.md §4.
@@ -67,7 +72,7 @@ function isCurrent(href: string): boolean {
   >
     <BrandMark tone="inverse" />
 
-    <nav aria-label="Principal" class="hidden items-center gap-1 md:flex">
+    <nav aria-label="Principal" class="hidden items-center gap-1 lg:flex">
       {
         links.map((link) => (
           <a
@@ -95,7 +100,7 @@ function isCurrent(href: string): boolean {
         Navegación móvil con <details>: funciona sin JavaScript, es accesible
         por teclado de serie y no necesita ninguna librería.
       -->
-      <details class="relative md:hidden">
+      <details class="relative lg:hidden">
         <summary
           class="flex min-h-11 min-w-11 cursor-pointer list-none items-center justify-center rounded-md border border-border-inverse px-3 text-sm text-ink-inverse marker:hidden [&::-webkit-details-marker]:hidden"
           aria-label="Abrir menú de navegación"

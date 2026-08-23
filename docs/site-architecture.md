@@ -55,7 +55,7 @@ Estado: ✅ implementada · ◻︎ planificada
 Portada (/)                                              ✅
 ├── Servicios (/servicios)                               ✅
 │   ├── Reprogramación (/servicios/reprogramacion)       ✅
-│   ├── Reparación de ECU (/servicios/reparacion-ecu)    ◻︎
+│   ├── Reparación de ECU (/servicios/reparacion-ecu)    ✅
 │   └── Clonación de ECU (/servicios/clonacion-ecu)      ◻︎
 ├── Cómo trabajamos (/como-trabajamos)
 ├── Trabajos (/trabajos)                    ← fase posterior
@@ -124,25 +124,38 @@ dentro de otra rompe esa promesa, y además hace que dos secciones compitan con
 la página que las contiene.
 
 ```
-[BrandMark]   Servicios   Reprogramación        [WhatsApp]
+[BrandMark]   Servicios   Reprogramación   Reparación de ECU   [WhatsApp]
 ```
 
 «Cómo trabajamos» y «Preguntas» **se han retirado de la cabecera**: eran anclas
 de `/servicios`. Siguen alcanzables desde el pie, desde el menú móvil y desde
 enlaces contextuales, que es donde ayudan sin engañar.
 
-De los tres servicios, solo **Reprogramación** tiene página propia, así que solo
-él aparece. **Tampoco hay desplegable bajo «Servicios»**: un menú que se abre
-para enseñar un único destino real es peor que una lista plana. Cuando existan
-`/servicios/reparacion-ecu` y `/servicios/clonacion-ecu` se replantea, y
-entonces el desplegable sí tendrá sentido.
+De los tres servicios, **Reprogramación** y **Reparación de ECU** tienen página
+propia, así que aparecen los dos; Clonación sigue siendo una sección de
+`/servicios` y por eso no está.
+
+**Sigue sin haber desplegable bajo «Servicios», y es una decisión, no un
+pendiente.** Con el hub y dos hijos son tres destinos cortos que caben en la
+barra: enseñarlos de una vez cuesta cero clics, mientras que un menú que hay
+que abrir para ver dos entradas esconde información en lugar de ordenarla. Se
+replantea cuando exista `/servicios/clonacion-ecu`, que es cuando la barra
+empieza a competir consigo misma.
+
+**Dónde pasa el relevo al menú desplegable: 1024 px.** Antes eran 768. Con un
+enlace más, la barra completa se apretaba contra la marca y el botón de
+WhatsApp en tabletas, así que entre 768 y 1023 px la navegación pasa al menú
+`<details>`, que ya lleva todos los destinos y sigue funcionando sin
+JavaScript.
 
 El campo `page` de cada servicio en `web/src/config/site.ts` gobierna esto: la
 cabecera se construye filtrando por él, así que crear una de las otras dos
 páginas la añade sola.
 
-- `Servicios` despliega los tres servicios confirmados. Con solo tres hijos, el
-  desplegable es innecesario en móvil: allí se expanden en la navegación.
+- `Servicios` es el hub y sigue estando en la barra: enlaza a los tres, incluida
+  la Clonación, que todavía no tiene página. En el menú móvil los servicios sin
+  página propia aparecen bajo «Dentro de servicios», junto al proceso y a las
+  preguntas, porque eso es exactamente lo que son: secciones de `/servicios`.
 - `Trabajos` **no se muestra hasta que existan casos reales autorizados**. Aparece en
   la arquitectura para reservar la URL, no en la interfaz. La portada tampoco
   reserva ya un hueco visible para esa sección: el recuadro vacío que anunciaba
@@ -190,10 +203,13 @@ nivel 1: no aportan nada y añaden ruido.
 | Identificadores | No. Slugs legibles siempre |
 | Profundidad | Máximo dos niveles |
 
-**Mientras no existan las páginas individuales de servicio**, los enlaces
-apuntan a anclas dentro de `/servicios` (`#reprogramacion`, `#reparacion-ecu`,
-`#clonacion-ecu`). Ningún enlace del sitio apunta a una página inexistente. Las
-URLs individuales quedan reservadas: cuando se creen, las anclas redirigen.
+**Mientras no exista la página individual de un servicio**, sus enlaces
+apuntan a un ancla dentro de `/servicios` (hoy solo `#clonacion-ecu`). Ningún
+enlace del sitio apunta a una página inexistente, y hay una prueba que lo
+sostiene: `web/test/site-config.test.ts` comprueba que todo servicio con el
+campo `page` relleno tiene su archivo escrito en `src/pages`, y que los que no
+lo tienen enlazan a su ancla. Es la única red que impide que la cabecera
+prometa una dirección que devuelve 404.
 
 | Tipo de página | Patrón | Ejemplo |
 |---|---|---|

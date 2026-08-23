@@ -1,0 +1,593 @@
+---
+import { px, py, topFace, sideFaces, box, trace } from "../lib/iso";
+
+/**
+ * Síntoma, causa e intervención — el cerco que se estrecha.
+ *
+ * Es la pieza distintiva de `/servicios/reparacion-ecu` y el argumento entero
+ * de la página en un solo gesto: **el mismo cerco recorre tres tamaños**.
+ * Empieza rodeando la unidad completa (al principio todo está bajo sospecha),
+ * se reduce a una zona de la placa cuando lo que se ve apunta ahí, y termina
+ * ajustado a un punto localizado. Al pasar del primer paso al segundo, la tapa
+ * se levanta: es el mismo «se abre la caja» que sostiene todo el sitio.
+ *
+ * El movimiento explica algo, que es la única razón por la que está: si el
+ * cerco no se encogiera, el dibujo no diría nada que no dijera el texto.
+ *
+ * Cómo se comporta cuando algo falta:
+ *
+ * - **Sin JavaScript** no se dibujan los controles y los tres pasos se sirven
+ *   uno detrás de otro, como una lista corriente. No se pierde ni una palabra.
+ * - **Con movimiento reducido** los pasos siguen cambiando —es navegación, no
+ *   decoración—, pero el cambio es instantáneo: lo colapsa la regla global de
+ *   `tokens.css`.
+ * - Los controles son botones reales, con el patrón de pestañas completo
+ *   (flechas, Inicio y Fin), montado en `src/scripts/fault-isolation.ts`.
+ *
+ * Y como todos los dibujos del sitio: sin una sola cifra, sin referencias y
+ * sin representar ninguna unidad concreta ni ninguna avería real.
+ */
+interface Props {
+  id?: string;
+  headingId: string;
+}
+
+const { id = "aislamiento", headingId } = Astro.props;
+
+/* ── Medidas ──────────────────────────────────────────────── */
+const W = 300;
+const D = 190;
+const C = 34;
+const T = 30;
+const IN = 26;
+
+const BW = W - IN * 2;
+const BD = D - IN * 2;
+
+const OX = 300;
+const OY = 210;
+const BOY = OY + IN; // px(OX, IN, IN) === OX, así que solo cambia la altura
+
+const LID_OY = OY - 12; // la tapa asienta sobre la carcasa
+const LID_T = 14;
+
+/* Componentes sobre la placa. El pequeño de la derecha es el que acaba
+   localizado; los demás son los que se descartan por el camino. */
+const chipA = box(OX, BOY, 14, 22, 44, 32, 8);
+const chipB = box(OX, BOY, 178, 18, 52, 30, 8);
+const mcu = box(OX, BOY, 86, 38, 78, 60, 12);
+const located = box(OX, BOY, 182, 88, 30, 28, 24);
+const chipC = box(OX, BOY, 18, 92, 50, 28, 8);
+
+const parts = [chipA, chipB, mcu, chipC, located];
+
+/* Pistas de la placa: recorridos ortogonales sobre los ejes del tablero. */
+const traces = [
+  trace(OX, BOY, 0, 60, [
+    [1, 80],
+    [2, -24],
+  ]),
+  trace(OX, BOY, 164, 60, [
+    [1, 40],
+    [2, 44],
+  ]),
+  trace(OX, BOY, 60, 118, [[1, 120]]),
+];
+
+/* Los dos que se comprueban y se descartan mientras se estrecha el cerco. */
+const candidates = [
+  [px(OX, 204, 33), py(BOY, 204, 33)],
+  [px(OX, 43, 106), py(BOY, 43, 106)],
+] as const;
+
+
+const titleId = `${id}-title`;
+const descId = `${id}-desc`;
+
+/*
+ * Los tres pasos. Sí son una secuencia —primero se observa, después se acota,
+ * y solo al final se decide qué hacer—, así que aquí numerar dice algo
+ * verdadero. Es la misma razón por la que los tres servicios NO se numeran.
+ */
+const STAGES = [
+  {
+    key: "sintoma",
+    index: "01",
+    name: "Síntoma",
+    title: "Lo que hace el vehículo",
+    body: [
+      "No arranca, se queda en modo emergencia, da tirones o repite un error después de borrarlo. Es el punto de partida y no señala una pieza: de momento, toda la unidad está bajo sospecha, y con ella el cableado, la alimentación y los sensores que la rodean.",
+      "Un código de avería tampoco cierra nada. Es una anotación de la propia centralita diciendo que un valor se salió de lo esperado; apunta a un circuito o a una función, no a un culpable.",
+    ],
+  },
+  {
+    key: "causa",
+    index: "02",
+    name: "Causa",
+    title: "Dónde se pierde",
+    body: [
+      "Se revisa lo que ya se sabe —en qué condiciones aparece, qué códigos se han leído, qué se ha comprobado y qué se ha sustituido— y el cerco se estrecha. Buena parte de las consultas se resuelven aquí, y no siempre dentro de la centralita.",
+      "Cuando lo que se ve sigue apuntando a la unidad, se abre y se mira la placa: alimentación, señales de entrada y salida, pistas y soldaduras. Es el momento en el que se deja de hablar de la caja entera y se empieza a hablar de una zona concreta.",
+    ],
+  },
+  {
+    key: "intervencion",
+    index: "03",
+    name: "Intervención",
+    title: "Actuar sobre el punto localizado",
+    body: [
+      "Si el problema está localizado en la centralita y es reparable, puede tener sentido intervenir sobre ese punto y dejar el resto de la unidad como estaba. Es la alternativa a sustituir la caja completa, y hay que confirmarla caso a caso.",
+      "Y si no es reparable, se dice. Hay averías que terminan en sustitución, y saberlo pronto vale más que una reparación prometida de antemano.",
+    ],
+  },
+] as const;
+---
+
+<section
+  class="on-dark relative scroll-mt-32 overflow-hidden bg-surface-inverse"
+  aria-labelledby={headingId}
+  id={id}
+>
+  <div
+    class="grid-technical-inverse absolute inset-0 opacity-20"
+    aria-hidden="true"
+  >
+  </div>
+
+  <div
+    class="relative mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+  >
+    <div class="reveal max-w-3xl">
+      <p class="label-technical text-accent-on-dark">Cómo se acota</p>
+      <h2
+        id={headingId}
+        class="display mt-5 text-h2 text-ink-inverse text-balance"
+      >
+        Síntoma, causa e intervención no son lo mismo.
+      </h2>
+      <p class="mt-6 max-w-(--container-prose) text-lead text-ink-inverse-muted">
+        Separarlos es el trabajo. Un vehículo que no arranca es un síntoma; la
+        causa puede estar dentro de la centralita o fuera de ella; y qué se
+        hace con la unidad solo se decide cuando la causa está localizada.
+      </p>
+    </div>
+
+    <div
+      class="fault mt-14 grid gap-10 lg:mt-16 lg:grid-cols-12 lg:gap-14"
+      data-fault
+      data-state="sintoma"
+    >
+      <!-- ── El dibujo ───────────────────────────────────────── -->
+      <figure class="fault-figure lg:col-span-7">
+        <div
+          class="border border-border-inverse bg-surface-bench p-4 sm:p-6 lg:p-8"
+        >
+          <svg
+            viewBox="80 96 550 416"
+            class="fault-svg"
+            role="img"
+            aria-labelledby={`${titleId} ${descId}`}
+            fill="none"
+          >
+            <title id={titleId}>
+              El cerco que se estrecha sobre una centralita
+            </title>
+            <desc id={descId}>
+              Dibujo esquemático en tres estados. En el primero, un círculo de
+              trazo discontinuo rodea la unidad entera, todavía cerrada. En el
+              segundo, la tapa se levanta y queda como contorno, la placa
+              aparece a la vista y el círculo se reduce a una zona de ella. En
+              el tercero, el círculo se ajusta a un único componente, marcado
+              en cobre.
+            </desc>
+
+            <!-- Carcasa abierta y placa -->
+            <g>
+              {
+                sideFaces(OX, OY, W, D, C, T).map((d) => (
+                  <path d={d} class="face-side" />
+                ))
+              }
+              <path d={topFace(OX, OY, W, D, C)} class="face-top" />
+              <path
+                d={topFace(px(OX, 14, 14), py(OY, 14, 14), W - 28, D - 28, 0)}
+                class="face-recess"
+              />
+            </g>
+
+            <g>
+              {
+                sideFaces(OX, BOY, BW, BD, 0, 7).map((d) => (
+                  <path d={d} class="board-side" />
+                ))
+              }
+              <path d={topFace(OX, BOY, BW, BD, 0)} class="board-top" />
+              {traces.map((d) => <path d={d} class="board-trace" />)}
+              {
+                parts.map((part) => (
+                  <g>
+                    {part.sides.map((d) => (
+                      <path d={d} class="part-side" />
+                    ))}
+                    <path d={part.top} class="part-top" />
+                  </g>
+                ))
+              }
+            </g>
+
+            <!-- Lo que se comprueba y se descarta por el camino -->
+            <g class="candidates">
+              {
+                candidates.map(([cx, cy]) => (
+                  <ellipse cx={cx} cy={cy} rx="30" ry="20" class="candidate" />
+                ))
+              }
+            </g>
+
+            <!-- El punto localizado, ya intervenido -->
+            <g class="fix">
+              {located.sides.map((d) => <path d={d} class="fix-side" />)}
+              <path d={located.top} class="fix-top" />
+            </g>
+
+            <!--
+              La tapa. Va la última de las piezas para que tape de verdad la
+              unidad cuando está puesta; al abrirse se queda como contorno.
+            -->
+            <g class="lid">
+              {
+                sideFaces(OX, LID_OY, W, D, C, LID_T).map((d) => (
+                  <path d={d} class="face-side" />
+                ))
+              }
+              <path d={topFace(OX, LID_OY, W, D, C)} class="face-top" />
+              <path d={trace(OX, LID_OY, 44, 40, [[1, 200]])} class="etch" />
+              <path d={trace(OX, LID_OY, 44, 74, [[1, 200]])} class="etch" />
+            </g>
+
+            <!--
+              El cerco. Es una sola elipse: lo que cambia entre pasos es su
+              posición y su tamaño, y ese recorrido es el argumento entero.
+            -->
+            <g class="ring-group">
+              <ellipse
+                cx="0"
+                cy="0"
+                rx="262"
+                ry="158"
+                class="ring"
+                vector-effect="non-scaling-stroke"
+              />
+            </g>
+          </svg>
+        </div>
+
+        <figcaption class="mt-4 text-xs leading-relaxed text-ink-inverse-muted">
+          Dibujo esquemático. No representa ninguna unidad concreta ni ninguna
+          avería real.
+        </figcaption>
+      </figure>
+
+      <!-- ── Los tres pasos ──────────────────────────────────── -->
+      <div class="lg:col-span-5">
+        <div class="fault-tablist" data-fault-tablist>
+          {
+            STAGES.map((stage) => (
+              <button type="button" class="fault-tab" data-fault-tab={stage.key}>
+                <span class="label-technical fault-tab-index">
+                  {stage.index}
+                </span>
+                <span class="display fault-tab-name">{stage.name}</span>
+              </button>
+            ))
+          }
+        </div>
+
+        <div class="fault-panels">
+          {
+            STAGES.map((stage) => (
+              <div class="fault-panel" data-fault-panel={stage.key}>
+                <p class="label-technical fault-panel-eyebrow">
+                  <span class="fault-panel-index">{stage.index}</span>
+                  {stage.name}
+                </p>
+                <h3 class="display mt-3 text-h3 text-ink-inverse">
+                  {stage.title}
+                </h3>
+                {stage.body.map((paragraph) => (
+                  <p class="mt-4 text-sm leading-relaxed text-ink-inverse-muted">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import "../scripts/fault-isolation";
+</script>
+
+<style>
+  /* ═══════════════════════════════════════════════════════════
+     El dibujo
+     ═══════════════════════════════════════════════════════════ */
+
+  .fault {
+    /* Posición y tamaño del cerco en cada paso. Se declaran aquí, en un solo
+       sitio, y las heredan el SVG y todo lo que hay dentro. */
+    --ring-x: 355px;
+    --ring-y: 341px;
+    --ring-s: 1;
+    --lid-y: 0px;
+  }
+
+  .fault[data-state="causa"] {
+    --ring-x: 371px;
+    --ring-y: 348px;
+    --ring-s: 0.42;
+    --lid-y: -90px;
+  }
+
+  .fault[data-state="intervencion"] {
+    --ring-x: 395px;
+    --ring-y: 385px;
+    --ring-s: 0.17;
+    --lid-y: -90px;
+  }
+
+  .fault-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* Materiales: los mismos del despiece y de los diagramas de servicio. */
+  .face-top {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-graphite-500);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  .face-side {
+    fill: var(--jm-graphite-800);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  .face-recess {
+    fill: var(--jm-graphite-850);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.25;
+  }
+
+  .etch {
+    stroke: var(--jm-graphite-600);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .board-top {
+    fill: var(--jm-graphite-850);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+
+  .board-side {
+    fill: var(--jm-graphite-950);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .board-trace {
+    stroke: var(--jm-copper-500);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .part-top {
+    fill: var(--jm-graphite-600);
+    stroke: var(--jm-graphite-400);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .part-side {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-graphite-500);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  /* La tapa: sólida cuando la unidad está cerrada, contorno cuando se abre. */
+  .lid {
+    transform: translateY(var(--lid-y));
+    transform-box: view-box;
+    transform-origin: 0 0;
+    transition:
+      transform var(--duration-assembly) var(--ease-settle),
+      opacity var(--duration-slow) var(--ease-out);
+  }
+
+  .lid .face-top,
+  .lid .face-side {
+    transition: fill var(--duration-slow) var(--ease-out);
+  }
+
+  .fault:not([data-state="sintoma"]) .lid {
+    opacity: 0.5;
+  }
+
+  .fault:not([data-state="sintoma"]) .lid .face-top,
+  .fault:not([data-state="sintoma"]) .lid .face-side {
+    fill: transparent;
+  }
+
+  /* El cerco */
+  .ring-group {
+    transform: translate(var(--ring-x), var(--ring-y)) scale(var(--ring-s));
+    transform-box: view-box;
+    transform-origin: 0 0;
+    transition: transform var(--duration-assembly) var(--ease-settle);
+  }
+
+  .ring {
+    fill: none;
+    stroke: var(--color-accent-on-dark);
+    stroke-width: 2.25;
+    stroke-dasharray: 7 6;
+  }
+
+  /* Lo que se descarta por el camino: solo mientras se busca. */
+  .candidate {
+    fill: none;
+    stroke: var(--jm-graphite-400);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 5;
+  }
+
+  .candidates,
+  .fix {
+    opacity: 0;
+    transition: opacity var(--duration-slow) var(--ease-out);
+  }
+
+  .fault[data-state="causa"] .candidates,
+  .fault[data-state="intervencion"] .fix {
+    opacity: 1;
+  }
+
+  .fix-top {
+    fill: var(--jm-copper-500);
+    stroke: var(--jm-copper-300);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+
+  .fix-side {
+    fill: var(--jm-copper-700);
+    stroke: var(--jm-copper-500);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     Los controles
+
+     No existen sin JavaScript: un botón que no hace nada es peor que no
+     tenerlo. En su lugar se sirven los tres pasos seguidos.
+     ═══════════════════════════════════════════════════════════ */
+
+  .fault-tablist {
+    display: none;
+  }
+
+  :global(html.js) .fault-tablist {
+    display: grid;
+    gap: 0;
+    border-top: 1px solid var(--color-border-inverse);
+  }
+
+  .fault-tab {
+    display: flex;
+    align-items: baseline;
+    gap: 0.875rem;
+    width: 100%;
+    min-height: 3.25rem;
+    padding: 0.9rem 0.25rem;
+    border-bottom: 1px solid var(--color-border-inverse);
+    border-left: 2px solid transparent;
+    padding-left: 1rem;
+    margin-left: -1rem;
+    text-align: left;
+    cursor: pointer;
+    color: var(--color-ink-inverse-muted);
+    background: none;
+    transition:
+      color var(--duration-base) var(--ease-out),
+      border-color var(--duration-base) var(--ease-out);
+  }
+
+  .fault-tab:hover {
+    color: var(--color-ink-inverse);
+  }
+
+  .fault-tab[aria-selected="true"] {
+    color: var(--color-ink-inverse);
+    border-left-color: var(--color-accent-on-dark);
+  }
+
+  .fault-tab-index {
+    color: var(--color-accent-on-dark);
+    flex: none;
+  }
+
+  .fault-tab-name {
+    font-size: var(--text-h3);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     Los paneles
+     ═══════════════════════════════════════════════════════════ */
+
+  .fault-panels {
+    margin-top: 2rem;
+  }
+
+  /* Sin JavaScript los tres se leen seguidos, separados por una línea. */
+  .fault-panel + .fault-panel {
+    margin-top: 2.5rem;
+    padding-top: 2.5rem;
+    border-top: 1px solid var(--color-border-inverse);
+  }
+
+  .fault-panel-eyebrow {
+    color: var(--color-accent-on-dark);
+  }
+
+  .fault-panel-index {
+    margin-right: 0.625rem;
+  }
+
+  /* Con JavaScript, el paso activo manda: los controles ya numeran, así que
+     el panel se queda solo con su título. */
+  :global(html.js) .fault-panel + .fault-panel {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  :global(html.js) .fault-panel-eyebrow {
+    display: none;
+  }
+
+  /* Que el alto no salte al cambiar de paso: el dibujo de al lado se movería
+     con él. La reserva es la del texto más largo en una columna estrecha. */
+  :global(html.js) .fault-panels {
+    min-height: 20rem;
+  }
+
+  :global(html.js-anim) .fault-panel:not([hidden]) {
+    animation: fault-panel-in var(--duration-slow) var(--ease-out) both;
+  }
+
+  @keyframes fault-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>

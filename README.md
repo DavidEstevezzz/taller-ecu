@@ -397,19 +397,26 @@ Ahora bien, **no está en marcha en ningún sitio**:
 Aplicación **Astro 5 + TypeScript + React + Tailwind 4** en `web/`, **sin
 desplegar**:
 
-- Portada pública en `/`, hub de servicios en `/servicios` y **página completa de
-  `/servicios/reprogramacion`**, con el configurador orientativo de
-  Tuning-shop.com incrustado bajo activación explícita. Es la **única petición a
-  terceros** de toda la web, y está documentada en
-  [embed-tuning-shop.md](docs/embed-tuning-shop.md). Estáticas, con
-  **~2,4 kB de JavaScript en línea** que solo aporta movimiento: revelado al
-  entrar en pantalla, trazado de la pista del proceso, paralaje del despiece e
-  índice activo. **Ninguna línea es necesaria para leer la página**, y todo se
-  desactiva con `prefers-reduced-motion`. Sin librería de animación.
+- Portada pública en `/`, hub de servicios en `/servicios` y **dos páginas
+  completas de servicio**: `/servicios/reprogramacion`, con el configurador
+  orientativo de Tuning-shop.com incrustado bajo activación explícita —la
+  **única petición a terceros** de toda la web, documentada en
+  [embed-tuning-shop.md](docs/embed-tuning-shop.md)—, y
+  `/servicios/reparacion-ecu`, que explica cómo se localiza el origen de un
+  fallo antes de sustituir la unidad. Estáticas, con **2,4 kB de JavaScript en
+  línea** (3,8 kB en la de reparación) que aporta movimiento y un bloque de tres
+  pasos: revelado al entrar en pantalla, trazado de la pista del proceso,
+  paralaje del despiece, índice activo y el cerco que se estrecha sobre la
+  centralita. **Nada de eso es necesario para leer la página** —sin JavaScript
+  el bloque de tres pasos se sirve entero, seguido— y el movimiento se desactiva
+  con `prefers-reduced-motion`. Sin librería de animación.
 - Identidad visual propia: un **despiece de centralita** dibujado a medida como
-  firma de la portada, y un diagrama por servicio, todos calculados desde la
-  misma proyección (`src/lib/iso.ts`). Ningún dibujo lleva cifras ni códigos
-  inventados.
+  firma de la portada, un diagrama por servicio, la capa de software abierta de
+  reprogramación y, en reparación, **el recorrido de una señal con su punto de
+  interrupción** y **un cerco que se estrecha** de la unidad entera a un
+  componente. Todos calculados desde la misma proyección (`src/lib/iso.ts`).
+  Ningún dibujo lleva cifras, referencias ni códigos inventados, y ninguno
+  representa una unidad concreta ni una avería real.
 - Acceso al panel en `/admin/login`.
 - Resumen del panel en `/admin`, consumiendo `GET /api/admin/dashboard`.
 - Fundamentos SEO, sistema de tokens y componentes básicos.
@@ -431,9 +438,10 @@ Sin esa variable no se configura ningún proxy y la web pública funciona igual.
 
 ### Sin empezar
 
-Las páginas individuales de cada servicio, el listado y el detalle de solicitudes
-en el panel, y todos los endpoints de escritura (cambio de estado, notas
-internas, urgencia).
+`/servicios/clonacion-ecu` —el tercer servicio sigue siendo una sección de
+`/servicios`—, el resto de páginas públicas previstas, el listado y el detalle
+de solicitudes en el panel, y todos los endpoints de escritura (cambio de
+estado, notas internas, urgencia).
 
 ### Siguientes fases
 
