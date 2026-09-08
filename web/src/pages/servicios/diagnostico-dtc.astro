@@ -1,0 +1,363 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import WhatsAppLink from "../../components/WhatsAppLink.astro";
+import FinalCta from "../../components/FinalCta.astro";
+import SymptomRoute from "../../components/SymptomRoute.astro";
+import {
+  INTERVENTIONS,
+  DTC_SOLUTIONS,
+  DTC_SEND,
+  DTC_MESSAGE,
+} from "../../config/site";
+
+/*
+ * /servicios/diagnostico-dtc — una necesidad, una interacción, un abanico de
+ * soluciones y una llamada a la acción.
+ *
+ * La primera versión de esta página documentaba el procedimiento: la anatomía
+ * de un código, los cinco tramos del análisis, quince líneas de escenario y
+ * cinco desenlaces internos. Mil cuatrocientas palabras para explicar cómo
+ * razonamos. Estaba bien construida y contaba lo que nadie viene a leer.
+ *
+ * Quien llega aquí tiene un testigo encendido y treinta segundos. Quiere
+ * saber si su caso encaja, qué se puede hacer, qué mandar y por dónde
+ * escribir. Cuatro cosas, cuatro secciones más la llamada final, y todo lo
+ * que no sirva a una de ellas fuera. Los servicios hermanos no se llevan
+ * sección propia: cierran el abanico de soluciones, que es su tema.
+ *
+ * La advertencia honesta —un código no confirma qué pieza está averiada— se
+ * dice **una sola vez**, al pie del tablero. Antes estaba repartida en cuatro
+ * bloques distintos, y repetida deja de leerse.
+ */
+
+/** Cierra el abanico: los tres servicios que sí son una intervención. */
+const RELATED = INTERVENTIONS;
+---
+
+<PublicLayout
+  title="Diagnóstico DTC: códigos de avería y soluciones software"
+  description="Diagnóstico DTC de centralitas ECU: testigo encendido, modo emergencia o un error que vuelve. Analizamos los códigos de avería y valoramos si hay solución software."
+  path="/servicios/diagnostico-dtc"
+>
+  <!-- ═══════════════════════════════════════════════════════════════
+       1. HERO — la tesis, una frase y un botón. Nada más.
+
+       La escalera «Leer · Borrar · Entender» que ocupaba la derecha se
+       ha ido: era una lección sobre lo que hace mal el visitante justo
+       en el sitio donde hay que decirle qué hacemos por él. El hueco lo
+       ocupa el titular, que ahora respira a lo ancho.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="on-dark relative overflow-hidden bg-surface-bench"
+    aria-labelledby="titulo-diagnostico"
+  >
+    <div
+      class="grid-technical-inverse absolute inset-0 opacity-25"
+      aria-hidden="true"
+    >
+    </div>
+    <div
+      class="pointer-events-none absolute inset-0 bg-[radial-gradient(88%_115%_at_12%_0%,transparent_22%,var(--color-surface-bench)_100%)]"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div
+      class="relative mx-auto max-w-(--container-wide) px-5 pb-20 pt-8 sm:px-8 lg:px-10 lg:pb-28 lg:pt-10 xl:px-14"
+    >
+      <nav aria-label="Migas de pan">
+        <ol
+          class="flex flex-wrap items-center gap-2.5 text-sm text-ink-inverse-muted"
+        >
+          <li>
+            <a
+              href="/"
+              class="underline-offset-4 hover:text-accent-on-dark hover:underline"
+            >
+              Inicio
+            </a>
+          </li>
+          <li aria-hidden="true" class="text-ink-inverse-muted">/</li>
+          <li>
+            <a
+              href="/servicios"
+              class="underline-offset-4 hover:text-accent-on-dark hover:underline"
+            >
+              Servicios
+            </a>
+          </li>
+          <li aria-hidden="true" class="text-ink-inverse-muted">/</li>
+          <li aria-current="page" class="text-ink-inverse">Diagnóstico DTC</li>
+        </ol>
+      </nav>
+
+      <p class="label-technical mt-16 text-accent-on-dark">Diagnóstico DTC</p>
+
+      <h1
+        id="titulo-diagnostico"
+        class="display mt-5 max-w-5xl text-display text-ink-inverse text-balance"
+      >
+        Un código dice dónde mirar. No siempre qué cambiar.
+      </h1>
+
+      <p class="mt-8 max-w-2xl text-lead text-ink-inverse-muted">
+        Analizamos códigos de avería, síntomas y funcionamiento del vehículo
+        para valorar si existe una solución electrónica o de software.
+      </p>
+
+      <div class="mt-10">
+        <WhatsAppLink
+          size="lg"
+          label="Consultar mi caso"
+          message={DTC_MESSAGE}
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       2. ¿TE OCURRE ALGO DE ESTO? — la sección principal.
+       Ver src/components/SymptomRoute.astro
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="on-dark relative bg-surface-inverse"
+    aria-labelledby="titulo-situaciones"
+  >
+    <!-- El fondo de placa lo pone la rejilla del sitio, no una textura
+         inventada dentro del dibujo. -->
+    <div
+      class="grid-technical-inverse absolute inset-0 opacity-25"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div
+      class="relative mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <h2
+        id="titulo-situaciones"
+        class="display max-w-3xl text-h2 text-ink-inverse text-balance"
+      >
+        ¿Te ocurre algo de esto?
+      </h2>
+
+      <div class="mt-10 lg:mt-12">
+        <SymptomRoute id="dtc-sintomas" />
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       3. QUÉ PODEMOS VALORAR — un abanico, no un procedimiento.
+
+       Filas con la pista de cobre a la izquierda, no seis tarjetas
+       iguales: el ojo baja por una lista y se detiene en la suya.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="bg-canvas" aria-labelledby="titulo-soluciones">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <h2
+        id="titulo-soluciones"
+        class="reveal display max-w-3xl text-h2 text-ink text-balance"
+      >
+        Qué podemos valorar.
+      </h2>
+
+      <ul class="sol mt-12 lg:mt-14">
+        {
+          DTC_SOLUTIONS.map((item, i) => (
+            <li class="sol-item reveal" style={`--reveal-delay: ${i * 50}ms`}>
+              <h3 class="display sol-title">{item.title}</h3>
+              <p class="sol-body">{item.body}</p>
+            </li>
+          ))
+        }
+      </ul>
+
+      <!-- El cierre natural del abanico, no una sección propia: si hay que
+           intervenir, esto es lo que se hace. Título, una frase y enlace. -->
+      <div class="reveal mt-10 lg:mt-12">
+        <p class="label-technical text-ink-muted">Si hay que intervenir</p>
+
+        <ul class="mt-6 grid gap-x-10 gap-y-5 sm:grid-cols-3">
+          {
+            RELATED.map((service) => (
+              <li>
+                <a href={service.href} class="group inline-flex flex-col gap-1">
+                  <span class="display text-h3 text-ink group-hover:text-accent">
+                    {service.name}
+                    <span
+                      class="ml-1 inline-block transition-transform duration-(--duration-base) group-hover:translate-x-1"
+                      aria-hidden="true"
+                    >
+                      →
+                    </span>
+                  </span>
+                  <span class="text-sm leading-relaxed text-ink-muted">
+                    {service.short}
+                  </span>
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       4. PARA EMPEZAR Y CIERRE — cuatro datos y un botón.
+
+       La plantilla completa sigue existiendo, pero dentro del enlace:
+       enseñarla entera convertía un «escríbenos» en un formulario.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="on-dark relative overflow-hidden bg-surface-bench"
+    aria-labelledby="titulo-empezar"
+  >
+    <div
+      class="grid-technical-inverse absolute inset-0 opacity-20"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div
+      class="relative mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="reveal lg:col-span-5">
+          <h2
+            id="titulo-empezar"
+            class="display text-h2 text-ink-inverse text-balance"
+          >
+            Para empezar.
+          </h2>
+          <p class="mt-6 max-w-md text-lead text-ink-inverse-muted">
+            Si te falta algún dato, escríbenos igualmente.
+          </p>
+
+          <WhatsAppLink
+            class="mt-9"
+            size="lg"
+            label="Enviar mi caso por WhatsApp"
+            message={DTC_MESSAGE}
+          />
+        </div>
+
+        <ul class="reveal send lg:col-span-6 lg:col-start-7">
+          {DTC_SEND.map((item) => <li class="send-item">{item}</li>)}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <FinalCta
+    title="¿Tienes un código y no sabes por dónde seguir?"
+    body="Cuéntanos el vehículo, qué hace y qué código da. Te decimos si podemos resolverlo."
+    message={DTC_MESSAGE}
+  />
+</PublicLayout>
+
+<style>
+  /* ── Qué podemos valorar ───────────────────────────────── */
+
+  .sol {
+    margin-inline: 0;
+    padding: 0;
+    display: grid;
+    gap: 0;
+    list-style: none;
+    border-block-start: 1px solid var(--color-border);
+  }
+
+  @media (min-width: 48rem) {
+    .sol {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 4rem;
+    }
+  }
+
+  @media (min-width: 80rem) {
+    .sol {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /*
+   * Una pista de cobre a la izquierda de cada fila, no un recuadro. Seis
+   * tarjetas idénticas dirían que son seis productos de catálogo; seis filas
+   * con una marca dicen que son seis cosas que sabemos mirar.
+   */
+  .sol-item {
+    position: relative;
+    border-block-end: 1px solid var(--color-border);
+    padding-block: 1.5rem;
+    padding-inline-start: 1.5rem;
+  }
+
+  .sol-item::before {
+    content: "";
+    position: absolute;
+    inset-block-start: 1.75rem;
+    inset-inline-start: 0;
+    block-size: 2px;
+    inline-size: 0.75rem;
+    background-color: var(--color-accent);
+  }
+
+  .sol-title {
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    color: var(--color-ink);
+    text-wrap: balance;
+  }
+
+  .sol-body {
+    margin-block-start: 0.5rem;
+    text-wrap: pretty;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* ── Para empezar ──────────────────────────────────────── */
+
+  /*
+   * Cuatro datos a tamaño de titular. Son cuatro: caben grandes, y a ese
+   * tamaño se leen de un vistazo sin tener que enfocar. Es lo contrario de
+   * lo que hacía la versión anterior, que metía siete en letra pequeña al
+   * lado de la plantilla entera.
+   */
+  .send {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0;
+    border-block-start: 1px solid var(--color-border-inverse);
+  }
+
+  .send-item {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    border-block-end: 1px solid var(--color-border-inverse);
+    padding-block: 1.125rem;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.25rem, 1.05rem + 0.9vw, 1.75rem);
+    line-height: 1.2;
+    color: var(--color-ink-inverse);
+  }
+
+  .send-item::before {
+    content: "";
+    flex-shrink: 0;
+    inline-size: 0.75rem;
+    block-size: 2px;
+    translate: 0 -0.35em;
+    background-color: var(--color-accent-on-dark-strong);
+  }
+</style>

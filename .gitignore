@@ -6,6 +6,9 @@
 # Dependencies
 node_modules/
 
+# Build output
+backend/dist/
+
 # Logs
 *.log
 logs/
@@ -15,6 +18,12 @@ backups/
 
 # Runtime data
 data/
+
+# Herramientas locales de desarrollo (skills, permisos de la máquina).
+# No van al servidor: producción clona este mismo repositorio.
+.claude/
+.agents/
+skills-lock.json
 
 # OS / editors
 .DS_Store

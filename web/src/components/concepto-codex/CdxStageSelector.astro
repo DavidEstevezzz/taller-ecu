@@ -1,0 +1,175 @@
+---
+/**
+ * Selector de configuraciones: una sola escena con cinco posiciones, no cinco
+ * tarjetas ni un acordeón. Todo se resuelve con radios y CSS, también sin JS.
+ */
+import { Image } from "astro:assets";
+import { REPRO_OPTIONS } from "../../config/site";
+
+import carImage from "../../assets/photos/rueda-en-movimiento.jpg";
+import bikeImage from "../../assets/photos/moto-deportiva-reflejo.jpg";
+
+const META: Record<string, { context: string; focus: string }> = {
+  "stage-1": {
+    context: "Vehículo de serie",
+    focus: "Respuesta, par disponible y uso real",
+  },
+  "stage-2": {
+    context: "Mecánica modificada",
+    focus: "Conjunto compatible y valoración previa",
+  },
+  personalizada: {
+    context: "Preferencia de conducción",
+    focus: "Uso, sensaciones y entrega",
+  },
+  consumo: {
+    context: "Muchos kilómetros",
+    focus: "Eficiencia antes que potencia",
+  },
+  motos: {
+    context: "Moto deportiva",
+    focus: "Modelo, configuración y uso",
+  },
+};
+---
+
+<div class="cdx-stage">
+  <fieldset class="cdx-stage__set">
+    <legend class="cdx-sr">Elige una configuración</legend>
+
+    {
+      REPRO_OPTIONS.map((option, index) => (
+        <input
+          class="cdx-stage__radio"
+          type="radio"
+          id={`cdx-stage-${option.id}`}
+          name="cdx-stage-option"
+          checked={index === 0}
+        />
+      ))
+    }
+
+    <div class="cdx-stage__tabs" aria-label="Configuraciones disponibles">
+      {
+        REPRO_OPTIONS.map((option) => (
+          <label class="cdx-stage__tab" for={`cdx-stage-${option.id}`}>
+            <span class="cdx-stage__tabMark" aria-hidden="true"></span>
+            <span>{option.name}</span>
+          </label>
+        ))
+      }
+    </div>
+
+    <div class="cdx-stage__display">
+      <figure class="cdx-stage__visual" aria-hidden="true">
+        <Image
+          src={carImage}
+          alt=""
+          widths={[600, 900, 1200]}
+          sizes="(min-width: 64rem) 58vw, 100vw"
+          class="cdx-stage__image cdx-stage__image--car"
+          loading="lazy"
+        />
+        <Image
+          src={bikeImage}
+          alt=""
+          widths={[480, 720, 868]}
+          sizes="(min-width: 64rem) 58vw, 100vw"
+          class="cdx-stage__image cdx-stage__image--bike"
+          loading="lazy"
+        />
+        <div class="cdx-stage__visualShade"></div>
+        <p class="cdx-stage__visualLabel">Configuración sobre el vehículo real</p>
+      </figure>
+
+      <div class="cdx-stage__panes" aria-live="polite">
+        {
+          REPRO_OPTIONS.map((option) => (
+            <article class={`cdx-stage__pane cdx-stage__pane--${option.id}`}>
+              <div class="cdx-stage__paneHead">
+                <p class="cdx-kicker">{META[option.id]?.context}</p>
+                <h3>{option.name}</h3>
+              </div>
+              <p class="cdx-stage__body">{option.body}</p>
+              <dl class="cdx-stage__facts">
+                <div>
+                  <dt>Punto de partida</dt>
+                  <dd>{META[option.id]?.context}</dd>
+                </div>
+                <div>
+                  <dt>Qué orienta el trabajo</dt>
+                  <dd>{META[option.id]?.focus}</dd>
+                </div>
+              </dl>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </fieldset>
+</div>
+
+<style>
+  .cdx-stage__set { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
+  .cdx-stage__radio { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .cdx-stage__tabs { display: grid; border-block-start: 1px solid var(--cdx-line); }
+  .cdx-stage__tab { position: relative; display: flex; min-block-size: 3.7rem; align-items: center; gap: .85rem; border-block-end: 1px solid var(--cdx-line); padding: .7rem 1.2rem; color: var(--cdx-muted); cursor: pointer; touch-action: manipulation; font-family: var(--cdx-display); font-size: 1.1rem; font-weight: 600; line-height: 1.05; transition: color var(--cdx-fast) var(--cdx-ease), background-color var(--cdx-fast) var(--cdx-ease); }
+  .cdx-stage__tabMark { display: block; inline-size: 2.25rem; block-size: 2px; flex: none; background: var(--cdx-line-strong); transform: scaleX(.6); transform-origin: left center; transition: transform var(--cdx-fast) var(--cdx-ease), background-color var(--cdx-fast) var(--cdx-ease), box-shadow var(--cdx-fast) var(--cdx-ease); }
+  .cdx-stage__tab:hover { color: var(--cdx-paper); background: var(--cdx-surface-raised); }
+
+  .cdx-stage__display { min-inline-size: 0; border-block-end: 1px solid var(--cdx-line); }
+  .cdx-stage__visual { position: relative; min-block-size: 17rem; overflow: hidden; background: var(--cdx-void); }
+  .cdx-stage__image { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; object-fit: cover; transition: opacity var(--cdx-slow) var(--cdx-ease), transform var(--cdx-slow) var(--cdx-ease); }
+  .cdx-stage__image--car { object-position: 50% 45%; opacity: 1; }
+  .cdx-stage__image--bike { object-position: 54% 48%; opacity: 0; transform: scale(1.025); }
+  .cdx-stage__visualShade { position: absolute; inset: 0; background: linear-gradient(to top, var(--cdx-void) 0, rgb(8 11 14 / .28) 46%, rgb(8 11 14 / .08) 100%), linear-gradient(120deg, rgb(8 11 14 / .5), transparent 54%); }
+  .cdx-stage__visualLabel { position: absolute; inset-inline-start: 1rem; inset-block-end: 1rem; border-inline-start: 2px solid var(--cdx-copper); padding-inline-start: .75rem; color: var(--cdx-paper); font-family: var(--cdx-mono); font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; }
+
+  .cdx-stage__panes { min-block-size: 25rem; padding: clamp(1.4rem, 3vw, 2.6rem); background: linear-gradient(135deg, var(--cdx-surface), var(--cdx-surface-raised)); }
+  .cdx-stage__pane { display: none; }
+  .cdx-stage__paneHead { display: grid; gap: .7rem; }
+  .cdx-stage__pane h3 { max-inline-size: 14ch; font-family: var(--cdx-display); font-size: clamp(1.9rem, 3.5vw, 3.4rem); font-weight: 800; line-height: .95; letter-spacing: -.035em; overflow-wrap: break-word; text-transform: uppercase; text-wrap: balance; }
+  .cdx-stage__body { margin-block-start: 1.35rem; max-inline-size: 48rem; color: var(--cdx-muted); font-size: 1rem; line-height: 1.65; text-wrap: pretty; }
+  .cdx-stage__facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr)); gap: 1rem 1.5rem; margin-block-start: 1.8rem; border-block-start: 1px solid var(--cdx-line); padding-block-start: 1rem; }
+  .cdx-stage__facts dt { color: var(--cdx-dim); font-family: var(--cdx-mono); font-size: .64rem; letter-spacing: .11em; text-transform: uppercase; }
+  .cdx-stage__facts dd { margin-block-start: .3rem; color: var(--cdx-paper); font-weight: 500; }
+
+  .cdx-stage__radio:nth-of-type(1):checked ~ .cdx-stage__tabs > :nth-child(1),
+  .cdx-stage__radio:nth-of-type(2):checked ~ .cdx-stage__tabs > :nth-child(2),
+  .cdx-stage__radio:nth-of-type(3):checked ~ .cdx-stage__tabs > :nth-child(3),
+  .cdx-stage__radio:nth-of-type(4):checked ~ .cdx-stage__tabs > :nth-child(4),
+  .cdx-stage__radio:nth-of-type(5):checked ~ .cdx-stage__tabs > :nth-child(5) { color: var(--cdx-paper); background: var(--cdx-surface-raised); }
+  .cdx-stage__radio:nth-of-type(1):checked ~ .cdx-stage__tabs > :nth-child(1) .cdx-stage__tabMark,
+  .cdx-stage__radio:nth-of-type(2):checked ~ .cdx-stage__tabs > :nth-child(2) .cdx-stage__tabMark,
+  .cdx-stage__radio:nth-of-type(3):checked ~ .cdx-stage__tabs > :nth-child(3) .cdx-stage__tabMark,
+  .cdx-stage__radio:nth-of-type(4):checked ~ .cdx-stage__tabs > :nth-child(4) .cdx-stage__tabMark,
+  .cdx-stage__radio:nth-of-type(5):checked ~ .cdx-stage__tabs > :nth-child(5) .cdx-stage__tabMark { background: var(--cdx-copper-bright); transform: scaleX(1); box-shadow: 0 0 12px color-mix(in srgb, var(--cdx-copper) 50%, transparent); }
+  .cdx-stage__radio:nth-of-type(1):focus-visible ~ .cdx-stage__tabs > :nth-child(1),
+  .cdx-stage__radio:nth-of-type(2):focus-visible ~ .cdx-stage__tabs > :nth-child(2),
+  .cdx-stage__radio:nth-of-type(3):focus-visible ~ .cdx-stage__tabs > :nth-child(3),
+  .cdx-stage__radio:nth-of-type(4):focus-visible ~ .cdx-stage__tabs > :nth-child(4),
+  .cdx-stage__radio:nth-of-type(5):focus-visible ~ .cdx-stage__tabs > :nth-child(5) { outline: 3px solid var(--cdx-focus); outline-offset: -4px; }
+
+  .cdx-stage__radio:nth-of-type(1):checked ~ .cdx-stage__display .cdx-stage__pane--stage-1,
+  .cdx-stage__radio:nth-of-type(2):checked ~ .cdx-stage__display .cdx-stage__pane--stage-2,
+  .cdx-stage__radio:nth-of-type(3):checked ~ .cdx-stage__display .cdx-stage__pane--personalizada,
+  .cdx-stage__radio:nth-of-type(4):checked ~ .cdx-stage__display .cdx-stage__pane--consumo,
+  .cdx-stage__radio:nth-of-type(5):checked ~ .cdx-stage__display .cdx-stage__pane--motos { display: block; }
+  .cdx-stage__radio:nth-of-type(5):checked ~ .cdx-stage__display .cdx-stage__image--car { opacity: 0; transform: scale(.985); }
+  .cdx-stage__radio:nth-of-type(5):checked ~ .cdx-stage__display .cdx-stage__image--bike { opacity: 1; transform: scale(1); }
+
+  @media (min-width: 40rem) {
+    .cdx-stage__tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (min-width: 64rem) {
+    .cdx-stage__set { display: grid; grid-template-columns: minmax(13rem, 3fr) minmax(0, 9fr); }
+    .cdx-stage__tabs { grid-template-columns: 1fr; border-inline-end: 1px solid var(--cdx-line); border-block-start: 1px solid var(--cdx-line); }
+    .cdx-stage__tab { min-block-size: 5.1rem; }
+    .cdx-stage__display { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(22rem, .95fr); border-block-start: 1px solid var(--cdx-line); }
+    .cdx-stage__visual { min-block-size: 39rem; }
+    .cdx-stage__panes { display: flex; min-block-size: 39rem; align-items: center; }
+  }
+  @media (max-width: 25rem) {
+    .cdx-stage__tabs { grid-template-columns: 1fr; }
+  }
+</style>

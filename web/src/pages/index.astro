@@ -1,0 +1,431 @@
+---
+import { Image } from "astro:assets";
+
+import PublicLayout from "../layouts/PublicLayout.astro";
+import WhatsAppLink from "../components/WhatsAppLink.astro";
+import Button from "../components/Button.astro";
+import FinalCta from "../components/FinalCta.astro";
+import EcuExploded from "../components/EcuExploded.astro";
+import ServiceDiagram from "../components/ServiceDiagram.astro";
+import ProcessTrack from "../components/ProcessTrack.astro";
+import { SERVICES, INTAKE, INTAKE_MESSAGE, LEGAL_NOTICE } from "../config/site";
+
+import benchImage from "../assets/photos/diagnosis-portatil-vehiculo.jpg";
+import boardImage from "../assets/photos/soldadura-placa-electronica.jpg";
+
+/* Los cuatro puntos del método. Todos verificables: describen cómo se trabaja,
+   no prometen resultado, plazo ni compatibilidad. */
+const METHOD = [
+  {
+    title: "Sobre la gestión original",
+    body: "Se trabaja sobre el software que ya lleva la unidad, no sobre un parche montado encima.",
+  },
+  {
+    title: "Se explica lo hecho",
+    body: "Qué se ha encontrado, qué se ha tocado y qué comportamiento cabe esperar después.",
+  },
+  {
+    title: "Consulta antes de mover el coche",
+    body: "Puedes enviarnos las fotos del error y los datos del vehículo antes de arrancarlo siquiera.",
+  },
+  {
+    title: "También para talleres",
+    body: "Buena parte del trabajo llega de otros talleres que necesitan cerrar la parte electrónica de una avería.",
+  },
+];
+---
+
+<PublicLayout
+  title="Diagnóstico DTC, reprogramación y reparación de centralitas"
+  description="Especialistas en software de centralitas ECU: diagnóstico DTC, reprogramación, reparación electrónica y clonación. Consulta tu caso por WhatsApp."
+  path="/"
+>
+  <!-- ═══════════════════════════════════════════════════════════════
+       BANCO DE TRABAJO
+       Hero y método comparten un único fondo continuo. Antes eran dos
+       bandas encadenadas y se leían como dos secciones que dicen lo mismo.
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="on-dark relative overflow-hidden bg-surface-bench">
+    <!-- Ambiente del taller: la fotografía es el fondo, no una pieza pegada
+         a la composición. Muy apagada y difuminada a propósito; no ilustra
+         ningún trabajo concreto ni se presenta como tal. -->
+    <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+      <Image
+        src={benchImage}
+        alt=""
+        widths={[900, 1400]}
+        sizes="100vw"
+        class="absolute inset-y-0 right-0 h-full w-full object-cover opacity-[0.16] blur-[2px] lg:w-[62%]"
+        loading="eager"
+        fetchpriority="high"
+      />
+      <div
+        class="absolute inset-0 bg-[radial-gradient(120%_90%_at_18%_35%,var(--color-surface-bench)_38%,transparent_100%)]"
+      >
+      </div>
+      <div
+        class="absolute inset-0 bg-gradient-to-t from-surface-bench via-transparent to-surface-bench/70"
+      >
+      </div>
+      <div class="grid-technical-inverse absolute inset-0 opacity-25"></div>
+    </div>
+
+    <section class="relative" aria-labelledby="titulo-hero">
+      <div
+        class="mx-auto grid max-w-(--container-wide) items-center gap-10 px-5 pb-12 pt-12 sm:px-8 lg:grid-cols-[minmax(0,48fr)_minmax(0,52fr)] lg:gap-8 lg:px-10 lg:pb-10 lg:pt-16 xl:px-14"
+      >
+        <div>
+          <h1
+            id="titulo-hero"
+            class="display text-mega text-ink-inverse"
+          >
+            Primero se lee.<br />Después se toca.
+          </h1>
+
+          <p class="mt-8 max-w-xl text-lead text-ink-inverse-muted">
+            Diagnóstico DTC, reprogramación, reparación y clonación de
+            centralitas ECU. Miramos qué está haciendo la gestión del motor
+            antes de intervenir, y actuamos sobre la causa.
+          </p>
+
+          <div class="mt-10 flex flex-wrap items-center gap-3">
+            <WhatsAppLink
+              size="lg"
+              label="Cuéntanos tu caso"
+              message="Hola, tengo un vehículo con un problema de centralita."
+            />
+            <Button href="/servicios" variant="onDark" size="lg">
+              Ver todos los servicios
+            </Button>
+          </div>
+        </div>
+
+        <!-- La firma del sitio. Ver src/components/EcuExploded.astro -->
+        <div>
+          <EcuExploded id="hero-ecu" class="mx-auto max-w-[48rem] lg:max-w-none" />
+        </div>
+      </div>
+
+      <!--
+        Raíl inferior del hero: tres datos verificables a todo el ancho.
+        Antes iban apilados en la columna de texto y dejaban medio hero vacío
+        en una pantalla de 1920.
+      -->
+      <div class="mx-auto max-w-(--container-wide) px-5 sm:px-8 lg:px-10 xl:px-14">
+        <dl
+          class="grid gap-x-10 gap-y-6 border-t border-border-inverse pt-6 sm:grid-cols-3"
+        >
+          {
+            [
+              { t: "Para quién", d: "Talleres y particulares" },
+              {
+                t: "Sobre qué",
+                d: "Coches, camiones, motos, barcos y motos de agua",
+              },
+              { t: "Por dónde se empieza", d: "Una conversación de WhatsApp" },
+            ].map((item) => (
+              <div>
+                <dt class="label-technical text-accent-on-dark">{item.t}</dt>
+                <dd class="mt-2.5 text-sm text-ink-inverse-muted">{item.d}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </div>
+    </section>
+
+    <!-- El método, dentro del mismo banco: separado por una línea, no por un
+         cambio de fondo. -->
+    <section
+      class="relative mt-16 border-t border-border-inverse lg:mt-20"
+      aria-labelledby="titulo-metodo"
+    >
+      <div
+        class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-24 xl:px-14"
+      >
+        <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+          <div class="reveal lg:col-span-5">
+            <p class="label-technical text-accent-on-dark">El método</p>
+            <h2
+              id="titulo-metodo"
+              class="display mt-5 text-h2 text-ink-inverse text-balance"
+            >
+              Una centralita rara vez se arregla cambiando piezas.
+            </h2>
+          </div>
+
+          <div class="lg:col-span-7">
+            <p
+              class="reveal max-w-(--container-prose) text-lead text-ink-inverse-muted"
+            >
+              Un vehículo que no arranca, uno en modo emergencia o un error que
+              vuelve tras cada borrado tienen casi siempre una causa concreta y
+              localizable. Encontrarla es el trabajo; sustituir la unidad, la
+              última salida.
+            </p>
+
+            <dl
+              class="mt-12 grid gap-x-12 gap-y-9 sm:grid-cols-2"
+            >
+              {
+                METHOD.map((item, i) => (
+                  <div
+                    class="reveal border-t border-border-inverse pt-5"
+                    style={`--reveal-delay: ${i * 80}ms`}
+                  >
+                    <span
+                      class="block h-0.5 w-8 -translate-y-[calc(1.25rem+1px)] bg-accent-on-dark"
+                      aria-hidden="true"
+                    />
+                    <dt class="display text-h3 text-ink-inverse">
+                      {item.title}
+                    </dt>
+                    <dd class="mt-2.5 text-sm leading-relaxed text-ink-inverse-muted">
+                      {item.body}
+                    </dd>
+                  </div>
+                ))
+              }
+            </dl>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SERVICIOS
+       Alternativas, no pasos: fuera la numeración, y cada una con su
+       propio dibujo. Los tres primeros dicen sobre qué capa se actúa; el
+       del diagnóstico dice lo contrario —que todavía no se sabe—, y por eso
+       llega a círculos sin resolver.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    id="servicios"
+    class="bg-canvas"
+    aria-labelledby="titulo-servicios"
+  >
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div
+        class="reveal flex flex-wrap items-end justify-between gap-x-10 gap-y-6"
+      >
+        <div class="max-w-3xl">
+          <p class="label-technical text-accent">Qué hacemos</p>
+          <h2
+            id="titulo-servicios"
+            class="display mt-5 text-h2 text-ink text-balance"
+          >
+            Un diagnóstico y tres intervenciones.
+          </h2>
+        </div>
+
+        <a
+          href="/servicios"
+          class="group inline-flex min-h-11 items-center gap-2 text-sm font-medium text-accent hover:text-accent-hover"
+        >
+          Ver los cuatro en detalle
+          <span
+            class="transition-transform duration-(--duration-base) group-hover:translate-x-1"
+            aria-hidden="true">→</span
+          >
+        </a>
+      </div>
+
+      <div class="mt-14 grid gap-8 sm:grid-cols-2 sm:gap-7 xl:grid-cols-4">
+        {
+          SERVICES.map((service, i) => (
+            <article
+              class="reveal group flex flex-col border border-border bg-surface transition-colors duration-(--duration-base) hover:border-border-strong"
+              style={`--reveal-delay: ${i * 100}ms`}
+            >
+              <div class="on-dark border-b border-border bg-surface-inverse px-6 pb-3 pt-7">
+                <ServiceDiagram
+                  variant={service.slug}
+                  id={`svc-${service.slug}`}
+                />
+              </div>
+
+              <div class="flex flex-1 flex-col p-7 lg:p-8">
+                <p class="label-technical text-accent">{service.depth}</p>
+
+                <h3 class="display mt-3 text-h3 text-ink">{service.name}</h3>
+
+                <p class="mt-4 flex-1 text-sm leading-relaxed text-ink-muted">
+                  {service.description}
+                </p>
+
+                <a
+                  href={service.href}
+                  class="mt-7 inline-flex min-h-11 items-center gap-2 self-start text-sm font-medium text-accent hover:text-accent-hover"
+                >
+                  {service.page ? "Ver la página completa" : "Cuándo tiene sentido"}
+                  <svg
+                    viewBox="0 0 20 20"
+                    class="size-4 transition-transform duration-(--duration-base) group-hover:translate-x-1"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M4 10h12m0 0-4-4m4 4-4 4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                  <span class="sr-only">: {service.nameLower}</span>
+                </a>
+              </div>
+            </article>
+          ))
+        }
+      </div>
+
+      <p
+        class="reveal mt-10 max-w-(--container-prose) text-xs leading-relaxed text-ink-muted"
+      >
+        {LEGAL_NOTICE}
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EL OFICIO — la fotografía llega al borde de la pantalla
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="border-y border-border bg-surface"
+    aria-labelledby="titulo-oficio"
+  >
+    <div class="grid items-stretch lg:grid-cols-2">
+      <div
+        class="reveal flex flex-col justify-center px-5 py-16 sm:px-8 lg:py-24 lg:pl-[max(2.5rem,calc((100vw-90rem)/2+3.5rem))] lg:pr-14 xl:pl-[max(3.5rem,calc((100vw-90rem)/2+3.5rem))]"
+      >
+        <p class="label-technical text-accent">El trabajo por dentro</p>
+        <h2
+          id="titulo-oficio"
+          class="display mt-5 max-w-xl text-h2 text-ink text-balance"
+        >
+          Reparar la placa, no cambiar la caja.
+        </h2>
+        <p
+          class="mt-6 max-w-(--container-prose) text-lead text-ink-muted"
+        >
+          Muchas centralitas que se dan por perdidas tienen un fallo concreto y
+          localizable: una pista cortada, una soldadura fría, un componente que
+          ha cedido. Abrirla y mirarla es lo que permite decidir con criterio si
+          tiene arreglo.
+        </p>
+
+        <dl
+          class="mt-10 grid max-w-lg grid-cols-2 gap-px border-t border-border bg-border"
+        >
+          {
+            [
+              { t: "Nivel", d: "Componente" },
+              { t: "Alternativa", d: "Sustituir la unidad entera" },
+            ].map((item) => (
+              <div class="bg-surface pr-5 pt-4">
+                <dt class="label-technical text-ink-subtle">{item.t}</dt>
+                <dd class="mt-2 text-sm text-ink">{item.d}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </div>
+
+      <div class="relative min-h-[22rem] lg:min-h-[34rem]">
+        <Image
+          src={boardImage}
+          alt="Técnico soldando un componente sobre una placa de circuito impreso"
+          widths={[720, 960, 1200]}
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          class="absolute inset-0 h-full w-full object-cover"
+          loading="lazy"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PROCESO — la pista de cobre del logotipo, a tamaño real
+       ═══════════════════════════════════════════════════════════════ -->
+  <ProcessTrack
+    headingId="titulo-proceso"
+    title="De tu mensaje al trabajo terminado."
+    intro="El primer contacto es una conversación de WhatsApp. Estos son los cuatro tramos que recorre desde ahí."
+  />
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       QUÉ NECESITAMOS
+       Sustituye al hueco vacío de «Trabajos». No hay casos reales que
+       enseñar todavía, y un recuadro punteado diciéndolo restaba en vez
+       de sumar. Esto es honesto y además es lo que más ayuda a convertir:
+       le dice al visitante exactamente qué escribir.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="bg-canvas" aria-labelledby="titulo-entrada">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="reveal lg:col-span-4">
+          <p class="label-technical text-accent">Antes de escribir</p>
+          <h2
+            id="titulo-entrada"
+            class="display mt-5 text-h2 text-ink text-balance"
+          >
+            Cuatro cosas y podemos empezar.
+          </h2>
+          <p class="mt-6 text-lead text-ink-muted">
+            Cuanto más concreto sea el primer mensaje, más útil es la primera
+            respuesta. Si te falta algún dato, escribe igualmente: se puede
+            completar por el camino.
+          </p>
+
+          <WhatsAppLink
+            class="mt-9"
+            size="lg"
+            label="Abrir WhatsApp con la plantilla"
+            message={INTAKE_MESSAGE}
+          />
+        </div>
+
+        <ul
+          class="grid gap-px border border-border bg-border sm:grid-cols-2 lg:col-span-8"
+        >
+          {
+            INTAKE.map((item, i) => (
+              <li
+                class="reveal flex gap-5 bg-surface p-7 lg:p-8"
+                style={`--reveal-delay: ${i * 80}ms`}
+              >
+                {/* Marca de comprobación, no un número: las cuatro cosas se
+                    reúnen, no se recorren en orden. */}
+                <svg
+                  viewBox="0 0 24 24"
+                  class="mt-0.5 size-5 shrink-0 text-accent"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.75"
+                  aria-hidden="true"
+                >
+                  <rect x="3.5" y="3.5" width="17" height="17" rx="1" />
+                  <path d="m8 12 3 3 5-6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <div>
+                  <h3 class="display text-h3 text-ink">{item.label}</h3>
+                  <p class="mt-2.5 text-sm leading-relaxed text-ink-muted">
+                    {item.body}
+                  </p>
+                </div>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <FinalCta />
+</PublicLayout>

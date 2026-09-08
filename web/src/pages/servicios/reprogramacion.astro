@@ -1,0 +1,428 @@
+---
+import { Image } from "astro:assets";
+
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import WhatsAppLink from "../../components/WhatsAppLink.astro";
+import PowerBand from "../../components/PowerBand.astro";
+import ServiceOptions from "../../components/ServiceOptions.astro";
+import CalcLink from "../../components/CalcLink.astro";
+import PowerConfigurator from "../../components/PowerConfigurator.astro";
+import {
+  SITE,
+  SITE_URL,
+  SERVICES,
+  CONTACT,
+  REPRO_SEND,
+  REPRO_MESSAGE,
+} from "../../config/site";
+import { TUNING_SHOP } from "../../config/embeds";
+
+import heroImage from "../../assets/photos/coche-tunel-noche.jpg";
+import wheelImage from "../../assets/photos/rueda-en-movimiento.jpg";
+import bikeImage from "../../assets/photos/moto-deportiva-reflejo.jpg";
+
+/* Enlace lateral a los otros servicios (docs/site-architecture.md §6). */
+const OTHERS = SERVICES.filter((service) => service.slug !== "reprogramacion");
+
+/**
+ * Datos estructurados. `Service` sin `offers`, sin `priceRange` y sin
+ * `aggregateRating`: no hay precio confirmado, no hay valoraciones y
+ * declararlos sería inventarlos. Mismo criterio que /contacto.
+ */
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Service",
+      "@id": `${SITE_URL}/servicios/reprogramacion#servicio`,
+      name: "Reprogramación de centralita",
+      serviceType: "Reprogramación de centralita de motor",
+      description:
+        "Ajuste de la gestión electrónica del motor sobre la calibración original de la unidad, según el vehículo y el objetivo del conductor.",
+      areaServed: { "@type": "Place", name: CONTACT.area },
+      provider: {
+        "@type": "Organization",
+        name: SITE.name,
+        url: SITE_URL,
+        telephone: CONTACT.phoneE164,
+      },
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Inicio", item: SITE_URL },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Servicios",
+          item: `${SITE_URL}/servicios`,
+        },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: "Reprogramación",
+          item: `${SITE_URL}/servicios/reprogramacion`,
+        },
+      ],
+    },
+  ],
+};
+---
+
+<PublicLayout
+  title="Reprogramación de centralita"
+  description="Reprogramación de centralita en Granada: más respuesta, más par y una entrega adaptada a cómo usas tu coche o tu moto. Cuéntanos el vehículo y valoramos tu caso."
+  path="/servicios/reprogramacion"
+  jsonLd={jsonLd}
+>
+  <!-- ═══════════════════════════════════════════════════════════════
+       HERO — el vehículo, en movimiento y de noche.
+
+       Es el cambio de rumbo de la página en una imagen: durante meses el
+       hero de este servicio fue el dibujo de un mapa de calibración. Nadie
+       compra un mapa. Se compra lo que se siente en tercera.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="on-dark relative isolate flex min-h-[32rem] flex-col justify-end overflow-hidden bg-surface-bench sm:min-h-[38rem] lg:min-h-[min(84svh,48rem)]"
+    aria-labelledby="titulo-repro"
+  >
+    <Image
+      src={heroImage}
+      alt="Un coche circulando de noche por un túnel, captado con barrido: la carrocería nítida y el entorno movido"
+      widths={[640, 1024, 1600, 1920]}
+      sizes="100vw"
+      class="absolute inset-0 -z-10 h-full w-full object-cover object-[62%_50%]"
+      loading="eager"
+      fetchpriority="high"
+    />
+
+    <!-- Dos velos. El vertical sostiene el texto en móvil; el horizontal, en
+         escritorio, donde el bloque vive a la izquierda. -->
+    <div
+      class="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_top,var(--color-surface-bench)_6%,color-mix(in_srgb,var(--color-surface-bench)_90%,transparent)_46%,color-mix(in_srgb,var(--color-surface-bench)_58%,transparent)_76%,color-mix(in_srgb,var(--color-surface-bench)_32%,transparent)_100%)] lg:bg-[linear-gradient(to_top,color-mix(in_srgb,var(--color-surface-bench)_90%,transparent)_0%,color-mix(in_srgb,var(--color-surface-bench)_38%,transparent)_26%,transparent_58%)]"
+      aria-hidden="true"
+    >
+    </div>
+    <div
+      class="pointer-events-none absolute inset-0 -z-10 hidden lg:block lg:bg-[linear-gradient(to_right,var(--color-surface-bench)_0%,color-mix(in_srgb,var(--color-surface-bench)_88%,transparent)_34%,color-mix(in_srgb,var(--color-surface-bench)_20%,transparent)_68%,transparent_92%)]"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div
+      class="relative mx-auto w-full max-w-(--container-wide) px-5 pb-14 pt-10 sm:px-8 lg:px-10 lg:pb-20 lg:pt-14 xl:px-14"
+    >
+      <nav aria-label="Migas de pan">
+        <ol class="flex flex-wrap items-center gap-2.5 text-sm text-ink-inverse-muted">
+          <li>
+            <a href="/" class="underline-offset-4 hover:text-accent-on-dark hover:underline">
+              Inicio
+            </a>
+          </li>
+          <li aria-hidden="true" class="text-ink-subtle">/</li>
+          <li>
+            <a
+              href="/servicios"
+              class="underline-offset-4 hover:text-accent-on-dark hover:underline"
+            >
+              Servicios
+            </a>
+          </li>
+          <li aria-hidden="true" class="text-ink-subtle">/</li>
+          <li aria-current="page" class="text-ink-inverse">Reprogramación</li>
+        </ol>
+      </nav>
+
+      <div class="mt-16 max-w-3xl lg:mt-28">
+        <p class="label-technical text-accent-on-dark">
+          Reprogramación de centralita · {CONTACT.area}
+        </p>
+
+        <h1
+          id="titulo-repro"
+          class="display mt-5 text-display text-ink-inverse text-balance"
+        >
+          Para que tu coche responda como tú quieres.
+        </h1>
+
+        <p class="mt-7 max-w-xl text-lead text-ink-inverse-muted text-pretty">
+          Ajustamos la gestión del motor a tu vehículo y a lo que buscas. Lo
+          que cambia no se lee en un papel: se nota al volante.
+        </p>
+
+        <div class="mt-9 flex flex-wrap items-center gap-3">
+          <WhatsAppLink
+            size="lg"
+            label="Consultar mi vehículo"
+            message={REPRO_MESSAGE}
+          />
+          <a
+            href="#banda"
+            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-border-inverse bg-surface-bench/60 px-6 text-base font-medium text-ink-inverse backdrop-blur-sm transition-colors duration-(--duration-base) hover:border-ink-inverse-muted hover:bg-surface-inverse-raised"
+          >
+            Ver qué puedes notar
+            <span aria-hidden="true">↓</span>
+          </a>
+          <!-- Baja directo al configurador, que está al final de la página:
+               quien viene a mirar cifras no tiene por qué recorrerla entera. -->
+          <CalcLink />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EL TRAMO CON RAÍL
+
+       La banda y las opciones comparten un raíl con el botón «Calcular
+       mejora», que baja hasta el configurador. Es `position: sticky` dentro de
+       un raíl que abarca exactamente este tramo, así que **aparece al dejar
+       atrás el hero y desaparece justo antes del configurador sin una línea de
+       JavaScript**: no hay observador de scroll, no hay clase que poner y no
+       hay estado que se pueda quedar pegado.
+
+       El raíl termina antes del configurador a propósito: ofrecer un atajo
+       hacia la sección que ya estás mirando no orienta, distrae.
+
+       El raíl no captura el puntero (`pointer-events-none`); solo lo hace el
+       botón. Y no tapa contenido: en escritorio se apoya en el canto derecho,
+       en móvil es una pastilla abajo a la izquierda, lejos del WhatsApp de la
+       cabecera.
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="relative">
+    <div
+      class="pointer-events-none absolute inset-0 z-(--z-sticky) flex flex-col items-start lg:items-end"
+    >
+      <CalcLink variant="rail" />
+    </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       LA BANDA — la pieza central. Ver src/components/PowerBand.astro
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    id="banda"
+    class="on-dark scroll-mt-24 border-t border-border-inverse-soft bg-surface-inverse"
+    aria-labelledby="titulo-banda"
+  >
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-14 sm:px-8 lg:px-10 lg:py-16 xl:px-14"
+    >
+      <!-- Titular y entradilla comparten fila en escritorio: es lo primero que
+           sobraba de alto, y así el bloque entero se lee como una unidad. -->
+      <div class="reveal lg:flex lg:items-baseline lg:justify-between lg:gap-12">
+        <div class="max-w-2xl">
+          <p class="label-technical text-accent-on-dark">Qué quieres notar</p>
+          <h2
+            id="titulo-banda"
+            class="display mt-3 text-h2 text-ink-inverse text-balance"
+          >
+            Tu coche ya empuja. La cuestión es dónde.
+          </h2>
+        </div>
+        <p
+          class="mt-4 max-w-sm text-ink-inverse-muted lg:mt-0 lg:shrink-0 lg:text-right"
+        >
+          Elige un objetivo y mira en qué tramo del régimen actúa.
+        </p>
+      </div>
+
+      <div class="mt-8 lg:mt-10">
+        <PowerBand />
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       OPCIONES — para quién es cada una, en una línea. Nada de cómo se hace.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="on-dark border-t border-border-inverse-soft bg-surface-bench"
+    aria-labelledby="titulo-opciones"
+  >
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 pb-16 pt-20 sm:px-8 lg:px-10 lg:pb-20 lg:pt-28 xl:px-14"
+    >
+      <div class="grid gap-10 lg:grid-cols-12 lg:gap-16">
+        <div class="reveal lg:col-span-4">
+          <p class="label-technical text-accent-on-dark">Opciones</p>
+          <h2
+            id="titulo-opciones"
+            class="display mt-5 text-h2 text-ink-inverse text-balance"
+          >
+            Un mismo trabajo, objetivos distintos.
+          </h2>
+          <p class="mt-6 text-lead text-ink-inverse-muted text-pretty">
+            Lo que buscas decide la calibración. No hay una reprogramación que
+            valga para todos.
+          </p>
+        </div>
+
+        <div class="reveal lg:col-span-8">
+          <ServiceOptions />
+        </div>
+      </div>
+
+    </div>
+
+    <!--
+      El díptico. Coche y moto, sin un rótulo encima: dice a qué se le hace
+      esto sin gastar una línea de texto en decirlo.
+
+      Son fotografías de referencia, no trabajos del taller, y la página no
+      las presenta como tales en ningún sitio. Procedencia y licencia en
+      docs/image-sources.md.
+    -->
+    <div class="mt-6 grid gap-1 sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <Image
+        src={wheelImage}
+        alt="Rueda de un coche girando a velocidad, con los radios desdibujados por el movimiento"
+        widths={[600, 900, 1200]}
+        sizes="(min-width: 640px) 60vw, 100vw"
+        class="h-56 w-full object-cover object-[50%_46%] sm:h-72 lg:h-96"
+        loading="lazy"
+      />
+      <Image
+        src={bikeImage}
+        alt="Una moto deportiva con su piloto sobre asfalto mojado al anochecer, reflejada en el suelo"
+        widths={[480, 720, 1080]}
+        sizes="(min-width: 640px) 40vw, 100vw"
+        class="h-52 w-full object-cover object-[52%_46%] sm:h-72 lg:h-96"
+        loading="lazy"
+      />
+    </div>
+  </section>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EL CONFIGURADOR — cifras del proveedor, con su aviso.
+
+       La única petición a un tercero de toda la web, y no se carga sola: hasta
+       que el visitante lo activa no sale ni una petición a tuning-shop.com ni
+       se deja su cookie. Es el destino de «Calcular mejora», arriba en el hero
+       y en la pestaña lateral. Ver docs/embed-tuning-shop.md.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    id="configurador"
+    class="on-dark scroll-mt-24 border-t border-border-inverse-soft bg-surface-inverse"
+    aria-labelledby="titulo-configurador"
+  >
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-16 sm:px-8 lg:px-10 lg:py-20 xl:px-14"
+    >
+      <div class="reveal max-w-3xl">
+        <p class="label-technical text-accent-on-dark">Antes de escribir</p>
+        <h2
+          id="titulo-configurador"
+          class="display mt-3 text-h2 text-ink-inverse text-balance"
+        >
+          Mira qué se maneja para tu motorización.
+        </h2>
+        <p class="mt-5 max-w-(--container-prose) text-lead text-ink-inverse-muted">
+          Un listado que mantiene {TUNING_SHOP.provider}, con cifras generales
+          por motor. Sirve para hacerse una idea; no es una respuesta sobre tu
+          vehículo.
+        </p>
+      </div>
+
+      <div class="reveal mt-10">
+        <PowerConfigurator headingId="titulo-configurador-caja" />
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       LOS OTROS SERVICIOS — una línea, no un callejón sin salida
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="on-dark border-t border-border-inverse-soft bg-surface-bench"
+    aria-labelledby="titulo-otros"
+  >
+    <div
+      class="mx-auto flex max-w-(--container-wide) flex-wrap items-baseline gap-x-8 gap-y-3 px-5 py-10 sm:px-8 lg:px-10 xl:px-14"
+    >
+      <h2 id="titulo-otros" class="label-technical text-ink-subtle">
+        ¿No es esto lo que necesitas?
+      </h2>
+      <ul class="flex flex-wrap gap-x-7 gap-y-2">
+        {
+          OTHERS.map((service) => (
+            <li>
+              <a
+                href={service.href}
+                class="group inline-flex min-h-11 items-center gap-2 text-ink-inverse underline-offset-4 hover:text-accent-on-dark hover:underline"
+              >
+                {service.name}
+                <span
+                  class="text-accent-on-dark transition-transform duration-(--duration-base) group-hover:translate-x-1"
+                  aria-hidden="true"
+                >
+                  →
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EL CIERRE — qué hace falta enviar, y nada más.
+
+       Va en cobre porque es la banda de «aquí se actúa» del sitio. Sustituye
+       a FinalCta en esta página: con una sección de consulta propia, encadenar
+       las dos era pedir lo mismo dos veces.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="bg-accent" aria-labelledby="titulo-consulta">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-16 sm:px-8 lg:px-10 lg:py-20 xl:px-14"
+    >
+      <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="lg:col-span-7">
+          <h2
+            id="titulo-consulta"
+            class="display text-h2 text-on-accent text-balance"
+          >
+            Cuéntanos el vehículo.
+          </h2>
+
+          <ul class="mt-8 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+            {
+              REPRO_SEND.map((item) => (
+                <li class="flex items-baseline gap-3 text-on-accent">
+                  <span
+                    class="h-px w-4 shrink-0 translate-y-[-0.35em] bg-on-accent/60"
+                    aria-hidden="true"
+                  />
+                  <span>{item}</span>
+                </li>
+              ))
+            }
+          </ul>
+
+          <p class="mt-7 max-w-(--container-prose) text-lead text-on-accent/90">
+            Escríbenos aunque te falte algún dato: con lo que tengas ya podemos
+            empezar.
+          </p>
+        </div>
+
+        <div class="lg:col-span-5 lg:justify-self-end">
+          <WhatsAppLink
+            size="lg"
+            variant="onAccent"
+            label="Abrir WhatsApp"
+            message={REPRO_MESSAGE}
+          />
+          <p class="mt-4 text-sm text-on-accent/85">
+            {CONTACT.whatsappDisplay}
+          </p>
+          <p class="mt-8 border-t border-on-accent/25 pt-5 text-sm text-on-accent/85">
+            Nos escribes, valoramos tu caso y te decimos qué se puede hacer con
+            tu vehículo.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</PublicLayout>

@@ -1,0 +1,726 @@
+---
+import WhatsAppLink from "./WhatsAppLink.astro";
+import {
+  CONTACT,
+  CONTACT_AUDIENCES,
+  CONTACT_ROUTES,
+  CONTACT_HELP_ROUTE,
+  whatsappUrl,
+} from "../config/site";
+
+/**
+ * El cuadro de conexiones de /contacto.
+ *
+ * Qué es: una entrada por servicio, todas a parar al mismo sitio, y un
+ * conmutador que decide qué plantilla lleva cada una. La idea de la página
+ * cabe en una frase, y el dibujo la dice: **hay varias puertas y un solo
+ * canal**. Por eso los conductores existen; no son adorno, son el argumento de
+ * por qué no hay aquí un formulario ni el doble de tarjetas.
+ *
+ * **Cero JavaScript.** Como `RouteSwitch`, es un grupo de radios y un
+ * combinador de hermanos. Y por los mismos motivos, que no son de peso sino de
+ * comportamiento:
+ *
+ * - Los enlaces de WhatsApp de las dos variantes ya están escritos en el HTML,
+ *   con su plantilla codificada en el `href`. No hay ningún `href` que un
+ *   script tenga que reescribir, así que no hay ningún estado en el que el
+ *   botón lleve a la plantilla equivocada.
+ * - El teclado ya funciona: un grupo de radios se recorre con las flechas.
+ * - Sin CSS se ven las cuatro plantillas y los ocho enlaces, todos correctos.
+ *   Sin JavaScript no cambia nada en absoluto.
+ * - No guarda la elección. Ni `localStorage`, ni cookies, ni nada que salga de
+ *   la página: lo único que sale de aquí es el enlace que el visitante abre.
+ *
+ * Está escrito para exactamente dos variantes: el CSS empareja el radio n con
+ * la pestaña n por `nth-of-type`. Una tercera necesitaría su par de reglas.
+ *
+ * ── El movimiento, y qué explica ──────────────────────────────
+ *
+ *   1. **Al enfocar o señalar una ruta**, se encienden su conductor, el bus y
+ *      el contacto de WhatsApp. Es la respuesta a la pregunta que se hace
+ *      quien duda: «si pulso aquí, ¿dónde acabo?».
+ *   2. **Al cambiar de variante**, un pulso recorre el bus hasta el contacto y
+ *      éste responde. Dice lo que acaba de pasar —las plantillas se han
+ *      rearmado— sin mover ni un texto de sitio.
+ *
+ * Ambos son de una sola pasada, salen de `transform` y `opacity`, y cuelgan de
+ * `.js-anim`: con movimiento reducido, o sin JavaScript, el cuadro se sirve
+ * quieto y entero. Nada que haya que leer depende de ellos.
+ */
+interface Props {
+  id?: string;
+  class?: string;
+}
+
+const { id = "contacto", class: className = "" } = Astro.props;
+
+/** El texto que se precarga, ya montado. Las plantillas viven en site.ts. */
+const text = (lines: readonly string[]): string => lines.join("\n");
+---
+
+<fieldset class={`cb ${className}`}>
+  <legend class="label-technical cb-legend">¿Quién consulta?</legend>
+
+  {
+    CONTACT_AUDIENCES.map((audience, i) => (
+      <input
+        type="radio"
+        name={`${id}-quien`}
+        id={`${id}-${audience.id}`}
+        class="cb-radio"
+        checked={i === 0}
+      />
+    ))
+  }
+
+  <div class="cb-control">
+    {
+      CONTACT_AUDIENCES.map((audience) => (
+        <label class="cb-tab" for={`${id}-${audience.id}`}>
+          {audience.tab}
+        </label>
+      ))
+    }
+  </div>
+
+  <p class="cb-note">
+    {
+      CONTACT_AUDIENCES.map((audience) => (
+        <span class={`cb-only-${audience.id}`}>{audience.note}</span>
+      ))
+    }{" "}
+    Rellena lo que sepas y envía: lo que falte lo preguntamos por WhatsApp, y
+    ahí mismo puedes añadir fotos, ficha técnica, capturas de los DTC y
+    referencias.
+  </p>
+
+  <!-- ── Las entradas, una por servicio ───────────────────── -->
+  <ul class="cb-board" role="list">
+    {
+      CONTACT_ROUTES.map((route) => (
+        <li class="cb-route">
+          <p class="label-technical cb-depth">{route.service.depth}</p>
+          <h2 class="display cb-name">{route.service.name}</h2>
+          <p class="cb-desc">{route.description}</p>
+
+          <details class="cb-peek">
+            <summary class="cb-summary">
+              <svg
+                viewBox="0 0 20 20"
+                class="cb-chevron"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                aria-hidden="true"
+              >
+                <path d="m5 8 5 5 5-5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span>
+                Ver la plantilla
+                <span class="sr-only"> de {route.service.name}</span>
+              </span>
+            </summary>
+
+            {/* En una sola línea: dentro de <pre>, Astro conserva el salto y
+                la sangría, y el mensaje saldría con un margen fantasma. */}
+            {CONTACT_AUDIENCES.map((audience) => (
+              <pre class={`cb-text cb-only-${audience.id}`}>{text(route.messages[audience.id])}</pre>
+            ))}
+          </details>
+
+          {CONTACT_AUDIENCES.map((audience) => (
+            <div class={`cb-send cb-only-${audience.id}`}>
+              <WhatsAppLink
+                size="lg"
+                class="cb-cta"
+                label={route.cta}
+                message={text(route.messages[audience.id])}
+              />
+            </div>
+          ))}
+
+          <a href={route.service.href} class="cb-more">
+            Qué hacemos en {route.service.nameLower}
+            <span aria-hidden="true">→</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+
+  <!-- ── El bus ──
+       Los conductores que bajan de cada tarjeta son un `::after` de la propia
+       tarjeta, así que caen siempre por su centro sin que haya que calcular
+       nada. Aquí solo van la línea que los recoge y la bajada al contacto. -->
+  <div class="cb-bus" aria-hidden="true">
+    <span class="cb-line"><span class="cb-pulse"></span></span>
+    <span class="cb-drop"></span>
+  </div>
+
+  <!-- ── El contacto: donde acaban todas ── -->
+  <p class="cb-pad">
+    <span class="cb-pad-ring" aria-hidden="true">
+      <span class="cb-pad-core"></span>
+    </span>
+    <a
+      href={`https://wa.me/${CONTACT.whatsappNumber}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      class="cb-pad-link"
+    >
+      WhatsApp {CONTACT.whatsappDisplay}
+    </a>
+  </p>
+
+  <!-- ── La salida secundaria ──
+       Sin tarjeta y sin botón relleno: tiene que verse, no competir. -->
+  <div class="cb-out">
+    <p class="cb-out-text">{CONTACT_HELP_ROUTE.text}</p>
+
+    {
+      CONTACT_AUDIENCES.map((audience) => (
+        <a
+          href={whatsappUrl(text(CONTACT_HELP_ROUTE.messages[audience.id]))}
+          target="_blank"
+          rel="noopener noreferrer"
+          class={`cb-out-link cb-only-${audience.id}`}
+        >
+          {CONTACT_HELP_ROUTE.cta}
+          <span aria-hidden="true">→</span>
+          <span class="sr-only">(se abre en WhatsApp, {CONTACT.whatsappDisplay})</span>
+        </a>
+      ))
+    }
+  </div>
+</fieldset>
+
+<style>
+  .cb {
+    /* El hueco de la rejilla es también la geometría del bus: se declara una
+       vez y lo usan los dos. */
+    --cb-gap: 1.5rem;
+
+    margin: 0;
+    border: 0;
+    padding: 0;
+    min-inline-size: 0;
+  }
+
+  .cb-legend {
+    padding: 0;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  /* Los radios se apartan de la vista, no del teclado ni del lector. */
+  .cb-radio {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* ── El conmutador ─────────────────────────────────────── */
+
+  .cb-control {
+    margin-top: 1rem;
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    border: 1px solid var(--color-border-inverse);
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface-inverse);
+    padding: 0.375rem;
+  }
+
+  .cb-tab {
+    display: inline-flex;
+    min-height: 2.75rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    align-items: center;
+    border-radius: var(--radius-sm);
+    padding-inline: 1.25rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-ink-inverse-muted);
+    transition:
+      background-color var(--duration-base) var(--ease-out),
+      color var(--duration-base) var(--ease-out);
+  }
+
+  .cb-tab:hover {
+    color: var(--color-ink-inverse);
+  }
+
+  .cb-note {
+    margin-top: 1.25rem;
+    max-inline-size: var(--container-prose);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  /* ── Las entradas ──────────────────────────────────────── */
+
+  .cb-board {
+    margin: 3rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: var(--cb-gap);
+    list-style: none;
+  }
+
+  /*
+   * Dos columnas en cuanto caben, cuatro solo cuando hay sitio de verdad.
+   *
+   * Con la cuarta ruta, cuatro columnas a 1024 px dejan cada tarjeta en poco
+   * más de 200 px: el nombre del servicio se parte y el botón cruza dos
+   * líneas. Lo que cede es el número de columnas, no el tamaño de la letra.
+   */
+  @media (min-width: 48rem) {
+    .cb-board {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 80rem) {
+    .cb-board {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .cb-route {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    border: 1px solid var(--color-border-inverse);
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface-inverse-raised);
+    padding: 1.75rem 1.5rem 1.5rem;
+    transition: border-color var(--duration-slow) var(--ease-out);
+  }
+
+  .cb-route:hover,
+  .cb-route:focus-within {
+    border-color: var(--color-accent-on-dark-strong);
+  }
+
+  /*
+   * El conductor que baja de la tarjeta hacia el bus. Va aquí y no en el bus
+   * porque así cae por el centro exacto de la tarjeta en cualquier anchura,
+   * sin depender de ningún cálculo de columnas.
+   *
+   * Solo existe cuando las tarjetas están en una sola fila: en dos filas, o
+   * apiladas, no hay ningún bus que recoger.
+   */
+  .cb-route::after {
+    content: "";
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-start: 50%;
+    display: none;
+    inline-size: 2px;
+    block-size: 2.5rem;
+    translate: -1px 0;
+    background-color: color-mix(
+      in srgb,
+      var(--jm-copper-400) 46%,
+      transparent
+    );
+    transition: background-color var(--duration-slow) var(--ease-out);
+  }
+
+  @media (min-width: 80rem) {
+    .cb-route::after {
+      display: block;
+    }
+  }
+
+  .cb-route:hover::after,
+  .cb-route:focus-within::after {
+    background-color: var(--jm-copper-400);
+  }
+
+  .cb-depth {
+    color: var(--color-accent-on-dark);
+  }
+
+  .cb-name {
+    margin-top: 0.75rem;
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    color: var(--color-ink-inverse);
+  }
+
+  .cb-desc {
+    margin-top: 0.75rem;
+    max-inline-size: 42ch;
+    text-wrap: pretty;
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  /* ── La plantilla, plegada ─────────────────────────────── */
+
+  .cb-peek {
+    margin-top: 1.5rem;
+    inline-size: 100%;
+  }
+
+  .cb-summary {
+    display: flex;
+    min-height: 2.75rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-label);
+    letter-spacing: var(--text-label--letter-spacing);
+    text-transform: uppercase;
+    color: var(--color-ink-inverse-muted);
+    list-style: none;
+    transition: color var(--duration-base) var(--ease-out);
+  }
+
+  .cb-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .cb-summary:hover {
+    color: var(--color-ink-inverse);
+  }
+
+  .cb-chevron {
+    inline-size: 1rem;
+    block-size: 1rem;
+    flex-shrink: 0;
+    color: var(--color-accent-on-dark);
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+
+  .cb-peek[open] .cb-chevron {
+    transform: rotate(180deg);
+  }
+
+  /* Lo que se va a enviar, literalmente, en la tipografía de datos. */
+  .cb-text {
+    margin: 0.75rem 0 0;
+    border: 1px solid var(--color-border-inverse);
+    background-color: var(--color-surface-bench);
+    padding: 1rem 1.125rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.9;
+    color: var(--color-ink-inverse-muted);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  /* ── Acciones ──────────────────────────────────────────── */
+
+  /*
+   * El botón se va al fondo de la tarjeta. Con las plantillas desplegadas cada
+   * una crece lo suyo, y la rejilla iguala las alturas: sin esto, las tres
+   * acciones quedaban a tres alturas distintas dentro de tarjetas del mismo
+   * tamaño. El `padding` sostiene la separación mínima cuando no sobra sitio.
+   */
+  .cb-send {
+    margin-block-start: auto;
+    padding-block-start: 1.75rem;
+    inline-size: 100%;
+    /* Apilada, la tarjeta ocupa todo el ancho y el botón no debe cruzar la
+       pantalla de lado a lado. */
+    max-inline-size: 24rem;
+  }
+
+  .cb-cta {
+    inline-size: 100%;
+  }
+
+  .cb-more {
+    margin-top: 1.125rem;
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.875rem;
+    color: var(--color-ink-inverse-muted);
+    text-underline-offset: 4px;
+    transition: color var(--duration-base) var(--ease-out);
+  }
+
+  .cb-more:hover {
+    color: var(--color-accent-on-dark);
+    text-decoration: underline;
+  }
+
+  /* ── El bus y el contacto ──────────────────────────────── */
+
+  .cb-bus {
+    position: relative;
+    block-size: 3rem;
+  }
+
+  @media (min-width: 80rem) {
+    .cb-bus {
+      block-size: 5.5rem;
+    }
+  }
+
+  /*
+   * La línea que recoge los conductores. Va del centro de la primera columna
+   * al de la última, calculada a partir del mismo hueco que usa la rejilla:
+   * con cuatro columnas iguales de ancho c = (100% − 3g)/4, el centro de la
+   * primera está en c/2 y el de la cuarta, 3(c + g) más allá.
+   *
+   * En dos filas o apilado no hay nada que recoger, así que no se dibuja.
+   */
+  .cb-line {
+    position: absolute;
+    display: none;
+    inset-block-start: 2.5rem;
+    inset-inline-start: calc((100% - 3 * var(--cb-gap)) / 8);
+    inline-size: calc(((100% - 3 * var(--cb-gap)) / 4 + var(--cb-gap)) * 3);
+    block-size: 2px;
+    overflow: hidden;
+    background-color: color-mix(
+      in srgb,
+      var(--jm-copper-400) 46%,
+      transparent
+    );
+    transition: background-color var(--duration-slow) var(--ease-out);
+  }
+
+  @media (min-width: 80rem) {
+    .cb-line {
+      display: block;
+    }
+  }
+
+  /* La bajada al contacto. Cae por el centro del contenedor, que con un
+     número par de columnas es el hueco central de la fila. */
+  .cb-drop {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 50%;
+    inline-size: 2px;
+    block-size: 100%;
+    translate: -1px 0;
+    background-color: color-mix(
+      in srgb,
+      var(--jm-copper-400) 46%,
+      transparent
+    );
+    transition: background-color var(--duration-slow) var(--ease-out);
+  }
+
+  @media (min-width: 80rem) {
+    .cb-drop {
+      inset-block-start: 2.5rem;
+      block-size: 3rem;
+    }
+  }
+
+  /* Señalar o enfocar una ruta enciende el camino entero hasta WhatsApp.
+     Si `:has()` no está disponible, el cuadro se queda quieto y funciona. */
+  .cb:has(.cb-route:hover) .cb-line,
+  .cb:has(.cb-route:focus-within) .cb-line,
+  .cb:has(.cb-route:hover) .cb-drop,
+  .cb:has(.cb-route:focus-within) .cb-drop {
+    background-color: var(--jm-copper-400);
+  }
+
+  /*
+   * El contacto va en columna, no en fila.
+   *
+   * En fila, el aro quedaba a la izquierda del rótulo y la bajada aterrizaba
+   * en mitad del número, atravesándolo. Un conductor que cruza una etiqueta en
+   * vez de terminar en un pad no es un esquema, es una raya encima del texto.
+   */
+  .cb-pad {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .cb-pad-ring {
+    display: grid;
+    place-items: center;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    flex-shrink: 0;
+    border: 2px solid var(--jm-copper-400);
+    border-radius: var(--radius-pill);
+  }
+
+  .cb-pad-core {
+    inline-size: 0.4rem;
+    block-size: 0.4rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--jm-copper-400);
+  }
+
+  .cb-pad-link {
+    /* Es un enlace de teléfono: 24px de alto no se pulsan con el pulgar. */
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    touch-action: manipulation;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-ink-inverse);
+    text-underline-offset: 4px;
+  }
+
+  .cb-pad-link:hover {
+    color: var(--color-accent-on-dark);
+    text-decoration: underline;
+  }
+
+  /* ── La salida secundaria ──────────────────────────────── */
+
+  .cb-out {
+    margin-top: 3.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+    border-top: 1px solid var(--color-border-inverse);
+    border-left: 2px solid var(--color-accent-on-dark-strong);
+    padding: 1.5rem 0 0 1.25rem;
+  }
+
+  .cb-out-text {
+    max-inline-size: 46ch;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--color-ink-inverse);
+  }
+
+  .cb-out-link {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: var(--color-accent-on-dark);
+    text-decoration: underline;
+    text-underline-offset: 5px;
+    transition: color var(--duration-base) var(--ease-out);
+  }
+
+  .cb-out-link:hover {
+    color: var(--color-ink-inverse);
+  }
+
+  /* ── El emparejamiento ─────────────────────────────────────
+     Radio n ↔ pestaña n ↔ plantillas n. Dos variantes, tres pares de reglas.
+
+     Lo que cambia es SOLO el contenido de las plantillas: el texto de la
+     vista previa y el `href` de los enlaces. Los títulos, las descripciones y
+     los enlaces a los servicios son los mismos para los dos, que es la razón
+     de que aquí haya una tarjeta por servicio y no el doble. */
+  .cb-radio:nth-of-type(1):checked ~ * .cb-only-taller,
+  .cb-radio:nth-of-type(2):checked ~ * .cb-only-particular {
+    display: none;
+  }
+
+  .cb-radio:nth-of-type(1):checked ~ .cb-control > .cb-tab:nth-child(1),
+  .cb-radio:nth-of-type(2):checked ~ .cb-control > .cb-tab:nth-child(2) {
+    background-color: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+
+  /* El foco se pinta sobre la etiqueta: el radio no se ve. */
+  .cb-radio:nth-of-type(1):focus-visible ~ .cb-control > .cb-tab:nth-child(1),
+  .cb-radio:nth-of-type(2):focus-visible ~ .cb-control > .cb-tab:nth-child(2) {
+    outline: 2px solid var(--color-accent-on-dark);
+    outline-offset: 2px;
+  }
+
+  /* ── El pulso del cambio de variante ───────────────────────
+     Dos animaciones idénticas con nombre distinto: es lo que hace que el
+     navegador la reinicie al pasar de una variante a la otra. Una sola
+     pasada, y solo bajo `.js-anim`. */
+  .cb-pulse {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: 26%;
+    opacity: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--jm-copper-300),
+      transparent
+    );
+  }
+
+  :global(.js-anim) .cb-radio:nth-of-type(1):checked ~ .cb-bus .cb-pulse {
+    animation: cb-flow-a 900ms var(--ease-out);
+  }
+
+  :global(.js-anim) .cb-radio:nth-of-type(2):checked ~ .cb-bus .cb-pulse {
+    animation: cb-flow-b 900ms var(--ease-out);
+  }
+
+  @keyframes cb-flow-a {
+    from {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+    25% {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+      transform: translateX(385%);
+    }
+  }
+
+  @keyframes cb-flow-b {
+    from {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+    25% {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+      transform: translateX(385%);
+    }
+  }
+
+  /* El contacto acusa recibo cuando el pulso llega. */
+  :global(.js-anim) .cb-radio:nth-of-type(1):checked ~ .cb-pad .cb-pad-ring {
+    animation: cb-ack-a 520ms var(--ease-settle) 620ms;
+  }
+
+  :global(.js-anim) .cb-radio:nth-of-type(2):checked ~ .cb-pad .cb-pad-ring {
+    animation: cb-ack-b 520ms var(--ease-settle) 620ms;
+  }
+
+  @keyframes cb-ack-a {
+    50% {
+      transform: scale(1.35);
+    }
+  }
+
+  @keyframes cb-ack-b {
+    50% {
+      transform: scale(1.35);
+    }
+  }
+</style>

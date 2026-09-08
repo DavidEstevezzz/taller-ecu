@@ -78,6 +78,14 @@ customers ──┬── vehicles
 - **`message_status_events`** — histórico de acks de Meta, idempotente.
 - **`workflow_errors`** — fallos de n8n capturados por un error handler global.
 
+Autenticación del panel (migraciones escritas, **todavía sin ejecutar**):
+
+- **`users`** — email único normalizado, `password_hash` (Argon2id), `role`
+  (`OWNER` o `EMPLOYEE`), `is_active`.
+- **`sessions`** — `token_hash` (SHA-256 del token de la cookie), `expires_at`,
+  `revoked_at`.
+- **`login_attempts`** — sostiene la limitación de intentos de login.
+
 Migraciones con `node-pg-migrate` en `backend/migrations/`.
 
 ---
@@ -87,27 +95,58 @@ Migraciones con `node-pg-migrate` en `backend/migrations/`.
 ```
 taller-ecu/
 ├── compose.yml                  postgres + backend + n8n
-├── .env.example                 plantilla de variables (incompleta, ver §Riesgos)
+├── .env.example                 plantilla de variables (sin secretos)
 ├── CLAUDE.md                    guía permanente de trabajo en este repositorio
 ├── README.md
 ├── backend/
 │   ├── Dockerfile
 │   ├── package.json  tsconfig.json
-│   ├── migrations/              9 migraciones
+│   ├── migrations/              12 migraciones
+│   ├── test/                    pruebas de contrato y de autenticación
 │   └── src/
-│       ├── server.ts            arranque, hook de API key, registro de rutas
+│       ├── server.ts            punto de entrada: buildApp() + listen
+│       ├── app.ts               construye la aplicación Fastify
 │       ├── db.ts                pool de PostgreSQL
-│       ├── schemas.ts           esquemas JSON de validación
+│       ├── schemas.ts           esquemas JSON del contrato con n8n
+│       ├── schemas/             adminAuth, adminPanel (esquemas del panel)
+│       ├── auth/                config, tokens, passwords, repository, service
+│       ├── panel/               sql, repository, service (API de lectura)
+│       ├── plugins/             internalApiKey, adminAuth
+│       ├── scripts/             create-owner (alta del primer OWNER)
 │       └── routes/              customers, vehicles, requests, conversations,
 │                                messages, whatsapp, messageLookup,
-│                                messageStatuses, workflowErrors
+│                                messageStatuses, workflowErrors,
+│                                admin/auth, admin/panel
+├── web/                         frontend Astro (público + panel)
+│   ├── astro.config.mjs
+│   ├── src/
+│   │   ├── config/              dominio y contenido provisional
+│   │   ├── styles/tokens.css    tokens de diseño (3 capas)
+│   │   ├── components/          públicos y admin/ (React)
+│   │   ├── layouts/             PublicLayout, AdminLayout
+│   │   ├── lib/api/             capa HTTP tipada del panel
+│   │   ├── assets/photos/       fotografías (ver docs/image-sources.md)
+│   │   └── pages/               index, servicios, servicios/{diagnostico-dtc,
+│   │                            reprogramacion, reparacion-ecu,
+│   │                            clonacion-ecu}, como-trabajamos, contacto,
+│   │                            sobre-nosotros, 404, robots.txt, admin/
+│   └── test/                    pruebas de cliente HTTP, login, dashboard,
+│                                proxy de desarrollo, navegación, contacto,
+│                                sobre-nosotros y diagnóstico DTC
+├── docs/
+│   ├── site-architecture.md
+│   ├── frontend-design.md
+│   └── seo-foundation.md
 ├── n8n-workflows/
 │   └── workflows-export.json    3 workflows exportados
 └── scripts/
     └── backup-postgres.sh       SOLO para producción, no ejecutar en desarrollo
 ```
 
-Todavía no existe nada de frontend. Se añadirá en `web/`.
+El frontend en `web/` cubre la portada pública, el hub de servicios, las cuatro
+páginas de servicio —diagnóstico DTC, reprogramación, reparación de ECU y
+clonación de ECU—, `/como-trabajamos`, `/contacto`, `/sobre-nosotros`, el login
+y el resumen del panel. **No está desplegado.**
 
 ---
 
@@ -153,7 +192,7 @@ Las reglas completas están en [CLAUDE.md](CLAUDE.md).
 ## Variables de entorno
 
 Van en un fichero `.env` en la raíz, que **nunca** se sube al repositorio.
-`.env.example` es la plantilla. Aquí solo se documentan los nombres y su propósito;
+`.env.example` es la plantilla y ya declara el conjunto completo. Aquí solo se documentan los nombres y su propósito;
 ningún valor real aparece en este repositorio.
 
 | Variable | Propósito |
@@ -170,6 +209,9 @@ ningún valor real aparece en este repositorio.
 
 El backend deriva `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` y
 `DATABASE_URL` desde `compose.yml`; no hace falta definirlas a mano.
+
+`NODE_ENV=production` lo fija el `Dockerfile` del backend. No es decorativo: es lo que
+activa el atributo `Secure` de la cookie de sesión del panel.
 
 Para ver qué espera el compose sin abrir ningún `.env`:
 
@@ -226,7 +268,8 @@ completo está en [CLAUDE.md](CLAUDE.md).
 ## Plan de la web y el panel
 
 Ambos se construyen **dentro de este mismo repositorio**, como una única aplicación
-Next.js (App Router + TypeScript) en `web/`.
+**Astro 5 + TypeScript + React (islas) + Tailwind 4** en `web/`. La web pública es
+estática y no necesita servidor propio; el panel se resuelve con islas de React.
 
 ### Web pública (`jmreprocars.com`)
 
@@ -241,14 +284,67 @@ conversación completa, marca de urgencia, notas internas, cambio de estado e
 historial del cliente.
 
 **El panel consume el backend a través de `/api/admin`. Nunca se conecta a PostgreSQL
-directamente.**
+directamente.** La autenticación de esa API ya está implementada (login, logout y
+sesión por cookie); los endpoints de datos del panel están por hacer.
+
+### API administrativa
+
+Implementada y probada localmente, **sin desplegar**. No usa `INTERNAL_API_KEY` en
+ningún caso, y ninguna de estas rutas es accesible con esa cabecera.
+
+Autenticación:
+
+| Método | Ruta | Autenticación |
+|---|---|---|
+| POST | `/api/admin/auth/login` | ninguna (limitada a 5 fallos por email y 20 por IP en 15 min) |
+| POST | `/api/admin/auth/logout` | opcional; revoca la sesión presentada |
+| GET | `/api/admin/auth/me` | cookie de sesión |
+
+Lectura del panel (**todas exigen sesión administrativa**; no hay endpoints de
+escritura todavía):
+
+| Método | Ruta | Devuelve |
+|---|---|---|
+| GET | `/api/admin/dashboard` | totales, solicitudes por estado y tipo de servicio, actividad reciente |
+| GET | `/api/admin/requests` | listado paginado con búsqueda y filtros |
+| GET | `/api/admin/requests/:requestId` | solicitud + cliente + vehículo + conversaciones + mensajes |
+| GET | `/api/admin/customers/:customerId` | cliente + vehículos + solicitudes + resumen |
+
+Parámetros de `GET /api/admin/requests`:
+
+| Parámetro | Valores | Por defecto |
+|---|---|---|
+| `page` | entero ≥ 1 | 1 |
+| `pageSize` | entero 1–100 | 25 |
+| `search` | texto libre; busca en nombre, teléfono, marca, modelo, matrícula, VIN y descripción | — |
+| `status` | `COLLECTING`, `HUMAN`, `CLOSED` | — |
+| `serviceType` | `REPROGRAMMING`, `ECU_REPAIR`, `ECU_CLONING`, `OTHER` | — |
+| `from` / `to` | fecha ISO; filtra por fecha de creación | — |
+| `sort` | `lastActivityAt`, `createdAt`, `updatedAt`, `status`, `customerName` | `lastActivityAt` |
+| `order` | `asc`, `desc` | `desc` |
+
+Cualquier otro parámetro, o un valor fuera de estas listas, devuelve `400`.
+Las conversaciones del detalle se recuperan por `conversations.request_id`.
+
+El primer usuario se crea por consola, sin registro público. Una vez ejecutadas las
+migraciones:
+
+```bash
+docker compose exec backend node dist/scripts/create-owner.js
+```
+
+El script pide email, nombre y contraseña con el eco desactivado; la contraseña nunca
+se acepta por argumento ni por variable de entorno, para que no acabe en el historial
+del shell ni en la tabla de procesos. **Todavía no se ha probado contra PostgreSQL.**
 
 ### Decisiones ya tomadas
 
-- Una sola aplicación Next.js para web y panel.
+- Una sola aplicación Astro para web y panel.
 - Autenticación en el backend Fastify: cookie **HttpOnly** segura, contraseñas con
-  hash **Argon2**, sin tokens en `localStorage`, sin registro público, primer usuario
-  creado por script CLI, roles **OWNER** y **EMPLOYEE**.
+  hash **Argon2id**, sin tokens en `localStorage`, sin registro público, primer usuario
+  creado por script CLI, roles **OWNER** y **EMPLOYEE**. Sesiones **absolutas de 12
+  horas**, sin renovación deslizante: cubren una jornada del taller con un único
+  inicio de sesión y acotan la ventana de uso de una cookie robada.
 - Mismo origen para web, panel y API. **Sin CORS abierto.**
 - `INTERNAL_API_KEY` no llega jamás al navegador.
 - Urgencia como columna booleana `is_urgent` (por defecto `false`), editable desde el
@@ -276,6 +372,24 @@ significa que esté conectado a un WhatsApp real.
   datos no disponibles y petición de atención humana.
 - Regresiones automáticas de texto superadas.
 
+### Implementado en código, sin desplegar
+
+La API del panel está escrita y cubierta por pruebas (94 en total):
+
+- **Autenticación**: usuarios con rol `OWNER`/`EMPLOYEE`, login con Argon2id, sesiones
+  en PostgreSQL con cookie `HttpOnly`, logout con revocación y limitación de intentos.
+- **Lectura**: dashboard, listado con búsqueda y filtros, detalle de solicitud e
+  historial de cliente.
+
+Ahora bien, **no está en marcha en ningún sitio**:
+
+- **Las 12 migraciones se han validado desde cero contra un PostgreSQL 17 desechable**,
+  pero **no se han ejecutado en producción**. Hasta que se apliquen allí, nadie puede
+  iniciar sesión.
+- El script CLI de alta del primer OWNER **ya se ha probado contra PostgreSQL 17** en
+  el entorno desechable de integración.
+- Ningún usuario existe todavía, y por tanto nadie puede iniciar sesión.
+
 ### Implementado, pendiente de validar end-to-end con Meta
 
 - Conexión con la cuenta real de Meta/WhatsApp del cliente.
@@ -285,21 +399,94 @@ significa que esté conectado a un WhatsApp real.
 - Análisis de imágenes y documentos recibidos desde Meta.
 - Estados reales de entrega enviados por Meta.
 
+### Frontend: primera porción vertical
+
+Aplicación **Astro 5 + TypeScript + React + Tailwind 4** en `web/`, **sin
+desplegar**:
+
+- Portada pública en `/`, hub de servicios en `/servicios`, **las tres páginas
+  completas de servicio** y `/como-trabajamos`, una página corta a propósito
+  —titular, esquema y qué enviar— pensada para que empezar sea fácil, con un
+  esquema propio y un selector de recorrido (particular o taller) **resuelto
+  sin JavaScript**. Es la única con el hero en claro.
+- **`/contacto`**, varias páginas en una: una entrada por servicio —diagnóstico
+  DTC, reprogramación, reparación y clonación— que abre WhatsApp con una
+  plantilla escrita para ese servicio, un conmutador «soy particular / soy un
+  taller» que cambia las plantillas sin duplicar las tarjetas, y una salida
+  secundaria para quien no sabe qué servicio necesita. **Sin formulario y sin
+  una línea de JavaScript**: los diez enlaces van en el HTML y el conmutador es
+  un grupo de radios resuelto con CSS. Publica solo datos confirmados —canal, zona, primer contacto y
+  visitas con cita previa—; la dirección y el correo provisionales están
+  guardados aparte, marcados `PENDING_CLIENT_CONFIRMATION` y **sin publicar**.
+- **`/servicios/diagnostico-dtc`**, la puerta de entrada del sitio para quien
+  llega con un testigo encendido, un código o un vehículo limitado. Su tesis es
+  que **un código indica dónde mirar, no qué cambiar**, y está construida sobre
+  una sola regla: *una necesidad, una interacción, un abanico de soluciones y
+  una llamada a la acción*. **Cinco secciones y 320 palabras visibles.** La
+  interacción es el tablero de síntomas: seis situaciones reconocibles, seis
+  caminos distintos y una sola respuesta de dos líneas cada vez. Elegir el caso
+  es un grupo de radios resuelto con CSS; el JavaScript solo traza el camino y
+  enciende la unidad al llegar. **No publica ningún código de avería concreto**,
+  ni real ni de ejemplo, y hay una prueba que lo impide en todo el sitio.
+- Las otras tres de servicio: `/servicios/reprogramacion`, con el configurador
+  orientativo de Tuning-shop.com incrustado bajo activación explícita —la
+  **única petición a terceros** de toda la web, documentada en
+  [embed-tuning-shop.md](docs/embed-tuning-shop.md)—, y
+  `/servicios/reparacion-ecu` y `/servicios/clonacion-ecu`, que no hacen
+  ninguna. Estáticas, con **2,9 kB de JavaScript en línea** comunes (4,4 kB en
+  la de diagnóstico, 4,3 kB en la de reparación y 5,0 kB en la de clonación) que
+  solo aporta movimiento y control: revelado al entrar en pantalla, trazado de la
+  pista del proceso, paralaje del despiece, cierre de los menús de la cabecera,
+  índice activo, el camino del síntoma hasta la unidad, el paso a paso del
+  recorrido por la placa y el traslado entre unidades.
+  **Ninguna línea es necesaria para leer la página**, y todo se desactiva con
+  `prefers-reduced-motion`. Sin librería de animación.
+- Identidad visual propia: un **despiece de centralita** dibujado a medida como
+  firma de la portada, un diagrama por servicio y una pieza propia por página de
+  servicio —el mapa de calibración, el recorrido por la placa y el traslado
+  entre dos unidades—, todos calculados desde la misma proyección
+  (`src/lib/iso.ts`). Tres piezas no dibujan una centralita y por eso no pasan
+  por esa proyección: el esquema de cableado de `/como-trabajamos` y el corte
+  estratigráfico de `/sobre-nosotros`. Y `/contacto` lleva un cuadro de conexiones que
+  conduce todas las rutas hasta un único contacto de WhatsApp —hecho con cajas de
+  CSS, no con SVG, para que los conductores caigan por el centro exacto de unas
+  tarjetas cuyo ancho decide la rejilla—. Ningún dibujo lleva cifras ni códigos
+  inventados.
+- Acceso al panel en `/admin/login`.
+- Resumen del panel en `/admin`, consumiendo `GET /api/admin/dashboard`.
+- Fundamentos SEO, sistema de tokens y componentes básicos.
+
+Documentación: [arquitectura del sitio](docs/site-architecture.md),
+[el configurador de Tuning-shop.com](docs/embed-tuning-shop.md),
+[dirección visual](docs/frontend-design.md),
+[identidad de marca](docs/brand-foundation.md),
+[procedencia de las imágenes](docs/image-sources.md),
+[fundamentos SEO](docs/seo-foundation.md).
+
+Para previsualizar contra un backend **aislado** (nunca el de producción):
+
+```bash
+DEV_API_PROXY_TARGET=http://127.0.0.1:3100 npm run dev
+```
+
+Sin esa variable no se configura ningún proxy y la web pública funciona igual.
+
 ### Sin empezar
 
-Todo el frontend. No hay usuarios ni autenticación de personas; la única protección de
-la API es una clave compartida pensada para máquinas.
+La página individual de clonación de ECU, el listado y el detalle de solicitudes
+en el panel, y todos los endpoints de escritura (cambio de estado, notas
+internas, urgencia).
 
 ### Siguientes fases
 
 | Fase | Contenido |
 |---|---|
-| **1** | Pruebas de integración mínimas de los endpoints que usa n8n, tabla `users`, sesión con cookie HttpOnly y Argon2, script CLI para el primer usuario |
-| **2** | Endpoints de lectura del panel: listado con búsqueda y filtros, detalle agregado, resumen, ficha e historial del cliente |
-| **3** | Proyecto Next.js en `web/`, Dockerfile, servicio en compose, login funcional |
-| **4** | Panel en modo lectura: resumen, listado y detalle completo |
+| **1** | ✅ *escrita, sin desplegar* — Pruebas de contrato de los endpoints que usa n8n, tabla `users`, sesión con cookie HttpOnly y Argon2id, script CLI para el primer usuario |
+| **2** | ✅ *escrita, sin desplegar* — Endpoints de lectura del panel: listado con búsqueda y filtros, detalle agregado, resumen, ficha e historial del cliente |
+| **3** | ✅ *escrita, sin desplegar* — Proyecto en `web/` (Astro, no Next.js), login funcional, tokens y SEO |
+| **4** | Panel en modo lectura: **resumen hecho**; faltan listado y detalle |
 | **5** | Panel en modo escritura: cambio de estado, notas internas, `is_urgent`, devolver la conversación al bot |
-| **6** | Web pública: las siete páginas, SEO y JSON-LD |
+| **6** | Web pública: **siete de las ocho páginas escritas** (falta `/sobre-nosotros` y las legales), SEO hecho, JSON-LD en `/contacto` |
 | **7** | Reverse proxy, TLS, DNS y despliegue |
 
 Reverse proxy, TLS y DNS quedan deliberadamente para el final: primero se construyen
@@ -307,18 +494,62 @@ y prueban backend y frontend de forma aislada.
 
 ### Riesgos pendientes
 
-- **`.env.example` está incompleto**: declara tres variables cuando `compose.yml`
-  exige nueve.
-- **Migración duplicada**: `1787047877216_add-business-check-constraints.js` usa
-  sintaxis CommonJS en un paquete ESM y se re-creó como `..._v2.js`. No se toca hasta
-  comprobar el historial real de migraciones en producción.
-- **Sin tests, sin CI y sin linter**, y builds no reproducibles (`npm install` sin
-  lockfile).
+- **Migración duplicada: resuelta.** `1787047877216_add-business-check-constraints.js`
+  y `1787048279926_..._v2.js` declaran los mismos siete nombres de constraint, y la
+  segunda abortaba con `already exists` (42710): ninguna instalación nueva podía
+  migrar. Ambas son ahora idempotentes, sin cambiar nombres ni definiciones, y se han
+  validado desde cero. En producción ya estaban registradas y no volverán a
+  ejecutarse.
+- **Las migraciones de autenticación no se han ejecutado.** Hasta que se apliquen, el
+  login fallará contra tablas inexistentes.
+- **`trustProxy` pendiente**: la limitación de intentos de login usa `request.ip`.
+  Al instalar el reverse proxy habrá que configurar `trustProxy` en Fastify; de lo
+  contrario todas las peticiones parecerán venir de la IP del proxy y el límite por IP
+  bloqueará a todos los usuarios a la vez.
+- **CSRF pendiente de revisar**: hoy la defensa es la cookie `SameSite=Lax`, que basta
+  mientras la API administrativa sea de solo lectura. **Antes de añadir operaciones de
+  escritura** (cambio de estado, notas internas, urgencia) hay que revisar la
+  validación de `Origin` o añadir un token anti-CSRF.
+- **Sin CI y sin linter**: las pruebas existen pero hay que lanzarlas a mano.
 - **La integración con Meta sigue sin validar**, así que todo el tramo de multimedia,
   transcripción, análisis y estados de entrega puede requerir ajustes cuando se
   conecte la cuenta real.
 - **No existe entorno de desarrollo ejecutable**: ni base de datos de pruebas ni n8n
   aislado. Montarlo es una tarea pendiente.
+- **El frontend no está desplegado** y depende de datos del cliente todavía sin
+  confirmar (logo, fotos, dirección, horario, precios). Ver
+  [site-architecture.md](docs/site-architecture.md) §11.
+
+---
+
+## Prueba de integración
+
+Valida el backend completo contra un PostgreSQL 17 real y desechable, sin tocar
+producción:
+
+```bash
+./scripts/integration-test.sh
+```
+
+Levanta una base efímera en su propia red (`tallerecu-itest-*`), sin publicar puertos
+y con los datos en tmpfs; aplica todas las migraciones desde cero; crea el primer
+OWNER con el CLI real; y ejecuta las pruebas de `backend/test/integration/`. Todo se
+destruye al terminar, aunque algo falle.
+
+Un guardia aborta la ejecución si la base a la que se apunta no es claramente de
+pruebas, de modo que una variable mal puesta no pueda alcanzar producción.
+
+Qué se ha validado con SQL real: las 12 migraciones desde una base vacía, la creación
+del OWNER, login correcto e incorrecto, la cookie de sesión y su hash en la base,
+`/me`, el dashboard, el listado con filtros, búsqueda y paginación, el detalle con
+conversaciones seleccionadas por `request_id`, el orden cronológico de mensajes, el
+historial de cliente, el aislamiento entre clientes, y el logout con revocación.
+
+Verificada en ejecuciones consecutivas: cada una parte de una base vacía y deja el
+entorno sin rastro.
+
+**Esto no implica despliegue**: nada de esto se ha ejecutado en producción, y las
+migraciones de autenticación siguen sin aplicarse allí.
 
 ---
 

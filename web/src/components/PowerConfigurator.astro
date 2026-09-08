@@ -1,0 +1,161 @@
+---
+import { TUNING_SHOP } from "../config/embeds";
+import WhatsAppLink from "./WhatsAppLink.astro";
+
+/**
+ * Configurador orientativo de Tuning-shop.com.
+ *
+ * Es la única petición a un tercero de toda la web pública, y por eso está
+ * envuelta así:
+ *
+ * 1. **No se carga sola.** El marco se crea cuando el visitante lo pide. Hasta
+ *    entonces no sale ni una petición a `tuning-shop.com` ni se deja su cookie
+ *    de sesión. Es lo que hace defendible la excepción de privacidad, y de
+ *    paso quita el tercero de la carga inicial de la página.
+ * 2. **El aviso está en el HTML, no en el marco.** Que las cifras son
+ *    genéricas y orientativas se lee siempre: antes de abrirlo, con él abierto,
+ *    sin JavaScript y en el HTML que ve un buscador. No depende del proveedor.
+ * 3. **Si no responde, la página sigue sirviendo.** Ver `configurator.ts`.
+ * 4. **La atribución al proveedor no se oculta** en ninguno de los estados.
+ *
+ * El control es un enlace de verdad, no un botón muerto: sin JavaScript abre
+ * el configurador del proveedor en una pestaña nueva. Con JavaScript se
+ * intercepta y se incrusta aquí.
+ */
+interface Props {
+  headingId: string;
+}
+
+const { headingId } = Astro.props;
+---
+
+<div
+  class="on-dark border border-border-inverse bg-surface-bench"
+  data-configurator
+  data-src={TUNING_SHOP.src}
+  data-min-height={String(TUNING_SHOP.minHeight)}
+>
+  <!-- Cabecera del instrumento -->
+  <div
+    class="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 border-b border-border-inverse px-5 py-4 sm:px-7"
+  >
+    <p class="label-technical text-accent-on-dark">Consulta orientativa</p>
+    <p class="text-xs text-ink-inverse-muted">
+      Datos de <a
+        href={TUNING_SHOP.providerUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="underline underline-offset-4 hover:text-accent-on-dark"
+        >{TUNING_SHOP.provider}</a
+      >
+    </p>
+  </div>
+
+  <!-- ── Estado inicial: nada cargado todavía ── -->
+  <div class="px-5 py-10 sm:px-7 lg:py-14" data-configurator-intro>
+    <div class="mx-auto max-w-2xl text-center">
+      <h3 id={headingId} class="display text-h3 text-ink-inverse text-balance">
+        Busca tu marca, tu modelo y tu motor
+      </h3>
+      <p class="mt-4 text-sm leading-relaxed text-ink-inverse-muted">
+        La herramienta de {TUNING_SHOP.provider} muestra las cifras de origen y
+        las estimadas para esa motorización en general.
+      </p>
+
+      <p
+        class="mt-6 rounded-sm border border-border-inverse bg-surface-inverse px-4 py-3 text-xs leading-relaxed text-ink-inverse-muted"
+      >
+        Al abrirlo se carga contenido de <strong class="text-ink-inverse"
+          >{TUNING_SHOP.provider}</strong
+        >, que deja una cookie propia de sesión. No se carga nada suyo hasta que
+        lo abres.
+      </p>
+
+      <a
+        href={TUNING_SHOP.src}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="mt-8 inline-flex min-h-12 items-center justify-center gap-2.5 rounded-md bg-accent px-6 text-base font-medium text-on-accent transition-colors duration-(--duration-base) hover:bg-accent-hover"
+        data-configurator-open
+      >
+        <svg
+          viewBox="0 0 20 20"
+          class="size-4.5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          aria-hidden="true"
+        >
+          <path
+            d="M3 5.5h14M3 10h14M3 14.5h9"
+            stroke-linecap="round"></path>
+        </svg>
+        Abrir el configurador
+      </a>
+    </div>
+  </div>
+
+  <!-- ── El marco se inserta aquí ── -->
+  <div class="hidden" data-configurator-frame></div>
+
+  <!--
+    Aviso permanente. Va fuera del marco a propósito: es nuestro, es texto real
+    del documento y se lee aunque el proveedor no cargue.
+  -->
+  <div
+    class="border-t border-border-inverse bg-surface-inverse px-5 py-6 sm:px-7"
+  >
+    <div class="flex gap-4">
+      <svg
+        viewBox="0 0 24 24"
+        class="mt-0.5 size-5 shrink-0 text-accent-on-dark"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M12 7.5v5.5" stroke-linecap="round"></path>
+        <circle cx="12" cy="16.5" r="0.9" fill="currentColor" stroke="none"
+        ></circle>
+      </svg>
+      <div class="text-sm leading-relaxed text-ink-inverse-muted">
+        <p>
+          <strong class="text-ink-inverse"
+            >Estas cifras son genéricas y orientativas.</strong
+          > Describen una motorización en general, no tu vehículo. No son mediciones
+          nuestras, no confirman compatibilidad y no son un presupuesto: lo que
+          admite un coche concreto depende de su estado y de su historial.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--
+  Si no hay JavaScript no hay configurador, y no por cómo lo hemos montado:
+  la herramienta del proveedor se dibuja entera en el navegador. Se dice tal
+  cual y se ofrece el camino que sí funciona.
+-->
+<noscript>
+  <div
+    class="on-dark mt-6 border border-border-inverse bg-surface-inverse-raised px-5 py-6 text-sm leading-relaxed text-ink-inverse-muted sm:px-7"
+  >
+    <p>
+      El configurador de {TUNING_SHOP.provider} necesita JavaScript para
+      funcionar: sus listas y sus resultados se generan en el navegador. Puedes
+      <a
+        href={TUNING_SHOP.src}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-accent-on-dark underline underline-offset-4 hover:text-accent-on-dark-strong"
+        >abrirlo en su propia web</a
+      >, o contarnos el vehículo directamente y te decimos qué se puede hacer.
+    </p>
+    <WhatsAppLink class="mt-5" variant="onDark" label="Escribir por WhatsApp" />
+  </div>
+</noscript>
+
+<script>
+  import "../scripts/configurator";
+</script>

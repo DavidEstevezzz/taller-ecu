@@ -1,0 +1,810 @@
+---
+import WhatsAppLink from "./WhatsAppLink.astro";
+import {
+  REPRO_GOALS,
+  REPRO_BASELINE_BAND,
+  REPRO_BAND_CAVEAT,
+  REPRO_MESSAGE_LINES,
+  CONTACT,
+} from "../config/site";
+
+/**
+ * «¿Qué quieres notar al volante?» — la pieza central de
+ * /servicios/reprogramacion.
+ *
+ * Sustituye a `MapLayer`, que dibujaba la retícula de un mapa de calibración.
+ * Aquel dibujo era correcto y estaba mirando al sitio equivocado: enseñaba la
+ * tabla que se toca, no lo que el conductor siente. Nadie compra una tabla.
+ *
+ * Lo que dibuja ahora cabe en una frase: **el empuje que tienes a lo largo
+ * del régimen, y dónde cambia si persigues un objetivo u otro.** Es el único
+ * instrumento que el conductor ya sabe leer sin que se lo expliquen, porque
+ * lo tiene delante cada día.
+ *
+ * ── La regla que lo hace publicable ──────────────────────────
+ *
+ * **No hay ni una cifra dentro del dibujo, y no puede haberla.** Sin números
+ * la banda no puede confundirse con la medición de un vehículo: es una forma.
+ * El eje horizontal se rotula con palabras —«ralentí», «corte»—, el vertical
+ * no se rotula en absoluto, y el aviso de `REPRO_BAND_CAVEAT` va debajo, en
+ * nuestro HTML, una sola vez.
+ *
+ * Por eso los rótulos del eje son HTML y no `<text>` dentro del SVG: fuera
+ * escalan con la página, se traducen, se leen y no obligan a esconder el
+ * dibujo en pantallas pequeñas. Misma decisión que en `SymptomRoute`.
+ *
+ * ── Cómo funciona ────────────────────────────────────────────
+ *
+ * El control es un **grupo de radios**, como `SymptomRoute`, `RouteSwitch` y
+ * `ContactBoard`: funciona sin JavaScript, se recorre con las flechas, se
+ * anuncia como grupo y no parpadea al cargar. Cada objetivo trae su curva ya
+ * dibujada en el HTML y `:checked ~` enseña la suya.
+ *
+ * El JavaScript (`src/scripts/power-band.ts`) añade dos cosas, y ninguna es
+ * necesaria para entender nada:
+ *
+ *   1. La curva **se deforma** de un objetivo a otro en lugar de saltar. Es
+ *      lo que hace que se lea como una misma entrega que cambia, y no como
+ *      cinco láminas distintas.
+ *   2. Al entrar en pantalla, la curva **nace sobre la de serie y crece**.
+ *      Esa es la frase entera de la página en un gesto: esto es tu coche,
+ *      esto es lo que cambia.
+ *
+ * También rellena la última línea de la plantilla de WhatsApp con el objetivo
+ * elegido. Sin JavaScript el campo va en blanco, como todos los demás.
+ *
+ * ── Cómo degrada ─────────────────────────────────────────────
+ *
+ *   sin JavaScript      → curva final dibujada, selector operativo, plantilla
+ *                         con el campo en blanco. No falta nada.
+ *   movimiento reducido → igual: el script no se ejecuta.
+ *   cualquier anchura   → la banda se queda. Sin rótulos dentro, no hay nada
+ *                         que se vuelva ilegible al escalar.
+ */
+interface Props {
+  /** Prefijo de los identificadores. Uno por página, así que basta con uno. */
+  id?: string;
+}
+
+const { id = "banda" } = Astro.props;
+
+/* ═══════════════════════════════════════════════════════════════
+   GEOMETRÍA
+   ═══════════════════════════════════════════════════════════════
+
+   El dibujo se calcula, no se escribe a mano: es la norma del sitio. Aquí no
+   se usa `lib/iso.ts` porque no hay ninguna centralita que proyectar; el
+   sistema de ejes es el de un plano cartesiano, que es justo lo que un
+   conductor espera de una curva de entrega. */
+
+/*
+ * El encuadre es deliberadamente apaisado. La primera versión usaba 1200×430 y
+ * la sección entera se comía una pantalla larga de escritorio: la banda es más
+ * legible ancha y baja —así se lee como un recorrido de régimen— y de paso
+ * deja de separar el titular de la respuesta con un vacío.
+ */
+const VIEW_W = 1200;
+const VIEW_H = 316;
+
+/** Zona de trazado. El margen inferior deja sitio a la regla del régimen. */
+const X0 = 64;
+const X1 = 1136;
+const BASE = 282;
+const TOP = 34;
+
+const SPAN = X1 - X0;
+const HEIGHT = BASE - TOP;
+
+/** Puntos por curva. Todas comparten muestreo: es lo que permite deformarlas. */
+const SAMPLES = 25;
+
+interface Shape {
+  rise: number;
+  slope: number;
+  hold: number;
+  drop: number;
+  top: number;
+}
+
+/**
+ * La forma de una entrega: una subida en S que se sostiene y luego cae.
+ *
+ * No modela ningún motor. Es la silueta que cualquiera reconoce de haber
+ * visto una curva de par, reducida a los cuatro gestos que la distinguen.
+ */
+function sample({ rise, slope, hold, drop, top }: Shape): number[] {
+  const values: number[] = [];
+
+  for (let i = 0; i < SAMPLES; i += 1) {
+    const t = i / (SAMPLES - 1);
+    const up = 1 / (1 + Math.exp(-(t - rise) / slope));
+    const down = t <= hold ? 1 : Math.exp(-(((t - hold) / drop) ** 2));
+    values.push(top * up * down);
+  }
+
+  return values;
+}
+
+/** De 0..1 a coordenadas del dibujo. */
+const px = (i: number): number => X0 + (SPAN * i) / (SAMPLES - 1);
+const py = (v: number): number => BASE - v * HEIGHT;
+
+/**
+ * Catmull-Rom a Bézier. Con las abscisas fijas y repartidas, dos curvas
+ * cualesquiera tienen exactamente la misma estructura de segmentos, así que
+ * interpolar sus ordenadas basta para deformar una en otra.
+ */
+function curve(values: number[]): string {
+  const pts = values.map((v, i) => [px(i), py(v)] as const);
+  let d = `M ${pts[0]![0].toFixed(1)} ${pts[0]![1].toFixed(1)}`;
+
+  for (let i = 0; i < pts.length - 1; i += 1) {
+    const p0 = pts[Math.max(i - 1, 0)]!;
+    const p1 = pts[i]!;
+    const p2 = pts[i + 1]!;
+    const p3 = pts[Math.min(i + 2, pts.length - 1)]!;
+
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+
+    d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+
+  return d;
+}
+
+/** La misma curva, cerrada contra la base: el relleno que le da cuerpo. */
+const area = (values: number[]): string =>
+  `${curve(values)} L ${X1} ${BASE} L ${X0} ${BASE} Z`;
+
+/* La entrega de partida vive en site.ts: ver REPRO_BASELINE_BAND. */
+const stockValues = sample(REPRO_BASELINE_BAND);
+const stockPath = curve(stockValues);
+
+const goals = REPRO_GOALS.map((goal) => {
+  const values = sample(goal.band);
+
+  return {
+    ...goal,
+    values,
+    path: curve(values),
+    area: area(values),
+    zoneX: X0 + goal.zone[0] * SPAN,
+    zoneW: (goal.zone[1] - goal.zone[0]) * SPAN,
+    message: [
+      ...REPRO_MESSAGE_LINES.slice(0, -1),
+      `${REPRO_MESSAGE_LINES.at(-1)} ${goal.goal}`,
+    ].join("\n"),
+  };
+});
+
+/** Regla del régimen: marcas sin rotular. Ritmo, no medida. */
+const TICKS = Array.from({ length: 13 }, (_, i) => X0 + (SPAN * i) / 12);
+
+/**
+ * Lo que el script necesita para deformar, servido como datos y no repetido
+ * en JavaScript: las matemáticas viven en un solo sitio, este archivo.
+ */
+const bandData = JSON.stringify({
+  x0: X0,
+  x1: X1,
+  base: BASE,
+  height: HEIGHT,
+  samples: SAMPLES,
+  stock: stockValues.map((v) => Number(v.toFixed(4))),
+  goals: goals.map((goal) => ({
+    id: goal.id,
+    values: goal.values.map((v) => Number(v.toFixed(4))),
+    zone: [goal.zoneX, goal.zoneW].map((v) => Number(v.toFixed(1))),
+    message: goal.message,
+  })),
+});
+
+const titleId = `${id}-svg-title`;
+const descId = `${id}-svg-desc`;
+const defaultMessage = goals[0]!.message;
+---
+
+<div class="pb" data-power-band data-band={bandData} data-number={CONTACT.whatsappNumber}>
+  <fieldset class="pb-set">
+    <legend class="label-technical pb-legend">Elige un objetivo</legend>
+
+    {
+      REPRO_GOALS.map((goal, i) => (
+        <input
+          type="radio"
+          name={`${id}-objetivo`}
+          id={`${id}-${goal.id}`}
+          value={goal.id}
+          class="pb-radio"
+          checked={i === 0}
+        />
+      ))
+    }
+
+    <div class="pb-tabs">
+      {
+        REPRO_GOALS.map((goal) => (
+          <label class="pb-tab" for={`${id}-${goal.id}`}>
+            {goal.tab}
+          </label>
+        ))
+      }
+    </div>
+
+    <!--
+      La respuesta y la letra pequeña, en la misma fila en escritorio. Antes
+      iban en tres bloques apilados y sumaban más alto que el propio dibujo.
+    -->
+    <div class="pb-said">
+      <div class="pb-answer" aria-live="polite">
+        {
+          goals.map((goal) => (
+            <div class={`pb-only pb-only-${goal.id}`}>
+              <h3 class="display pb-answer-title">{goal.title}</h3>
+              <p class="pb-answer-text">{goal.body}</p>
+            </div>
+          ))
+        }
+      </div>
+
+      <div class="pb-foot">
+        <p class="pb-legend-keys">
+          <span class="pb-key"><span class="pb-swatch pb-swatch-stock" aria-hidden="true"></span
+            >Entrega de partida</span>
+          <span class="pb-key"><span class="pb-swatch pb-swatch-tuned" aria-hidden="true"></span
+            >Según el objetivo</span>
+        </p>
+        <p class="pb-caveat">{REPRO_BAND_CAVEAT}</p>
+      </div>
+    </div>
+
+    <!-- ── El instrumento ──
+         Supletorio: todo lo que dice está escrito ahí arriba. Por eso es
+         role="img" y por eso no lleva ni una cifra dentro. -->
+    <div class="pb-board">
+      <svg
+        class="pb-svg"
+        viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+        preserveAspectRatio="none"
+        role="img"
+        aria-labelledby={`${titleId} ${descId}`}
+        fill="none"
+      >
+        <title id={titleId}>La entrega a lo largo del régimen</title>
+        <desc id={descId}>
+          Dibujo esquemático de dos curvas de empuje sobre el régimen del
+          motor: una de partida y otra según el objetivo elegido, con el tramo
+          donde ese objetivo actúa iluminado. No lleva cifras ni escala, y no
+          corresponde a ningún vehículo concreto.
+        </desc>
+
+        <defs>
+          <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--color-accent-on-dark-strong)" stop-opacity="0.34" />
+            <stop offset="100%" stop-color="var(--color-accent-on-dark-strong)" stop-opacity="0" />
+          </linearGradient>
+          <linearGradient id={`${id}-zone`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--jm-copper-400)" stop-opacity="0" />
+            <stop offset="55%" stop-color="var(--jm-copper-400)" stop-opacity="0.13" />
+            <stop offset="100%" stop-color="var(--jm-copper-400)" stop-opacity="0.3" />
+          </linearGradient>
+        </defs>
+
+        <!-- La regla del régimen. Marcas, sin una sola cifra. -->
+        <g class="pb-ticks">
+          {
+            TICKS.map((x, i) => (
+              <line
+                x1={x}
+                x2={x}
+                y1={BASE}
+                y2={BASE + (i % 3 === 0 ? 18 : 10)}
+              />
+            ))
+          }
+        </g>
+        <line class="pb-axis" x1={X0} x2={X1} y1={BASE} y2={BASE} />
+
+        <!-- El tramo donde se nota. Uno por objetivo; solo se ve el elegido. -->
+        <g class="pb-zones-static">
+          {
+            goals.map((goal) => (
+              <g class={`pb-zone pb-zone-${goal.id}`}>
+                <rect
+                  x={goal.zoneX}
+                  y={TOP - 8}
+                  width={goal.zoneW}
+                  height={BASE - TOP + 8}
+                  fill={`url(#${id}-zone)`}
+                />
+                <line
+                  class="pb-zone-edge"
+                  x1={goal.zoneX}
+                  x2={goal.zoneX}
+                  y1={TOP - 8}
+                  y2={BASE}
+                />
+                <line
+                  class="pb-zone-edge"
+                  x1={goal.zoneX + goal.zoneW}
+                  x2={goal.zoneX + goal.zoneW}
+                  y1={TOP - 8}
+                  y2={BASE}
+                />
+              </g>
+            ))
+          }
+        </g>
+
+        <!-- La versión viva, que el script mueve. Oculta hasta que la enciende. -->
+        <g class="pb-zone-live">
+            <rect
+              data-band-zone-fill
+              x={goals[0]!.zoneX}
+              y={TOP - 8}
+              width={goals[0]!.zoneW}
+              height={BASE - TOP + 8}
+              fill={`url(#${id}-zone)`}
+            />
+            <line
+              class="pb-zone-edge"
+              data-band-zone-left
+              x1={goals[0]!.zoneX}
+              x2={goals[0]!.zoneX}
+              y1={TOP - 8}
+              y2={BASE}
+            />
+            <line
+              class="pb-zone-edge"
+              data-band-zone-right
+              x1={goals[0]!.zoneX + goals[0]!.zoneW}
+              x2={goals[0]!.zoneX + goals[0]!.zoneW}
+              y1={TOP - 8}
+              y2={BASE}
+            />
+        </g>
+
+        <!-- La entrega de partida. Fría y fina: es la referencia, no el tema. -->
+        <path class="pb-stock" d={stockPath} />
+
+        <!-- Las cinco curvas estáticas. Sin JavaScript, mandan estas. -->
+        <g class="pb-static">
+          {
+            goals.map((goal) => (
+              <g class={`pb-only pb-only-${goal.id}`}>
+                <path class="pb-area" d={goal.area} fill={`url(#${id}-fill)`} />
+                <path class="pb-glow" d={goal.path} />
+                <path class="pb-tuned" d={goal.path} />
+              </g>
+            ))
+          }
+        </g>
+
+        <!-- La curva viva. Oculta hasta que el script la enciende. -->
+        <g class="pb-live">
+          <path
+            class="pb-area"
+            data-band-area
+            d={goals[0]!.area}
+            fill={`url(#${id}-fill)`}
+          />
+          <path class="pb-glow" data-band-glow d={goals[0]!.path} />
+          <path class="pb-tuned" data-band-line d={goals[0]!.path} />
+        </g>
+      </svg>
+
+      <!-- Los rótulos del eje viven fuera del dibujo: escalan, se leen y se
+           traducen. Dentro serían texto que hay que esconder en móvil. -->
+      <p class="pb-axis-labels">
+        <span>ralentí</span>
+        <span class="pb-axis-mid">régimen del motor</span>
+        <span>corte</span>
+      </p>
+    </div>
+
+    <div class="pb-cta">
+      <WhatsAppLink
+        size="lg"
+        label="Consultar mi vehículo"
+        message={defaultMessage}
+        data-band-link
+      />
+      <p class="pb-cta-note">
+        Se abre WhatsApp con el objetivo que has elegido escrito. El resto lo
+        rellenas tú.
+      </p>
+    </div>
+  </fieldset>
+</div>
+
+<style>
+  .pb-set {
+    margin: 0;
+    border: 0;
+    padding: 0;
+    min-inline-size: 0;
+  }
+
+  .pb-legend {
+    padding: 0;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  /* Los radios se apartan de la vista, no del teclado ni del lector. */
+  .pb-radio {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* ── El selector ───────────────────────────────────────────
+     No son pastillas. Son los modos de un instrumento: texto grande sobre una
+     regla, y el elegido se enciende. Es el único sitio de la página donde la
+     tipografía hace de control. */
+  .pb-tabs {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.75rem;
+    border-block-end: 1px solid var(--color-border-inverse);
+  }
+
+  .pb-tab {
+    position: relative;
+    display: inline-flex;
+    min-height: 3rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    align-items: center;
+    padding-block: 0.5rem;
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    /* Grafito 300: 8,9:1 sobre el fondo de la sección. Un control apagado
+       tiene que leerse igual de bien que el encendido. */
+    color: var(--color-ink-inverse-muted);
+    transition: color var(--duration-base) var(--ease-out);
+  }
+
+  /* La regla que se enciende. Vive en ::after para que no empuje nada. */
+  .pb-tab::after {
+    content: "";
+    position: absolute;
+    inset-block-end: -1px;
+    inset-inline: 0;
+    block-size: 2px;
+    background-color: var(--color-accent-on-dark-strong);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--duration-slow) var(--ease-out);
+  }
+
+  .pb-tab:hover {
+    color: var(--color-ink-inverse);
+  }
+
+  @media (min-width: 48rem) {
+    .pb-tab {
+      font-size: 1.3125rem;
+    }
+  }
+
+  /* ── La respuesta ──────────────────────────────────────────── */
+
+  .pb-said {
+    margin-top: 1.75rem;
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  @media (min-width: 64rem) {
+    .pb-said {
+      grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+      gap: 3rem;
+      align-items: baseline;
+    }
+  }
+
+  .pb-answer-title {
+    /* Entre el h2 de la sección y el h3 del sitio: es la respuesta, no otro
+       titular de sección. Token de componente, según la capa 3 de
+       tokens.css. */
+    --pb-answer-size: clamp(1.5rem, 1.15rem + 1.4vw, 2.25rem);
+
+    font-size: var(--pb-answer-size);
+    line-height: 1.1;
+    letter-spacing: -0.012em;
+    color: var(--color-ink-inverse);
+    text-wrap: balance;
+  }
+
+  .pb-answer-text {
+    margin-top: 0.625rem;
+    max-inline-size: 36rem;
+    text-wrap: pretty;
+    font-size: var(--text-lead);
+    line-height: var(--text-lead--line-height);
+    color: var(--color-ink-inverse-muted);
+  }
+
+  /* ── El instrumento ────────────────────────────────────────── */
+
+  .pb-board {
+    margin-top: 1.25rem;
+  }
+
+  /*
+   * El dibujo se estira en vertical por debajo de 1024 px, y por eso lleva
+   * `preserveAspectRatio="none"`: con la relación del viewBox, a 375 px de
+   * ancho quedaba en 134 px de alto y la curva no se leía. A partir de
+   * 1024 px la altura vuelve a salir de la relación del viewBox, así que ahí
+   * no hay deformación ninguna.
+   *
+   * Lo que hace que estirarlo no estropee nada es `non-scaling-stroke`: los
+   * trazos se miden en píxeles de pantalla, así que no se ovalan al escalar
+   * de forma desigual. De paso, la curva se ve MÁS gruesa en móvil, que es
+   * justo lo que hacía falta.
+   */
+  .pb-svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 13rem;
+  }
+
+  .pb-svg :is(path, line) {
+    vector-effect: non-scaling-stroke;
+  }
+
+  @media (min-width: 40rem) {
+    .pb-svg {
+      block-size: 16rem;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .pb-svg {
+      block-size: auto;
+      aspect-ratio: 1200 / 316;
+      /* Red de seguridad en pantallas muy anchas o muy bajas: la banda no
+         tiene por qué crecer sin fin ni quedarse en una raya. */
+      max-block-size: 25.5rem;
+      min-block-size: 16.5rem;
+    }
+  }
+
+  /*
+   * Por debajo de 1024 px la banda se sale hasta el borde de la pantalla. Se
+   * lo gana: no lleva ni un rótulo dentro, así que cada píxel de ancho es
+   * recorrido que se ve.
+   */
+  @media (max-width: 63.9375rem) {
+    .pb-svg {
+      inline-size: calc(100% + 2.5rem);
+      margin-inline: -1.25rem;
+    }
+  }
+
+  @media (min-width: 40rem) and (max-width: 63.9375rem) {
+    .pb-svg {
+      inline-size: calc(100% + 4rem);
+      margin-inline: -2rem;
+    }
+  }
+
+  .pb-ticks line {
+    stroke: var(--color-border-inverse);
+    stroke-width: 2;
+  }
+
+  .pb-axis {
+    stroke: var(--jm-graphite-600);
+    stroke-width: 2;
+  }
+
+  .pb-stock {
+    stroke: var(--color-ink-inverse-muted);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+  }
+
+  .pb-tuned {
+    stroke: var(--color-accent-on-dark-strong);
+    stroke-width: 5;
+    stroke-linecap: round;
+  }
+
+  /* El calor. Un trazo ancho y translúcido pesa menos que un filtro de
+     desenfoque y no obliga al navegador a rasterizar una capa aparte. */
+  .pb-glow {
+    stroke: var(--jm-copper-400);
+    stroke-width: 14;
+    stroke-linecap: round;
+    opacity: 0.24;
+  }
+
+  .pb-zone-edge {
+    stroke: var(--color-accent-on-dark);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 7;
+    opacity: 0.5;
+  }
+
+  .pb-axis-labels {
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-label);
+    letter-spacing: var(--text-label--letter-spacing);
+    text-transform: uppercase;
+    color: var(--color-ink-subtle);
+  }
+
+  /* A 375 px los tres rótulos no caben en una línea sin apretarse. El del
+     centro es el prescindible: los extremos son los que orientan. */
+  .pb-axis-mid {
+    display: none;
+  }
+
+  @media (min-width: 40rem) {
+    .pb-axis-mid {
+      display: inline;
+    }
+  }
+
+  /* ── Pie del instrumento ───────────────────────────────────── */
+
+  .pb-foot {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .pb-legend-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  .pb-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+
+  .pb-swatch {
+    display: inline-block;
+    inline-size: 1.5rem;
+    block-size: 3px;
+    border-radius: var(--radius-pill);
+  }
+
+  .pb-swatch-stock {
+    background-color: var(--color-ink-inverse-muted);
+  }
+
+  .pb-swatch-tuned {
+    background-color: var(--color-accent-on-dark-strong);
+  }
+
+  .pb-caveat {
+    max-inline-size: var(--container-prose);
+    border-inline-start: 2px solid var(--color-border-inverse);
+    padding-inline-start: 1rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    text-wrap: pretty;
+    color: var(--color-ink-subtle);
+  }
+
+  .pb-cta {
+    margin-top: 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 1.5rem;
+  }
+
+  .pb-cta-note {
+    max-inline-size: 26rem;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--color-ink-subtle);
+  }
+
+  /* ── El emparejamiento ─────────────────────────────────────────
+     Radio n ↔ pestaña n ↔ respuesta n ↔ curva n ↔ tramo n. Cinco, así que
+     cinco selectores por regla y una sola regla por propiedad. */
+  .pb-radio:nth-of-type(1):checked ~ .pb-tabs > .pb-tab:nth-child(1),
+  .pb-radio:nth-of-type(2):checked ~ .pb-tabs > .pb-tab:nth-child(2),
+  .pb-radio:nth-of-type(3):checked ~ .pb-tabs > .pb-tab:nth-child(3),
+  .pb-radio:nth-of-type(4):checked ~ .pb-tabs > .pb-tab:nth-child(4),
+  .pb-radio:nth-of-type(5):checked ~ .pb-tabs > .pb-tab:nth-child(5) {
+    color: var(--color-ink-inverse);
+  }
+
+  .pb-radio:nth-of-type(1):checked ~ .pb-tabs > .pb-tab:nth-child(1)::after,
+  .pb-radio:nth-of-type(2):checked ~ .pb-tabs > .pb-tab:nth-child(2)::after,
+  .pb-radio:nth-of-type(3):checked ~ .pb-tabs > .pb-tab:nth-child(3)::after,
+  .pb-radio:nth-of-type(4):checked ~ .pb-tabs > .pb-tab:nth-child(4)::after,
+  .pb-radio:nth-of-type(5):checked ~ .pb-tabs > .pb-tab:nth-child(5)::after {
+    transform: scaleX(1);
+  }
+
+  /* El foco se pinta sobre la etiqueta: el radio no se ve. */
+  .pb-radio:nth-of-type(1):focus-visible ~ .pb-tabs > .pb-tab:nth-child(1),
+  .pb-radio:nth-of-type(2):focus-visible ~ .pb-tabs > .pb-tab:nth-child(2),
+  .pb-radio:nth-of-type(3):focus-visible ~ .pb-tabs > .pb-tab:nth-child(3),
+  .pb-radio:nth-of-type(4):focus-visible ~ .pb-tabs > .pb-tab:nth-child(4),
+  .pb-radio:nth-of-type(5):focus-visible ~ .pb-tabs > .pb-tab:nth-child(5) {
+    outline: 2px solid var(--color-accent-on-dark);
+    outline-offset: 3px;
+    border-radius: var(--radius-sm);
+  }
+
+  .pb-only {
+    display: none;
+  }
+
+  .pb-radio:nth-of-type(1):checked ~ .pb-said .pb-only-respuesta,
+  .pb-radio:nth-of-type(2):checked ~ .pb-said .pb-only-empuje,
+  .pb-radio:nth-of-type(3):checked ~ .pb-said .pb-only-elasticidad,
+  .pb-radio:nth-of-type(4):checked ~ .pb-said .pb-only-diario,
+  .pb-radio:nth-of-type(5):checked ~ .pb-said .pb-only-preparado {
+    display: block;
+  }
+
+  /* En SVG, `display: block` en un <g> es lo mismo que en HTML: se pinta. */
+  .pb-radio:nth-of-type(1):checked ~ .pb-board .pb-only-respuesta,
+  .pb-radio:nth-of-type(2):checked ~ .pb-board .pb-only-empuje,
+  .pb-radio:nth-of-type(3):checked ~ .pb-board .pb-only-elasticidad,
+  .pb-radio:nth-of-type(4):checked ~ .pb-board .pb-only-diario,
+  .pb-radio:nth-of-type(5):checked ~ .pb-board .pb-only-preparado {
+    display: block;
+  }
+
+  .pb-zone {
+    display: none;
+  }
+
+  .pb-radio:nth-of-type(1):checked ~ .pb-board .pb-zone-respuesta,
+  .pb-radio:nth-of-type(2):checked ~ .pb-board .pb-zone-empuje,
+  .pb-radio:nth-of-type(3):checked ~ .pb-board .pb-zone-elasticidad,
+  .pb-radio:nth-of-type(4):checked ~ .pb-board .pb-zone-diario,
+  .pb-radio:nth-of-type(5):checked ~ .pb-board .pb-zone-preparado {
+    display: block;
+  }
+
+  /* ── El relevo ─────────────────────────────────────────────────
+     Mientras no haya script, mandan las curvas estáticas y las vivas no
+     existen. `is-live` lo pone `power-band.ts` y hace el cambio de mando en
+     un solo sitio: si el archivo no llega, no hay nada que reparar. */
+  .pb-live,
+  .pb-zone-live {
+    display: none;
+  }
+
+  .pb.is-live .pb-static,
+  .pb.is-live .pb-zones-static {
+    display: none;
+  }
+
+  .pb.is-live .pb-live,
+  .pb.is-live .pb-zone-live {
+    display: block;
+  }
+</style>
+
+<script>
+  import "../scripts/power-band";
+</script>

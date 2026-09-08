@@ -1,0 +1,170 @@
+---
+import PublicLayout from "../layouts/PublicLayout.astro";
+import Button from "../components/Button.astro";
+import WhatsAppLink from "../components/WhatsAppLink.astro";
+import FinalCta from "../components/FinalCta.astro";
+import CaseHarness from "../components/CaseHarness.astro";
+import RouteSwitch from "../components/RouteSwitch.astro";
+import {
+  INTERVENTIONS,
+  CHANNEL,
+  CASE_DISCLAIMER,
+  HOW_MESSAGE,
+} from "../config/site";
+
+/*
+ * Tres bloques y fuera: hero claro, esquema en oscuro, qué enviar en claro.
+ *
+ * Dos recortes seguidos llevaron hasta aquí. El primero quitó una sección que
+ * repetía lo que el esquema dice mejor; el segundo quitó todo lo que hablaba
+ * del propio funcionamiento en vez de servir para algo:
+ *
+ * - **El hero pasó a papel cálido.** Era la tercera banda oscura seguida de la
+ *   página y pesaba; con el esquema en oscuro en medio, el ritmo es
+ *   claro → oscuro → claro y la página respira.
+ * - **Fuera la franja «Después de revisar».** Sus tres resultados eran
+ *   genéricos. Lo único concreto que había allí —que el precio y el plazo
+ *   llegan después— cabe en una línea debajo del selector.
+ * - **Fuera el pie del esquema.** Explicaba cómo leer el dibujo. Un dibujo que
+ *   necesita instrucciones no está terminado; los grosores y los colores de los
+ *   rótulos ya dicen qué pesa más.
+ *
+ * Regla para lo que venga después: cada frase de esta página tiene que darle un
+ * dato al cliente o ayudarle a escribir. Si solo describe cómo trabajamos,
+ * sobra.
+ */
+---
+
+<PublicLayout
+  title="Cómo trabajamos: del primer mensaje al criterio técnico"
+  description="Cómo empezar una consulta de centralita: escribe por WhatsApp con los datos del vehículo, revisamos el caso y te decimos el siguiente paso. Qué enviar si eres particular o taller."
+  path="/como-trabajamos"
+>
+  <!-- ═══════════════════════════════════════════════════════════════
+       HERO — papel cálido. Sin rejilla técnica: ésa es del banco de
+       trabajo, y aquí lo que se busca es luz.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="bg-canvas" aria-labelledby="titulo-como">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 pb-16 pt-16 sm:px-8 lg:px-10 lg:pb-20 lg:pt-24 xl:px-14"
+    >
+      <p class="label-technical text-accent">Cómo trabajamos</p>
+
+      <h1
+        id="titulo-como"
+        class="display mt-5 max-w-4xl text-display text-ink text-balance"
+      >
+        Del primer mensaje al criterio técnico
+      </h1>
+
+      <div class="mt-10 grid gap-8 lg:grid-cols-12 lg:gap-16">
+        <!-- La entradilla NO repite qué hay que enviar: eso lo dicen el raíl
+             y la sección de abajo. Aporta el dato que quita fricción. -->
+        <p class="max-w-(--container-prose) text-lead text-ink-muted lg:col-span-6">
+          Puedes preguntar antes de mover el vehículo.
+        </p>
+
+        <div
+          class="flex flex-wrap items-start gap-3 lg:col-span-5 lg:col-start-8 lg:justify-end"
+        >
+          <WhatsAppLink
+            size="lg"
+            label="Empezar por WhatsApp"
+            message={HOW_MESSAGE}
+          />
+          <Button href="#que-enviar" variant="secondary" size="lg">
+            Qué enviar
+            <span aria-hidden="true">↓</span>
+          </Button>
+        </div>
+      </div>
+
+      <dl
+        class="mt-14 grid gap-x-10 gap-y-7 border-t border-border pt-9 sm:grid-cols-3 lg:mt-16"
+      >
+        {
+          CHANNEL.map((item, i) => (
+            <div class="reveal" style={`--reveal-delay: ${i * 80}ms`}>
+              <dt class="label-technical text-accent">{item.label}</dt>
+              <dd class="display mt-3 text-h3 text-ink">{item.value}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EL ESQUEMA — el banco de trabajo, en oscuro.
+       Ver src/components/CaseHarness.astro
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="on-dark relative overflow-hidden bg-surface-bench"
+    aria-labelledby="titulo-esquema"
+  >
+    <div
+      class="grid-technical-inverse absolute inset-0 opacity-25"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div
+      class="relative mx-auto max-w-(--container-wide) px-5 py-16 sm:px-8 lg:px-10 lg:py-24 xl:px-14"
+    >
+      <h2
+        id="titulo-esquema"
+        class="reveal display max-w-3xl text-h2 text-ink-inverse text-balance"
+      >
+        Cuanta más información, menos preguntas
+      </h2>
+
+      <div class="mt-12 lg:mt-16">
+        <CaseHarness id="como-esquema" />
+      </div>
+
+      <!--
+        Los tres enlaces van en una sola expresión y sin saltos de línea
+        alrededor de las etiquetas: Astro conserva ese salto como espacio, y
+        con él salía «reprogramación , una» con el espacio delante de la coma.
+      -->
+      <p class="reveal mt-12 max-w-(--container-prose) leading-relaxed text-ink-inverse-muted">
+        Según el caso, el trabajo será una {INTERVENTIONS.map((service, i) => (<Fragment>{i === 0 ? "" : i === INTERVENTIONS.length - 1 ? " o una " : ", una "}<a href={service.href} class="font-medium text-accent-on-dark underline-offset-4 hover:underline">{service.nameLower}</a></Fragment>))}.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       QUÉ ENVIAR — selector sin JavaScript.
+       Ver src/components/RouteSwitch.astro
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    id="que-enviar"
+    class="scroll-mt-24 border-t border-border bg-surface"
+    aria-labelledby="titulo-recorridos"
+  >
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-24 xl:px-14"
+    >
+      <h2
+        id="titulo-recorridos"
+        class="reveal display max-w-3xl text-h2 text-ink text-balance"
+      >
+        Qué necesitamos para revisar tu caso
+      </h2>
+
+      <div class="reveal mt-12">
+        <RouteSwitch id="recorridos" />
+      </div>
+
+      <p class="reveal mt-10 max-w-(--container-prose) text-ink">
+        Si te falta algún dato, escríbenos igualmente. {CASE_DISCLAIMER}
+      </p>
+    </div>
+  </section>
+
+  <FinalCta
+    title="Cuéntanos tu caso"
+    body="La plantilla ya lleva los campos escritos: rellena lo que sepas y envíala."
+    message={HOW_MESSAGE}
+  />
+</PublicLayout>

@@ -1,0 +1,135 @@
+---
+/**
+ * Cabecera del Concepto B. Local: no toca `SiteHeader.astro`.
+ *
+ * Tres decisiones, y las tres son deliberadamente lo contrario de las del
+ * sitio actual:
+ *
+ * 1. **No es fija.** Se va con el desplazamiento y deja la portada limpia. La
+ *    acción principal no se pierde porque vive en la barra de estado de abajo,
+ *    que sí acompaña y además dice en qué punto está tu elección.
+ * 2. **No hay menú desplegable ni menú de móvil.** Es una página; su
+ *    navegación son sus propias secciones. Debajo de 768 px los tres enlaces
+ *    se retiran —el recorrido de la página los sustituye— y queda la marca y
+ *    la acción.
+ * 3. **La marca va compuesta, no dibujada.** El símbolo actual pertenece al
+ *    sistema del sitio (`BrandMark.astro`, que usa sus clases y su
+ *    tipografía); reproducirlo aquí sería duplicar la identidad. Este concepto
+ *    prueba otra: el nombre como palabra, en la anchura expandida de la
+ *    familia. Si el concepto se adoptara, la marca definitiva volvería a
+ *    dibujarse en un solo sitio.
+ */
+import CbWhatsApp from "./CbWhatsApp.astro";
+import { REPRO_MESSAGE } from "../../config/site";
+
+const LINKS = [
+  { href: "#al-volante", label: "Al volante" },
+  { href: "#tu-caso", label: "Tu caso" },
+  { href: "#cifras", label: "Cifras" },
+] as const;
+---
+
+<header class="cbh">
+  <div class="cb-wrap cbh__in">
+    <p class="cbh__brand">
+      <span class="cbh__name">JM Repro</span>
+      <span class="cbh__tag cb-micro">Cars</span>
+    </p>
+
+    <nav class="cbh__nav" aria-label="Secciones de la página">
+      <ul class="cbh__list">
+        {
+          LINKS.map((link) => (
+            <li>
+              <a class="cbh__link" href={link.href}>
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <CbWhatsApp
+      class="cbh__cta"
+      variant="ghost"
+      label="WhatsApp"
+      message={REPRO_MESSAGE}
+    />
+  </div>
+</header>
+
+<style>
+  .cbh {
+    background-color: var(--cb-paper);
+  }
+
+  .cbh__in {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 4.5rem;
+    padding-block: 0.75rem;
+  }
+
+  /* La marca compuesta: nombre expandido y sufijo estrecho debajo. La misma
+     idea de «placa de características» del sitio, dicha con anchura en vez
+     de con dos familias distintas. */
+  .cbh__brand {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    line-height: 1;
+  }
+
+  .cbh__name {
+    font-size: 1.15rem;
+    font-weight: 800;
+    font-variation-settings: "wdth" 116;
+    letter-spacing: -0.012em;
+    text-transform: uppercase;
+  }
+
+  .cbh__tag {
+    color: var(--cb-ink-2);
+    letter-spacing: 0.34em;
+  }
+
+  .cbh__nav {
+    display: none;
+  }
+
+  .cbh__list {
+    display: flex;
+    align-items: center;
+    gap: clamp(1rem, 2.4vw, 2.25rem);
+  }
+
+  .cbh__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    font-size: var(--cb-small);
+    font-weight: 500;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--cb-fast) var(--cb-ease);
+  }
+
+  .cbh__link:hover {
+    border-bottom-color: var(--cb-ink);
+  }
+
+  .cbh__cta {
+    min-height: 2.75rem;
+    padding-inline: 1rem;
+    font-size: var(--cb-small);
+  }
+
+  @media (min-width: 48rem) {
+    .cbh__nav {
+      display: block;
+    }
+  }
+</style>

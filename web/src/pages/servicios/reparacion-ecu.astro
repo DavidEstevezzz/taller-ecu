@@ -1,0 +1,530 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import WhatsAppLink from "../../components/WhatsAppLink.astro";
+import FinalCta from "../../components/FinalCta.astro";
+import FaultTrace from "../../components/FaultTrace.astro";
+import {
+  SERVICES,
+  REPAIR_SYMPTOMS,
+  REPAIR_INTAKE,
+  REPAIR_LIMITS,
+  REPAIR_MESSAGE,
+} from "../../config/site";
+
+/** Enlace lateral a los otros dos servicios (docs/site-architecture.md §6). */
+const OTHERS = SERVICES.filter((service) => service.slug !== "reparacion-ecu");
+
+/*
+ * La definición, escrita como una nota técnica: párrafo y margen.
+ *
+ * La columna de la derecha no repite lo que dice el párrafo; lo acota. Es el
+ * sitio natural para las advertencias —«esto no es una reprogramación», «el
+ * síntoma no señala a la centralita»— sin partir la lectura en cinco
+ * secciones ni convertirlas en letra pequeña al final.
+ */
+const DEFINITION = [
+  {
+    body:
+      "Dentro de la carcasa hay una placa, y en esa placa hay zonas que hacen " +
+      "cosas distintas: la que recibe la alimentación, la que lee lo que " +
+      "mandan los sensores, la que manda corriente hacia inyectores y bobinas, " +
+      "y el microcontrolador con la memoria donde está guardada la " +
+      "configuración del vehículo.",
+    note: {
+      label: "No es una reprogramación",
+      body: "Ahí se trabaja sobre el software de la unidad. Aquí, sobre el soporte físico: componentes, pistas y soldaduras.",
+      href: "/servicios/reprogramacion",
+      linkText: "Ver reprogramación",
+    },
+  },
+  {
+    body:
+      "Cuando una centralita deja de hacer su trabajo, casi nunca es «la " +
+      "centralita» entera: es algo concreto que ha cedido. Humedad que ha " +
+      "entrado, un golpe, una subida de tensión, una soldadura que se ha " +
+      "fatigado, una pista interrumpida. Reparar consiste en encontrar ese " +
+      "algo y tratarlo.",
+    note: null,
+  },
+  {
+    body:
+      "Por eso el trabajo empieza mirando, no cambiando. Sustituir la unidad " +
+      "sin saber qué falló tiene dos problemas: cuesta una unidad, y si la " +
+      "causa estaba fuera —en el cableado, en un sensor, en la parte " +
+      "mecánica— el vehículo vuelve con lo mismo.",
+    note: {
+      label: "Cuando no hay arreglo",
+      body: "Hay daños que no admiten intervención. Si es el caso, se dice; no se propone una reparación para no dar una mala noticia.",
+      href: null,
+      linkText: null,
+    },
+  },
+];
+---
+
+<PublicLayout
+  title="Reparación de centralitas ECU"
+  description="Cómo se repara una centralita: qué se comprueba dentro de la unidad, cuándo tiene sentido consultar y qué datos hacen falta para valorar el caso."
+  path="/servicios/reparacion-ecu"
+>
+  <!-- ═══════════════════════════════════════════════════════════════
+       HERO — tipográfico a propósito.
+       La reprogramación abre con su diagrama; aquí el dibujo es el
+       centro de la página y llega más abajo, así que el hero no compite
+       con él: enuncia la tesis y planta al lado la comparación que
+       resume el servicio entero.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="on-dark relative overflow-hidden bg-surface-bench"
+    aria-labelledby="titulo-reparacion"
+  >
+    <div
+      class="grid-technical-inverse absolute inset-0 opacity-25"
+      aria-hidden="true"
+    >
+    </div>
+    <div
+      class="pointer-events-none absolute inset-0 bg-[radial-gradient(85%_110%_at_10%_5%,transparent_22%,var(--color-surface-bench)_100%)]"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div
+      class="relative mx-auto max-w-(--container-wide) px-5 pb-16 pt-8 sm:px-8 lg:px-10 lg:pb-24 lg:pt-10 xl:px-14"
+    >
+      <nav aria-label="Migas de pan">
+        <ol
+          class="flex flex-wrap items-center gap-2.5 text-sm text-ink-inverse-muted"
+        >
+          <li>
+            <a
+              href="/"
+              class="underline-offset-4 hover:text-accent-on-dark hover:underline"
+            >
+              Inicio
+            </a>
+          </li>
+          <li aria-hidden="true" class="text-ink-inverse-muted">/</li>
+          <li>
+            <a
+              href="/servicios"
+              class="underline-offset-4 hover:text-accent-on-dark hover:underline"
+            >
+              Servicios
+            </a>
+          </li>
+          <li aria-hidden="true" class="text-ink-inverse-muted">/</li>
+          <li aria-current="page" class="text-ink-inverse">Reparación de ECU</li>
+        </ol>
+      </nav>
+
+      <div class="mt-14 grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="lg:col-span-7">
+          <p class="label-technical text-accent-on-dark">Dentro de la unidad</p>
+
+          <h1
+            id="titulo-reparacion"
+            class="display mt-5 text-display text-ink-inverse text-balance"
+          >
+            Reparación de centralita
+          </h1>
+
+          <p class="mt-8 max-w-xl text-lead text-ink-inverse-muted">
+            Antes de cambiar nada se abre la unidad y se comprueba zona por
+            zona hasta dar con el punto en el que algo dejó de funcionar. Si
+            ese punto se puede tratar, se trata; la centralita sigue siendo la
+            del vehículo.
+          </p>
+
+          <div class="mt-10 flex flex-wrap items-center gap-3">
+            <WhatsAppLink
+              size="lg"
+              label="Contar mi caso"
+              message={REPAIR_MESSAGE}
+            />
+            <a
+              href="#recorrido"
+              class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-border-inverse px-6 text-base font-medium text-ink-inverse transition-colors duration-(--duration-base) hover:border-ink-inverse-muted hover:bg-surface-inverse-raised"
+            >
+              Ver qué se comprueba
+              <span aria-hidden="true">↓</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- La distinción que ordena toda la página, dicha de entrada. -->
+        <div class="lg:col-span-5 lg:pt-2">
+          <div class="border border-border-inverse bg-surface-inverse">
+            <div class="border-b border-border-inverse p-7 lg:p-8">
+              <p class="label-technical text-accent-on-dark">Reparar</p>
+              <p class="mt-3.5 leading-relaxed text-ink-inverse">
+                Se localiza el fallo y se interviene sobre la unidad que ya
+                lleva el vehículo. Conserva su configuración y su
+                identificación.
+              </p>
+            </div>
+            <div class="p-7 lg:p-8">
+              <p class="label-technical text-ink-inverse-muted">Sustituir</p>
+              <p class="mt-3.5 leading-relaxed text-ink-inverse-muted">
+                Se monta otra unidad y hay que conseguir que el vehículo la
+                reconozca como propia. Es la salida cuando la reparación no es
+                viable.
+              </p>
+              <a
+                href="/servicios/clonacion-ecu"
+                class="group mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-accent-on-dark"
+              >
+                Eso es la clonación de ECU
+                <span
+                  class="transition-transform duration-(--duration-base) group-hover:translate-x-1"
+                  aria-hidden="true">→</span
+                >
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       QUÉ ES — nota técnica: párrafo y margen
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="bg-canvas" aria-labelledby="titulo-que-es">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="reveal grid gap-6 lg:grid-cols-12 lg:gap-16">
+        <p class="label-technical text-accent lg:col-span-12">Qué es</p>
+        <h2
+          id="titulo-que-es"
+          class="display text-h2 text-ink text-balance lg:col-span-8"
+        >
+          Reparar una centralita es localizar qué ha dejado de funcionar.
+        </h2>
+      </div>
+
+      <div class="mt-14 space-y-12 lg:mt-16 lg:space-y-14">
+        {
+          DEFINITION.map((item, i) => (
+            <div
+              class="reveal grid gap-6 lg:grid-cols-12 lg:gap-16"
+              style={`--reveal-delay: ${i * 70}ms`}
+            >
+              <p class="max-w-(--container-prose) text-lead text-ink-muted lg:col-span-7">
+                {item.body}
+              </p>
+
+              {item.note && (
+                <aside class="border-l-2 border-accent pl-5 lg:col-span-4 lg:col-start-9 lg:border-l-0 lg:border-t lg:border-border-strong lg:pl-0 lg:pt-5">
+                  <p class="label-technical text-ink-muted">
+                    {item.note.label}
+                  </p>
+                  <p class="mt-2.5 text-sm leading-relaxed text-ink-muted">
+                    {item.note.body}
+                  </p>
+                  {item.note.href && (
+                    <a
+                      href={item.note.href}
+                      class="group mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-accent hover:text-accent-hover"
+                    >
+                      {item.note.linkText}
+                      <span
+                        class="transition-transform duration-(--duration-base) group-hover:translate-x-1"
+                        aria-hidden="true"
+                      >
+                        →
+                      </span>
+                    </a>
+                  )}
+                </aside>
+              )}
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EL RECORRIDO — la firma de la página.
+       Ver src/components/FaultTrace.astro
+       ═══════════════════════════════════════════════════════════════ -->
+  <!--
+    Sin `overflow-hidden`: convierte a la sección en contenedor de
+    desplazamiento y deja el dibujo pegajoso sin pegar. Aquí no hace falta,
+    porque la rejilla de fondo es `inset-0` y no se sale.
+  -->
+  <section
+    id="recorrido"
+    class="on-dark relative scroll-mt-24 bg-surface-bench"
+    aria-labelledby="titulo-recorrido"
+  >
+    <div
+      class="grid-technical-inverse absolute inset-0 opacity-20"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div
+      class="relative mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="reveal max-w-3xl">
+        <p class="label-technical text-accent-on-dark">El recorrido</p>
+        <h2
+          id="titulo-recorrido"
+          class="display mt-5 text-h2 text-ink-inverse text-balance"
+        >
+          Qué se comprueba dentro de una centralita.
+        </h2>
+        <p class="mt-6 max-w-(--container-prose) text-lead text-ink-inverse-muted">
+          Una centralita no es una caja con un único interruptor. Es una placa
+          con zonas que hacen cosas distintas, y el trabajo consiste en seguir
+          el camino que debería recorrer una señal, de fuera hacia dentro,
+          hasta donde deja de recorrerlo.
+        </p>
+      </div>
+
+      <div class="mt-14 lg:mt-20">
+        <FaultTrace id="reparacion-recorrido" />
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CUÁNDO PREGUNTAR — un índice de situaciones, no tarjetas
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="border-y border-border bg-surface"
+    aria-labelledby="titulo-cuando"
+  >
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="reveal grid gap-6 lg:grid-cols-12 lg:gap-16">
+        <div class="lg:col-span-7">
+          <p class="label-technical text-accent">Cuándo preguntar</p>
+          <h2
+            id="titulo-cuando"
+            class="display mt-5 text-h2 text-ink text-balance"
+          >
+            Seis situaciones en las que merece la pena consultar.
+          </h2>
+        </div>
+        <p
+          class="max-w-(--container-prose) text-lead text-ink-muted lg:col-span-5 lg:pt-2"
+        >
+          A la izquierda, lo que se ve desde fuera. A la derecha, el dato que
+          convierte «me pasa esto» en una consulta que se puede responder.
+        </p>
+      </div>
+
+      <div class="mt-14 border-t border-border">
+        {
+          REPAIR_SYMPTOMS.map((item, i) => (
+            <div
+              class="reveal grid gap-2 border-b border-border py-6 lg:grid-cols-12 lg:items-baseline lg:gap-10 lg:py-7"
+              style={`--reveal-delay: ${i * 50}ms`}
+            >
+              <p class="display text-h3 text-ink lg:col-span-7">{item.case}</p>
+              <p class="text-sm leading-relaxed text-ink-muted lg:col-span-5">
+                {item.ask}
+              </p>
+            </div>
+          ))
+        }
+      </div>
+
+      <p
+        class="reveal mt-10 max-w-(--container-prose) border-l-2 border-accent pl-5 text-sm leading-relaxed text-ink-muted"
+      >
+        Ninguna de estas situaciones señala a la centralita por sí sola. Pueden
+        venir del cableado, de un sensor o de la parte mecánica, y descartarlo
+        forma parte del trabajo. Precisamente por eso conviene preguntar antes
+        de cambiar nada.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       QUÉ NECESITAMOS — una hoja de datos, no una rejilla de tarjetas.
+       Dos grupos porque la diferencia es real: sin lo primero no se
+       puede empezar; lo segundo adelanta trabajo y su falta no bloquea.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="bg-canvas" aria-labelledby="titulo-datos">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="reveal lg:col-span-4">
+          <p class="label-technical text-accent">Para valorar tu caso</p>
+          <h2
+            id="titulo-datos"
+            class="display mt-5 text-h2 text-ink text-balance"
+          >
+            Con esto podemos empezar a mirarlo.
+          </h2>
+          <p class="mt-6 text-lead text-ink-muted">
+            No hace falta que traigas un informe. Con lo primero se puede
+            empezar; lo segundo adelanta trabajo, y si no lo tienes, se
+            completa por el camino.
+          </p>
+
+          <WhatsAppLink
+            class="mt-9"
+            size="lg"
+            label="Abrir WhatsApp con la plantilla"
+            message={REPAIR_MESSAGE}
+          />
+
+          <p class="mt-5 max-w-sm text-sm leading-relaxed text-ink-muted">
+            La plantilla lleva estos campos ya escritos: rellena los que sepas
+            y borra el resto.
+            <strong class="font-medium text-ink">
+              No desmontes la centralita para escribirnos.
+            </strong>
+            Si la referencia no está a la vista, se ve luego.
+          </p>
+        </div>
+
+        <div class="space-y-8 lg:col-span-8">
+          <div class="reveal border border-border bg-surface">
+            <p
+              class="label-technical border-b border-border px-6 py-4 text-accent lg:px-8"
+            >
+              Lo que hace falta siempre
+            </p>
+            <dl class="divide-y divide-border">
+              {
+                REPAIR_INTAKE.needed.map((item) => (
+                  <div class="px-6 py-5 sm:flex sm:gap-8 lg:px-8 lg:py-6">
+                    <dt class="label-technical shrink-0 pt-1 text-ink sm:w-56">
+                      {item.label}
+                    </dt>
+                    <dd class="mt-2 text-sm leading-relaxed text-ink-muted sm:mt-0">
+                      {item.body}
+                    </dd>
+                  </div>
+                ))
+              }
+            </dl>
+          </div>
+
+          <div class="reveal border border-border bg-surface">
+            <p
+              class="label-technical border-b border-border px-6 py-4 text-ink-muted lg:px-8"
+            >
+              Lo que ayuda si lo tienes
+            </p>
+            <dl class="divide-y divide-border">
+              {
+                REPAIR_INTAKE.helpful.map((item) => (
+                  <div class="px-6 py-5 sm:flex sm:gap-8 lg:px-8 lg:py-6">
+                    <dt class="label-technical shrink-0 pt-1 text-ink sm:w-56">
+                      {item.label}
+                    </dt>
+                    <dd class="mt-2 text-sm leading-relaxed text-ink-muted sm:mt-0">
+                      {item.body}
+                    </dd>
+                  </div>
+                ))
+              }
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       LÍMITES — visible, no en letra pequeña al final
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="on-dark bg-surface-inverse" aria-labelledby="titulo-limites">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-16 sm:px-8 lg:px-10 lg:py-24 xl:px-14"
+    >
+      <div class="reveal max-w-3xl">
+        <p class="label-technical text-accent-on-dark">Sin adornos</p>
+        <h2
+          id="titulo-limites"
+          class="display mt-5 text-h2 text-ink-inverse text-balance"
+        >
+          Lo que no podemos decirte todavía.
+        </h2>
+      </div>
+
+      <dl
+        class="mt-12 grid gap-10 border-t border-border-inverse pt-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-0 lg:divide-x lg:divide-border-inverse"
+      >
+        {
+          REPAIR_LIMITS.map((item, i) => (
+            <div
+              class={`reveal ${i === 0 ? "lg:pr-8" : "lg:px-8"} ${i === REPAIR_LIMITS.length - 1 ? "lg:pr-0" : ""}`}
+              style={`--reveal-delay: ${i * 80}ms`}
+            >
+              <dt class="display text-h3 text-ink-inverse">{item.title}</dt>
+              <dd class="mt-3 text-sm leading-relaxed text-ink-inverse-muted">
+                {item.body}
+              </dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       LOS OTROS DOS SERVICIOS — filas, no tarjetas
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="border-t border-border bg-surface-sunken"
+    aria-labelledby="titulo-otros"
+  >
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-16 sm:px-8 lg:px-10 lg:py-20 xl:px-14"
+    >
+      <h2 id="titulo-otros" class="display text-h3 text-ink">
+        ¿No es esto lo que necesitas?
+      </h2>
+
+      <ul class="mt-8 border-t border-border">
+        {
+          OTHERS.map((service) => (
+            <li>
+              <a
+                href={service.href}
+                class="group grid gap-2 border-b border-border py-7 transition-colors duration-(--duration-base) hover:bg-surface lg:grid-cols-12 lg:items-center lg:gap-8 lg:px-4"
+              >
+                <span class="label-technical text-accent lg:col-span-2">
+                  {service.depth}
+                </span>
+                <span class="display text-h3 text-ink lg:col-span-3">
+                  {service.name}
+                </span>
+                <span class="text-sm leading-relaxed text-ink-muted lg:col-span-5">
+                  {service.description}
+                </span>
+                <span class="mt-2 inline-flex items-center gap-2 text-sm font-medium text-accent lg:col-span-2 lg:mt-0 lg:justify-end">
+                  {service.page ? "Ver la página" : "Ver en Servicios"}
+                  <span
+                    class="transition-transform duration-(--duration-base) group-hover:translate-x-1"
+                    aria-hidden="true"
+                  >
+                    →
+                  </span>
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <FinalCta
+    title="¿Tienes una centralita que no responde?"
+    body="Cuéntanos el vehículo, el síntoma y qué se ha probado ya. Te decimos si encaja con lo que hacemos y qué haría falta para valorarlo."
+    message={REPAIR_MESSAGE}
+  />
+</PublicLayout>

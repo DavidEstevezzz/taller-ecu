@@ -1,0 +1,422 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ *  CONCEPTO C — Reprogramación. Maqueta interna, no es una página pública.
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Tercera interpretación completa de la página de reprogramación, creada
+ * para comparar direcciones artísticas, no para publicarse. Vive fuera de la
+ * navegación, fuera del sitemap, bloqueada en robots y con `noindex,
+ * nofollow`. Ninguna página pública enlaza aquí.
+ *
+ * La dirección, en tres frases:
+ *
+ *   1. **La página es un instrumento.** El Concepto A es un túnel de noche y
+ *      el B una portada de revista; el C es la placa frontal de un equipo de
+ *      medida: chasis gris aluminio, módulos separados por juntas de un
+ *      píxel, rótulos grabados y un solo azul de señal para estado y acción.
+ *   2. **Sin fotografía.** A y B son foto-dirigidos; aquí el lenguaje
+ *      gráfico es el dibujo técnico: siluetas de placa y un registrador.
+ *   3. **Se pisa, no se elige.** La pieza central no es una curva que se
+ *      selecciona (A) ni tres preguntas que se contestan (B): es un pedal
+ *      que se mantiene pisado mientras un plóter dibuja tu pisada.
+ *
+ * El razonamiento completo, las referencias y lo pendiente de confirmar
+ * están en `docs/concepto-c-reprogramacion.md`.
+ */
+import ConceptoCLayout from "../../layouts/ConceptoCLayout.astro";
+import CcWhatsApp from "../../components/concepto-c/CcWhatsApp.astro";
+import CcPedalBench from "../../components/concepto-c/CcPedalBench.astro";
+import CcConfigurator from "../../components/concepto-c/CcConfigurator.astro";
+import CcVehicles from "../../components/concepto-c/CcVehicles.astro";
+import {
+  CONTACT,
+  REPRO_GOALS,
+  REPRO_OPTIONS,
+  REPRO_SEND,
+  REPRO_MESSAGE,
+} from "../../config/site";
+
+/*
+ * Qué se ajusta: cuatro de los cinco objetivos de `site.ts`, elegidos por id
+ * para que reordenar la lista no cambie esta sección. El quinto («ya
+ * preparado») vive en la lámina de vehículos, que es donde este concepto
+ * habla de modificaciones.
+ */
+const AJUSTES = ["respuesta", "empuje", "elasticidad", "diario"]
+  .map((id) => REPRO_GOALS.find((goal) => goal.id === id))
+  .filter((goal): goal is (typeof REPRO_GOALS)[number] => goal !== undefined);
+
+/*
+ * La línea «para quién» de cada configuración: una destilación directa del
+ * texto ya revisado de `REPRO_OPTIONS`, no contenido nuevo. El cuerpo
+ * completo sigue viviendo en `site.ts` (y en la página real); esta maqueta
+ * enseña el abanico en una fila por opción, legible en un vistazo.
+ */
+const PARA_QUIEN: Record<string, string> = {
+  "stage-1": "Vehículo de serie: se trabaja solo sobre el software de la centralita.",
+  "stage-2": "Con modificaciones mecánicas compatibles: la calibración se adapta al conjunto montado.",
+  "personalizada": "Para quien ya sabe qué quiere notar y cuándo: se ajusta a tu uso y a tus preferencias.",
+  "consumo": "Para quien hace muchos kilómetros: entrega en la zona baja, para reducir y estirar menos.",
+  "motos": "El mismo planteamiento que en coche, valorando qué admite cada modelo.",
+};
+---
+
+<ConceptoCLayout
+  title="Concepto C · Reprogramación — JM Repro Cars"
+  description="Maqueta interna: tercera dirección visual para la página de reprogramación. No es una página pública."
+>
+  <!-- ═══════════════════════════════════════════════════════════
+       PORTADA — el titular y, a su lado, el instrumento.
+
+       El hero ES la pieza interactiva: en A el hero es una fotografía y en
+       B un titular de revista; aquí lo primero que se ve es el banco.
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="cc-row hero cc-grid" aria-labelledby="titulo-c">
+    <div class="cc-module hero__copy">
+      <p class="cc-micro">
+        Reprogramación de centralita · Coches y motos · {CONTACT.area}
+      </p>
+      <h1 id="titulo-c" class="cc-mega hero__title">
+        Afinamos el software que gobierna tu motor.
+      </h1>
+      <p class="cc-lead cc-muted hero__lead">
+        La centralita decide cuánto empuje da el motor y cuándo. Una
+        reprogramación ajusta esa calibración sobre tu vehículo: respuesta al
+        pisar, par en las recuperaciones y forma de entregar la potencia.
+      </p>
+      <div class="hero__acts">
+        <CcWhatsApp label="Consultar mi vehículo" message={REPRO_MESSAGE} />
+        <a class="cc-btn cc-btn--ghost" href="#configuraciones">
+          Ver configuraciones
+        </a>
+      </div>
+    </div>
+
+    <div class="cc-module cc-module--face hero__bench">
+      <CcPedalBench />
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       QUÉ SE AJUSTA — cuatro celdas, texto ya revisado de site.ts
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="cc-row" aria-labelledby="titulo-ajusta">
+    <div class="cc-module tune__head">
+      <h2 id="titulo-ajusta" class="cc-micro">Qué se ajusta</h2>
+      <p class="cc-micro tune__meta">Se nota conduciendo</p>
+    </div>
+    <ul class="cc-grid tune__cells">
+      {
+        AJUSTES.map((goal) => (
+          <li class="cc-module cc-module--face tune__cell">
+            <h3 class="cc-h3">{goal.title}</h3>
+            <p class="cc-small cc-muted tune__body">{goal.body}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CONFIGURACIONES Y VEHÍCULOS — el abanico como carta de banco,
+       una fila por opción, y las dos siluetas de placa al lado.
+       ═══════════════════════════════════════════════════════════ -->
+  <section
+    id="configuraciones"
+    class="cc-row rack cc-grid"
+    aria-labelledby="titulo-configuraciones"
+  >
+    <div class="cc-module rack__list">
+      <div class="cc-modhead">
+        <h2 id="titulo-configuraciones" class="cc-micro">Configuraciones</h2>
+        <p class="cc-micro rack__meta">Cinco puntos de partida</p>
+      </div>
+
+      <ul class="rack__rows">
+        {
+          REPRO_OPTIONS.map((option) => (
+            <li class="rack__row">
+              <h3 class="cc-h3 rack__name">{option.name}</h3>
+              <p class="cc-small cc-muted rack__line">
+                {PARA_QUIEN[option.id]}
+              </p>
+            </li>
+          ))
+        }
+      </ul>
+
+      <p class="cc-small cc-muted rack__note">
+        Cuál encaja no lo decide esta lista: lo decide tu vehículo y el uso que
+        le das. <a class="cc-link" href="#consulta">Cuéntanoslo y te lo decimos.</a>
+      </p>
+    </div>
+
+    <div class="cc-module rack__side">
+      <div class="cc-modhead">
+        <h2 class="cc-micro">Vehículos</h2>
+      </div>
+      <CcVehicles />
+      <p class="cc-small cc-muted rack__sideNote">
+        Coches y motos, también con modificaciones ya montadas: la calibración
+        se adapta a lo que hay, no a la ficha del modelo.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LA CONDICIÓN — la honestidad, grabada en una placa rehundida
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="cc-row cc-module cc-module--recess claim" aria-label="Condición">
+    <h2 class="cc-h2 claim__text">No hay dos motores iguales.</h2>
+    <p class="cc-lead cc-muted claim__note">
+      La misma referencia admite ajustes distintos según la versión, el estado,
+      el mantenimiento y lo que lleve montado. Por eso aquí no publicamos
+      cifras: tu caso se valora sobre tu vehículo, y si algo no conviene
+      hacerlo, también se dice.
+    </p>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       REFERENCIA EXTERNA — el configurador del proveedor, bajo demanda
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="cc-row cc-module figures" aria-labelledby="cc-config-titulo">
+    <div class="cc-modhead">
+      <h2 class="cc-micro">Cifras orientativas</h2>
+    </div>
+    <CcConfigurator headingId="cc-config-titulo" />
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CONSULTA — la ficha del banco: los cuatro datos, y WhatsApp
+       ═══════════════════════════════════════════════════════════ -->
+  <section id="consulta" class="cc-row end cc-grid" aria-labelledby="titulo-consulta">
+    <div class="cc-module end__sheet">
+      <div class="cc-modhead">
+        <h2 id="titulo-consulta" class="cc-micro">Consulta</h2>
+      </div>
+      <p class="cc-h2 end__title">Cuéntanos el vehículo.</p>
+      <ul class="end__fields">
+        {
+          REPRO_SEND.map((item) => (
+            <li class="end__field">
+              <span class="cc-micro end__label">{item}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div class="cc-module cc-module--face end__act">
+      <p class="cc-lead end__note">
+        Escríbenos aunque te falte algún dato: con lo que tengas ya podemos
+        empezar. Miramos el caso y te decimos qué se puede hacer.
+      </p>
+      <CcWhatsApp label="Abrir WhatsApp" message={REPRO_MESSAGE} />
+      <p class="end__phone">{CONTACT.whatsappDisplay}</p>
+    </div>
+  </section>
+</ConceptoCLayout>
+
+<style>
+  /* ═══════════════════════════════════════════════════
+     PORTADA
+     ═══════════════════════════════════════════════════ */
+
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .hero__copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding-block: clamp(2rem, 1rem + 3vw, 3.5rem);
+  }
+
+  .hero__title {
+    margin-block-start: 1rem;
+    max-inline-size: 16ch;
+  }
+
+  .hero__lead {
+    margin-block-start: 1.25rem;
+    max-inline-size: 44ch;
+  }
+
+  .hero__acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-block-start: 1.75rem;
+  }
+
+  @media (min-width: 64rem) {
+    .hero {
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════
+     QUÉ SE AJUSTA
+     ═══════════════════════════════════════════════════ */
+
+  .tune__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-block: 0.75rem;
+    border-block-end: 1px solid var(--cc-line-strong);
+  }
+
+  .tune__cells {
+    grid-template-columns: 1fr;
+  }
+
+  .tune__body {
+    margin-block-start: 0.5rem;
+    max-inline-size: 34ch;
+  }
+
+  @media (min-width: 40rem) {
+    .tune__cells {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .tune__cells {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════
+     CONFIGURACIONES Y VEHÍCULOS
+     ═══════════════════════════════════════════════════ */
+
+  .rack {
+    grid-template-columns: 1fr;
+    scroll-margin-block-start: 1rem;
+  }
+
+  .rack__rows {
+    border-block-start: 2px solid var(--cc-ink);
+  }
+
+  .rack__row {
+    display: grid;
+    gap: 0.2rem 2rem;
+    border-block-end: 1px solid var(--cc-line);
+    padding-block: 0.9rem;
+  }
+
+  .rack__line {
+    max-inline-size: 52ch;
+  }
+
+  .rack__note {
+    margin-block-start: 1.25rem;
+    max-inline-size: 48ch;
+  }
+
+  .rack__side {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .rack__sideNote {
+    margin-block-start: 1rem;
+    max-inline-size: 40ch;
+  }
+
+  @media (min-width: 48rem) {
+    .rack__row {
+      grid-template-columns: minmax(11rem, 14rem) minmax(0, 1fr);
+      align-items: baseline;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .rack {
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════
+     LA CONDICIÓN
+     ═══════════════════════════════════════════════════ */
+
+  .claim {
+    display: grid;
+    gap: 1.25rem 3rem;
+    padding-block: clamp(2.5rem, 1.5rem + 3vw, 4.5rem);
+  }
+
+  .claim__text {
+    max-inline-size: 14ch;
+  }
+
+  .claim__note {
+    max-inline-size: 48ch;
+  }
+
+  @media (min-width: 64rem) {
+    .claim {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+      align-items: start;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════
+     CONSULTA
+     ═══════════════════════════════════════════════════ */
+
+  .end {
+    grid-template-columns: 1fr;
+    scroll-margin-block-start: 1rem;
+  }
+
+  .end__title {
+    max-inline-size: 16ch;
+  }
+
+  /* La ficha del banco: cada dato es una casilla por rellenar. La rellena
+     el visitante en WhatsApp, y eso es exactamente lo que dice el módulo
+     de al lado. */
+  .end__fields {
+    margin-block-start: 1.75rem;
+    display: grid;
+    gap: 1.9rem;
+  }
+
+  .end__field {
+    border-block-end: 1px solid var(--cc-ink-3);
+    padding-block-end: 1.6rem;
+  }
+
+  .end__act {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1.25rem;
+  }
+
+  .end__note {
+    max-inline-size: 36ch;
+  }
+
+  .end__phone {
+    font-size: var(--cc-h3);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (min-width: 64rem) {
+    .end {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    }
+  }
+</style>

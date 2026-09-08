@@ -1,0 +1,403 @@
+@import "tailwindcss";
+
+/*
+ * Tokens de diseño de JM Repro Cars.
+ *
+ * Tres capas, según la skill `design-system`:
+ *   1. Primitivos  (--jm-*)      valores crudos, sin significado
+ *   2. Semánticos  (--color-*, --text-*, …) propósito, no apariencia
+ *   3. Componente  (--btn-*, --field-*) definidos junto a su componente
+ *
+ * Los componentes usan SIEMPRE la capa semántica. Ningún color, tamaño ni
+ * sombra suelta en una plantilla.
+ *
+ * Todos los pares de color están verificados a contraste WCAG AA (≥4.5:1
+ * para texto, ≥3:1 para interfaz). Ver docs/frontend-design.md.
+ */
+
+@theme {
+  /* ═══════════════════════════════════════════════════════════
+     CAPA 1 — PRIMITIVOS
+     ═══════════════════════════════════════════════════════════ */
+
+  /* Grafito: metal mecanizado, no gris azulado de plantilla. */
+  --jm-graphite-950: #0b0e11;
+  --jm-graphite-900: #12171c;
+  --jm-graphite-850: #161c22;
+  --jm-graphite-800: #1c232b;
+  --jm-graphite-700: #2b343e;
+  --jm-graphite-600: #3f4b58;
+  --jm-graphite-500: #4a5763;
+  --jm-graphite-400: #808d9a;
+  --jm-graphite-300: #aab4bf;
+  --jm-graphite-200: #d3dae1;
+  --jm-graphite-100: #e8ecf0;
+  --jm-graphite-50: #f4f6f8;
+
+  /* Papel: blanco cálido, evita el blanco clínico. */
+  --jm-paper: #fafaf8;
+  --jm-white: #ffffff;
+
+  /* Cobre: pistas de circuito y cableado. El acento de la marca. */
+  --jm-copper-700: #8a3a16;
+  --jm-copper-600: #a8461e;
+  --jm-copper-500: #c25a2c;
+  --jm-copper-400: #d4794b;
+  --jm-copper-300: #e5a986;
+  --jm-copper-100: #f6e7de;
+
+  /* Estados de solicitud. Familia distinta al cobre a propósito. */
+  --jm-steel-600: #1f5f9e;
+  --jm-steel-100: #e7eff8;
+  --jm-gold-700: #8a6100;
+  --jm-gold-100: #f7eeda;
+
+  /* Retroalimentación de interfaz. */
+  --jm-danger-600: #b3261e;
+  --jm-danger-100: #fbe6e4;
+  --jm-success-700: #146b3a;
+  --jm-success-100: #e2f2e8;
+
+  /* ═══════════════════════════════════════════════════════════
+     CAPA 2 — SEMÁNTICOS
+     ═══════════════════════════════════════════════════════════ */
+
+  /* Superficies */
+  --color-canvas: var(--jm-paper);
+  --color-surface: var(--jm-white);
+  --color-surface-sunken: var(--jm-graphite-50);
+  --color-surface-inverse: var(--jm-graphite-900);
+  --color-surface-inverse-raised: var(--jm-graphite-800);
+  /* El banco de trabajo: el fondo más profundo, reservado al hero. */
+  --color-surface-bench: var(--jm-graphite-950);
+
+  /* Texto */
+  --color-ink: var(--jm-graphite-900);
+  --color-ink-muted: var(--jm-graphite-500);
+  --color-ink-subtle: var(--jm-graphite-400);
+  --color-ink-inverse: var(--jm-paper);
+  --color-ink-inverse-muted: var(--jm-graphite-300);
+
+  /* Marca / acción */
+  --color-accent: var(--jm-copper-600);
+  --color-accent-hover: var(--jm-copper-700);
+  --color-accent-soft: var(--jm-copper-100);
+  --color-accent-on-dark: var(--jm-copper-300);
+  --color-accent-on-dark-strong: var(--jm-copper-400);
+  --color-on-accent: var(--jm-white);
+
+  /* Líneas */
+  --color-border: var(--jm-graphite-200);
+  --color-border-strong: var(--jm-graphite-300);
+  --color-border-inverse: var(--jm-graphite-700);
+  --color-border-inverse-soft: var(--jm-graphite-800);
+  --color-focus: var(--jm-copper-600);
+
+  /* Estados de solicitud (el panel los usa siempre con etiqueta de texto,
+     nunca solo con color) */
+  --color-status-collecting: var(--jm-steel-600);
+  --color-status-collecting-bg: var(--jm-steel-100);
+  --color-status-human: var(--jm-gold-700);
+  --color-status-human-bg: var(--jm-gold-100);
+  --color-status-closed: var(--jm-graphite-500);
+  --color-status-closed-bg: var(--jm-graphite-100);
+
+  /* Retroalimentación */
+  --color-danger: var(--jm-danger-600);
+  --color-danger-bg: var(--jm-danger-100);
+  --color-success: var(--jm-success-700);
+  --color-success-bg: var(--jm-success-100);
+
+  /* ── Tipografía ────────────────────────────────────────────
+     Una sola superfamilia, tres papeles:
+       Display  IBM Plex Sans Condensed — titulares. Estrecha y de peso alto:
+                gana tamaño sin ganar ancho, y tiene el aire de una etiqueta
+                de equipo industrial. Solo 600 y 700, subconjunto latino.
+       Texto    IBM Plex Sans — herencia de ingeniería, no la Inter de siempre.
+       Datos    JetBrains Mono — códigos DTC, VIN, matrículas, identificadores.
+     Al ser la misma superfamilia, display y texto no pueden desafinar. */
+  --font-display: "IBM Plex Sans Condensed", "IBM Plex Sans", ui-sans-serif,
+    system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+    monospace;
+
+  /* Escala fluida. El salto entre 1440 y 1920 es real, no cosmético:
+     la web dejaba una columna pequeña en el centro de las pantallas grandes. */
+
+  /* Tesis del hero. Solo se usa una vez por sitio. */
+  --text-mega: clamp(2.75rem, 1.6rem + 4.2vw, 5.5rem);
+  --text-mega--line-height: 0.94;
+  --text-mega--letter-spacing: -0.02em;
+  --text-mega--font-weight: 700;
+
+  /* h1 de páginas interiores y titulares de sección mayores. */
+  --text-display: clamp(2.25rem, 1.35rem + 3.1vw, 4.25rem);
+  --text-display--line-height: 1;
+  --text-display--letter-spacing: -0.018em;
+  --text-display--font-weight: 700;
+
+  /* Titular medio (se conserva el nombre: lo usa la 404). */
+  --text-hero: clamp(2rem, 1.45rem + 2vw, 3.25rem);
+  --text-hero--line-height: 1.06;
+  --text-hero--letter-spacing: -0.015em;
+  --text-hero--font-weight: 700;
+
+  /* Titulares de sección. */
+  --text-h2: clamp(1.75rem, 1.15rem + 1.9vw, 3rem);
+  --text-h2--line-height: 1.08;
+  --text-h2--letter-spacing: -0.015em;
+  --text-h2--font-weight: 700;
+
+  --text-h3: clamp(1.25rem, 1.12rem + 0.42vw, 1.5rem);
+  --text-h3--line-height: 1.2;
+  --text-h3--letter-spacing: -0.01em;
+  --text-h3--font-weight: 600;
+
+  /* Entradilla: el párrafo que sigue a un titular. */
+  --text-lead: clamp(1.0625rem, 0.98rem + 0.42vw, 1.3125rem);
+  --text-lead--line-height: 1.55;
+
+  /* Cuerpo de la web pública: sube un punto en pantallas grandes. */
+  --text-body: clamp(1rem, 0.97rem + 0.13vw, 1.0625rem);
+  --text-body--line-height: 1.65;
+
+  /* Etiqueta técnica: mono, versalitas, muy espaciada. */
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.2;
+  --text-label--letter-spacing: 0.12em;
+
+  /* ── Espaciado ─────────────────────────────────────────────
+     Base 4px. Ritmo vertical de sección en tres niveles. */
+  --spacing: 0.25rem;
+  --space-section: 4rem;
+  --space-section-lg: 6rem;
+  --space-section-xl: 9rem;
+
+  /* ── Radios ────────────────────────────────────────────────
+     Deliberadamente pequeños: precisión mecánica, no burbujas.
+     Nada de tarjetas idénticas con esquinas de 16px. */
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-pill: 999px;
+
+  /* ── Sombras ───────────────────────────────────────────────
+     Escala corta y contenida. La jerarquía la da el borde, no la sombra. */
+  --shadow-none: none;
+  --shadow-sm: 0 1px 2px rgb(11 14 17 / 0.06);
+  --shadow-md: 0 2px 8px rgb(11 14 17 / 0.08);
+  --shadow-lg: 0 8px 24px rgb(11 14 17 / 0.1);
+
+  /* ── Movimiento ────────────────────────────────────────────
+     Tres duraciones cortas para interfaz, dos largas para la coreografía
+     del despiece y el trazado de la pista. */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 260ms;
+  --duration-reveal: 620ms;
+  --duration-assembly: 1000ms;
+  --duration-draw: 1600ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Curva de asentamiento: sale rápido y se posa. Es la del despiece. */
+  --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── Disposición ───────────────────────────────────────────
+     Breakpoints alineados con los del proyecto: 640 / 768 / 1024 / 1280. */
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+  --breakpoint-2xl: 96rem;
+
+  /* Tres anchuras, tres propósitos. `content` se mantiene en 72rem porque
+     lo usa el panel; la web pública usa `wide`, que es lo que arregla la
+     columna estrecha perdida en el centro de una pantalla de 1920. */
+  /* Alto exacto de la cabecera fija. Lo necesitan el índice pegajoso de
+     /servicios y los `scroll-margin` de las anclas: si se calcula a ojo, el
+     titular de la sección queda medio tapado al saltar a un ancla. */
+  --header-height: 4.8125rem;
+
+  --container-wide: 90rem;
+  --container-content: 72rem;
+  --container-prose: 42rem;
+}
+
+/*
+ * Escala de apilamiento. Definida una vez para que nadie invente un
+ * z-index de 9999.
+ */
+:root {
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-header: 20;
+  --z-overlay: 40;
+  --z-modal: 50;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Reglas base
+   ═══════════════════════════════════════════════════════════════ */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    /* Ninguna composición debe poder desbordar a lo ancho. */
+    overflow-x: clip;
+  }
+
+  /* Foco visible y consistente en todo el sitio. Nunca se elimina. */
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Sobre grafito, el cobre oscuro no contrasta: el foco se aclara. */
+  .on-dark :focus-visible,
+  .on-dark:focus-visible {
+    outline-color: var(--color-accent-on-dark);
+  }
+
+  /* Cifras tabulares en datos: evita que las columnas bailen. */
+  .tabular,
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-soft);
+    color: var(--color-ink);
+  }
+}
+
+/* Sin movimiento para quien lo ha pedido. Regla global, no por componente.
+   Las animaciones de entrada usan `fill-mode: both`, así que colapsarlas a
+   0.01ms deja el estado final: el contenido se ve igual, sin recorrido. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  /* Etiqueta técnica reutilizable: mono, mayúsculas, muy espaciada.
+     Se usa con moderación: marca una sección, no decora un párrafo. */
+  .label-technical {
+    font-family: var(--font-mono);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    letter-spacing: var(--text-label--letter-spacing);
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  /* Todos los titulares del sitio van en la condensada. */
+  .display {
+    font-family: var(--font-display);
+    font-weight: 700;
+  }
+
+  /*
+   * Rejilla técnica de fondo. Evoca un plano o una placa, sin recurrir a
+   * fibra de carbono ni neón. Muy sutil a propósito, y ahora limitada al
+   * banco de trabajo del hero: repetida en cada sección se volvía papel
+   * pintado.
+   */
+  .grid-technical {
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-border) 55%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-border) 55%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 72px 72px;
+  }
+
+  .grid-technical-inverse {
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-border-inverse) 70%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-border-inverse) 70%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 72px 72px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Movimiento de la web pública
+   ═══════════════════════════════════════════════════════════════
+
+   Dos interruptores, puestos por un script en línea en el <head>:
+
+     html.js       hay JavaScript.
+     html.js-anim  hay JavaScript Y el visitante no ha pedido menos
+                   movimiento.
+
+   Todo lo que empieza oculto se esconde SOLO bajo `.js-anim`. Si el script
+   no llega a ejecutarse, o si el sistema pide movimiento reducido, el
+   contenido se sirve visible desde el primer momento. No hay ningún texto
+   cuya lectura dependa de que el JavaScript funcione.
+   ═══════════════════════════════════════════════════════════════ */
+
+@layer components {
+  .js-anim .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition:
+      opacity var(--duration-reveal) var(--ease-settle),
+      transform var(--duration-reveal) var(--ease-settle);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  .js-anim .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Trazado de la pista de cobre del proceso. Sin JavaScript el trazo se
+     sirve completo: `stroke-dasharray` solo se aplica bajo `.js-anim`. */
+  .js-anim .trace-draw {
+    stroke-dasharray: var(--trace-length, 2000);
+    stroke-dashoffset: var(--trace-length, 2000);
+    transition: stroke-dashoffset var(--duration-draw) var(--ease-out);
+  }
+
+  .js-anim .trace-draw.is-visible {
+    stroke-dashoffset: 0;
+  }
+}

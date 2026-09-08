@@ -1,0 +1,337 @@
+---
+import PublicLayout from "../layouts/PublicLayout.astro";
+import WhatsAppLink from "../components/WhatsAppLink.astro";
+import FinalCta from "../components/FinalCta.astro";
+import ServiceDiagram from "../components/ServiceDiagram.astro";
+import ProcessTrack from "../components/ProcessTrack.astro";
+import {
+  SERVICES,
+  SERVICE_DETAILS,
+  FAQ,
+  LEGAL_NOTICE,
+} from "../config/site";
+
+/*
+ * Ritmo de la página: oscuro · claro · oscuro · claro.
+ *
+ * Antes eran bloques con la misma composición y un sombreado alterno, y se
+ * leían como el mismo bloque repetido. Ahora cada servicio cambia de lado y
+ * la sección entera se invierte una sí y una no.
+ *
+ * El diagnóstico abre en oscuro pese a venir justo después del hero, que
+ * también lo es: entre los dos queda el raíl pegajoso, que va en papel y
+ * separa de sobra. Y abre él porque es por donde se entra: los otros tres
+ * son lo que se hace **después** de saber qué le pasa al vehículo.
+ */
+const LAYOUT = {
+  "diagnostico-dtc": { side: "right", tone: "dark" },
+  reprogramacion: { side: "left", tone: "light" },
+  "reparacion-ecu": { side: "right", tone: "dark" },
+  "clonacion-ecu": { side: "left", tone: "light" },
+} as const;
+---
+
+<PublicLayout
+  title="Servicios: diagnóstico DTC, reprogramación y reparación de ECU"
+  description="Diagnóstico DTC, reprogramación, reparación electrónica y clonación de centralitas. Cuándo tiene sentido cada servicio y qué información conviene enviarnos."
+  path="/servicios"
+>
+  <!-- ═══════════════════════════════════════════════════════════════
+       HERO — el banco de trabajo, sin fotografía: aquí manda el texto
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="on-dark relative overflow-hidden bg-surface-bench"
+    aria-labelledby="titulo-servicios"
+  >
+    <div class="grid-technical-inverse absolute inset-0 opacity-25" aria-hidden="true">
+    </div>
+    <div
+      class="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_120%_at_15%_0%,transparent_20%,var(--color-surface-bench)_100%)]"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div
+      class="relative mx-auto max-w-(--container-wide) px-5 pb-16 pt-10 sm:px-8 lg:px-10 lg:pb-20 lg:pt-14 xl:px-14"
+    >
+      <nav aria-label="Migas de pan">
+        <ol class="flex items-center gap-2.5 text-sm text-ink-inverse-muted">
+          <li>
+            <a
+              href="/"
+              class="underline-offset-4 hover:text-accent-on-dark hover:underline"
+            >
+              Inicio
+            </a>
+          </li>
+          <li aria-hidden="true" class="text-ink-subtle">/</li>
+          <li aria-current="page" class="text-ink-inverse">Servicios</li>
+        </ol>
+      </nav>
+
+      <div class="mt-10 grid gap-10 lg:grid-cols-12 lg:gap-14">
+        <h1
+          id="titulo-servicios"
+          class="display text-display text-ink-inverse text-balance lg:col-span-7"
+        >
+          Qué hacemos con una centralita
+        </h1>
+
+        <div class="lg:col-span-5 lg:pt-2">
+          <p class="max-w-(--container-prose) text-lead text-ink-inverse-muted">
+            Cuatro trabajos distintos sobre la misma pieza, y no son fases de
+            un proceso. El primero, el diagnóstico, es el que decide cuál de
+            los otros tres hace falta; o si no hace falta ninguno.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       LOS SERVICIOS
+       El índice queda fijo mientras se recorren, y marca en cuál estás.
+       Sin JavaScript sigue siendo una lista de anclas que funciona igual.
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="relative">
+    <nav
+      data-depth-rail
+      aria-label="Servicios"
+      class="sticky top-(--header-height) z-(--z-sticky) border-b border-border bg-canvas/95 backdrop-blur-md"
+    >
+      <ul
+        class="mx-auto flex max-w-(--container-wide) items-stretch gap-x-8 overflow-x-auto px-5 sm:px-8 lg:px-10 xl:px-14"
+      >
+        {
+          SERVICES.map((service) => (
+            <li class="shrink-0">
+              <a
+                href={`#${service.slug}`}
+                class="group flex min-h-12 items-center gap-3 border-b-2 border-transparent py-3 text-sm whitespace-nowrap text-ink-muted transition-colors duration-(--duration-base) hover:text-ink data-current:border-accent data-current:font-medium data-current:text-ink"
+              >
+                <span class="label-technical text-accent">{service.depth}</span>
+                <span>{service.name}</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    {
+      SERVICES.map((service) => {
+        const detail = SERVICE_DETAILS[service.slug];
+        const { side, tone } = LAYOUT[service.slug];
+        const dark = tone === "dark";
+
+        return (
+          <section
+            id={service.slug}
+            class={`scroll-mt-32 ${dark ? "on-dark bg-surface-inverse" : "border-y border-border bg-canvas"}`}
+            aria-labelledby={`titulo-${service.slug}`}
+          >
+            <div class="mx-auto max-w-(--container-wide) px-5 py-16 sm:px-8 lg:px-10 lg:py-24 xl:px-14">
+              <div class="grid gap-10 lg:grid-cols-12 lg:gap-16">
+                {/* El dibujo se queda quieto mientras el texto pasa por delante:
+                    es la pieza sobre la que se está hablando, no un adorno que
+                    se desplaza con el resto. */}
+                <figure
+                  class={`lg:col-span-5 lg:self-start ${side === "right" ? "lg:order-2 lg:col-start-8" : ""}`}
+                >
+                  <div class="lg:sticky lg:top-40">
+                    <div
+                      class={`on-dark border p-6 lg:p-8 ${dark ? "border-border-inverse bg-surface-bench" : "border-border bg-surface-inverse"}`}
+                    >
+                      <ServiceDiagram
+                        variant={service.slug}
+                        id={`pg-${service.slug}`}
+                      />
+                    </div>
+                    <figcaption
+                      class={`mt-4 text-xs leading-relaxed ${dark ? "text-ink-inverse-muted" : "text-ink-muted"}`}
+                    >
+                      {service.depthNote}. Dibujo esquemático: no representa
+                      ninguna unidad ni ningún trabajo concreto.
+                    </figcaption>
+                  </div>
+                </figure>
+
+                <div
+                  class={`lg:col-span-6 ${side === "right" ? "lg:order-1 lg:col-start-1" : "lg:col-start-7"}`}
+                >
+                  <p
+                    class={`label-technical ${dark ? "text-accent-on-dark" : "text-accent"}`}
+                  >
+                    {service.depth}
+                  </p>
+
+                  <h2
+                    id={`titulo-${service.slug}`}
+                    class={`display mt-5 text-h2 text-balance ${dark ? "text-ink-inverse" : "text-ink"}`}
+                  >
+                    {service.name}
+                  </h2>
+
+                  <p
+                    class={`mt-6 max-w-(--container-prose) text-lead ${dark ? "text-ink-inverse-muted" : "text-ink-muted"}`}
+                  >
+                    {detail.what}
+                  </p>
+
+                  <div class="mt-12 grid gap-10 sm:grid-cols-2">
+                    <div>
+                      <h3
+                        class={`label-technical border-b pb-3 ${dark ? "border-border-inverse text-ink-inverse-muted" : "border-border text-ink-muted"}`}
+                      >
+                        Cuándo puede ayudarte
+                      </h3>
+                      <ul class="mt-5 space-y-3.5">
+                        {detail.when.map((item) => (
+                          <li
+                            class={`flex gap-3 text-sm leading-relaxed ${dark ? "text-ink-inverse" : "text-ink"}`}
+                          >
+                            <span
+                              class={`mt-2 h-px w-3 shrink-0 ${dark ? "bg-accent-on-dark" : "bg-accent"}`}
+                              aria-hidden="true"
+                            />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h3
+                        class={`label-technical border-b pb-3 ${dark ? "border-border-inverse text-ink-inverse-muted" : "border-border text-ink-muted"}`}
+                      >
+                        Qué conviene enviarnos
+                      </h3>
+                      <ul class="mt-5 space-y-3.5">
+                        {detail.send.map((item) => (
+                          <li
+                            class={`flex gap-3 text-sm leading-relaxed ${dark ? "text-ink-inverse" : "text-ink"}`}
+                          >
+                            <svg
+                              viewBox="0 0 20 20"
+                              class={`mt-0.5 size-4 shrink-0 ${dark ? "text-accent-on-dark" : "text-accent"}`}
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="m4 10 4 4 8-8"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              />
+                            </svg>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div class="mt-12 flex flex-wrap items-center gap-3">
+                    {/* Un servicio sin página propia no enseña este botón:
+                        `page` es lo único que hay que rellenar al escribirla. */}
+                    {service.page && (
+                      <a
+                        href={service.page}
+                        class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent px-6 text-base font-medium text-on-accent transition-colors duration-(--duration-base) hover:bg-accent-hover"
+                      >
+                        Ver la página de {service.nameLower}
+                        <span aria-hidden="true">→</span>
+                      </a>
+                    )}
+
+                    <WhatsAppLink
+                      size="lg"
+                      variant={dark ? "onDark" : "secondary"}
+                      label={`Consultar sobre ${service.nameLower}`}
+                      message={`Hola, quería consultar sobre ${service.nameLower}. Vehículo:`}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+      })
+    }
+  </div>
+
+  <ProcessTrack
+    id="proceso"
+    headingId="titulo-proceso"
+    eyebrow="El siguiente paso"
+    title="Cómo trabajamos, tramo a tramo."
+    intro="Sea cual sea el servicio, el recorrido es el mismo y empieza igual: escribiendo."
+  />
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PREGUNTAS
+       ═══════════════════════════════════════════════════════════════ -->
+  <section id="preguntas" class="scroll-mt-32 bg-canvas" aria-labelledby="titulo-preguntas">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="reveal lg:col-span-4">
+          <div class="lg:sticky lg:top-40">
+            <p class="label-technical text-accent">Dudas</p>
+            <h2
+              id="titulo-preguntas"
+              class="display mt-5 text-h2 text-ink text-balance"
+            >
+              Preguntas habituales.
+            </h2>
+            <p class="mt-6 text-lead text-ink-muted">
+              Aquí solo está lo que podemos afirmar. Para precios, plazos o
+              compatibilidades concretas, pregúntanos por WhatsApp: dependen del
+              vehículo.
+            </p>
+          </div>
+        </div>
+
+        <!-- <details> nativo: accesible por teclado y sin JavaScript -->
+        <div class="lg:col-span-8">
+          <div class="divide-y divide-border border-y border-border">
+            {
+              FAQ.map((item, i) => (
+                <details class="group reveal" style={`--reveal-delay: ${i * 60}ms`}>
+                  <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-6 py-5 text-ink [&::-webkit-details-marker]:hidden">
+                    <span class="display text-h3">{item.q}</span>
+                    <svg
+                      viewBox="0 0 20 20"
+                      class="size-5 shrink-0 text-accent transition-transform duration-(--duration-base) group-open:rotate-45"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      aria-hidden="true"
+                    >
+                      <path d="M10 4v12M4 10h12" stroke-linecap="round" />
+                    </svg>
+                  </summary>
+                  <p class="max-w-(--container-prose) pb-6 leading-relaxed text-ink-muted">
+                    {item.a}
+                  </p>
+                </details>
+              ))
+            }
+          </div>
+
+          <p class="mt-10 max-w-(--container-prose) text-xs leading-relaxed text-ink-muted">
+            {LEGAL_NOTICE}
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <FinalCta
+    title="¿Tienes una centralita entre manos?"
+    body="Escríbenos con el vehículo, el síntoma y las fotos que tengas. Te decimos si podemos ayudarte."
+    message="Hola, quería consultar sobre un servicio. Vehículo:"
+  />
+</PublicLayout>

@@ -1,0 +1,353 @@
+---
+/**
+ * El recorrido de una consulta — la firma de /como-trabajamos.
+ *
+ * Las tres páginas de servicio dibujan **la pieza**: el mapa, la placa, dos
+ * unidades. Ésta no dibuja una centralita, porque no habla de una: habla de lo
+ * que ocurre **antes** de que haya una centralita encima de la mesa. Por eso es
+ * el único dibujo del sitio que no usa la proyección dimétrica de `iso.ts`, y
+ * está bien que se note: es un esquema de cableado, no una pieza.
+ *
+ * Qué dibuja, y por qué:
+ *
+ * - **Seis conductores que convergen en uno.** Es la idea entera de la página:
+ *   distintos fragmentos de información entran por su lado, se ordenan y salen
+ *   como una sola cosa. No es una pista con paradas —eso ya es el proceso de
+ *   cuatro pasos de la portada—, es un mazo que se recoge.
+ * - **Tres van gruesos y tres finos.** Los primeros identifican el vehículo y
+ *   dicen qué pasa; sin ellos no hay caso que mirar. Los otros ahorran vueltas,
+ *   pero su ausencia no bloquea nada, y el pie del dibujo lo dice con todas las
+ *   letras. **No es una lista de requisitos.**
+ * - **Todo converge en un conector** y de él sale un solo conductor: la
+ *   consulta, ya con todo junto.
+ * - **El final es un pad rotulado «Al taller», no un diagnóstico.** Nada aquí
+ *   resuelve una avería, y ninguna parte del esquema representa una
+ *   herramienta concreta.
+ * - **Sin pie de foto.** Lo llevó, explicando cómo leer los grosores, y se
+ *   quitó: un dibujo que necesita instrucciones no está terminado. Los
+ *   grosores y el color de los rótulos ya dicen qué pesa más.
+ * - **Ni una cifra, ni un código, ni una medida.** Misma regla que el resto de
+ *   los dibujos del sitio.
+ *
+ * Coste en JavaScript: **cero**. Los conductores se trazan con el mecanismo
+ * `.trace-draw` que ya existe en tokens.css y que mide `motion.ts`; el orden lo
+ * lleva un `transition-delay` por conductor. Sin JavaScript, o con movimiento
+ * reducido, el esquema se sirve entero y trazado.
+ */
+interface Props {
+  id?: string;
+  class?: string;
+}
+
+const { id = "case-harness", class: className = "" } = Astro.props;
+
+/* ── Geometría ─────────────────────────────────────────────
+   Esquema plano, no dimétrico. Las filas van a la izquierda, el mazo se
+   recoge abajo y la salida sube hacia la derecha cruzando el límite. */
+const ROW_Y = [86, 138, 190, 242, 294, 346];
+
+/*
+ * Los conductores arrancan pegados al borde y **cada rótulo va encima del
+ * suyo**, no en una columna a la izquierda.
+ *
+ * Con la columna, el rótulo más largo fijaba el margen izquierdo en 184
+ * unidades de 1000: a 375px eso son 69px de nada, y encima obligaba a que los
+ * rótulos cupieran en ese hueco, es decir, a dejarlos en 5px de alto. Encima
+ * del conductor caben tan anchos como haga falta, así que en pantalla pequeña
+ * pueden crecer hasta leerse.
+ */
+const WIRE_X = 40;
+const LABEL_X = 44;
+
+/*
+ * Cada conductor dobla en una vertical propia y se incorpora al mazo en su
+ * propio carril. Las verticales van de derecha a izquierda según baja la fila,
+ * y los carriles al revés: así ningún conductor cruza a otro. Con los dobleces
+ * al revés el dibujo se convertía en una maraña, que es justo lo contrario de
+ * lo que cuenta.
+ */
+const BEND_X = ROW_Y.map((_, i) => 560 - i * 40);
+const LANE_Y = ROW_Y.map((_, i) => 378 + i * 4);
+
+/** El conector: el caso montado. */
+const HUB = { x: 650, y: 366, w: 70, h: 44 };
+
+/** La salida: un solo conductor que sube y cruza el límite. */
+const OUT_Y = 388;
+const OUT_TURN_X = 760;
+/* Con el rótulo de «revisión» a tamaño de móvil (28 unidades) hay que dejarle
+   sitio: pegado a 915 rozaba el borde derecho, y el límite tenía que apartarse
+   para que no lo cruzara por la mitad. */
+const REVIEW = { x: 900, y: 120 };
+const BOUNDARY_X = 790;
+
+/*
+ * Los seis rótulos del esquema, cortos a propósito: el nombre entero y la
+ * explicación viven en el texto de la página, que es donde se leen. Los tres
+ * primeros son los que permiten mirar el caso; los otros tres ahorran
+ * preguntas.
+ */
+const INPUTS = [
+  { label: "Vehículo", key: true },
+  { label: "Motor", key: true },
+  { label: "Qué ocurre", key: true },
+  { label: "Fotos", key: false },
+  { label: "DTC", key: false },
+  { label: "Referencia", key: false },
+] as const;
+
+/** Un conductor: tramo horizontal, doblez y carril hasta el conector. */
+function wire(index: number): string {
+  const y = ROW_Y[index]!;
+  const bend = BEND_X[index]!;
+  const lane = LANE_Y[index]!;
+
+  return `M ${WIRE_X} ${y} L ${bend} ${y} L ${bend} ${lane} L ${HUB.x} ${lane}`;
+}
+
+const OUTPUT = `M ${HUB.x + HUB.w} ${OUT_Y} L ${OUT_TURN_X} ${OUT_Y} L ${OUT_TURN_X} ${REVIEW.y} L ${REVIEW.x} ${REVIEW.y}`;
+
+/** Cadencia: cada conductor entra detrás del anterior, una sola vez. */
+const STEP = 130;
+const OUT_DELAY = INPUTS.length * STEP + 120;
+const END_DELAY = OUT_DELAY + 780;
+
+const titleId = `${id}-t`;
+const descId = `${id}-d`;
+---
+
+<figure class={`ch ${className}`}>
+  <svg
+    viewBox="0 0 1000 450"
+    class="ch-svg"
+    role="img"
+    aria-labelledby={`${titleId} ${descId}`}
+    fill="none"
+  >
+    <title id={titleId}>Los datos que envías se unen en una sola consulta</title>
+    <desc id={descId}>
+      Esquema: seis datos del vehículo —vehículo, motor, qué ocurre, fotos, DTC
+      y referencia— entran por separado, se juntan en un conector y salen como
+      una sola consulta hacia el taller.
+    </desc>
+
+    <!-- ── El límite: lo único que cruza el dibujo entero ── -->
+    <path
+      d={`M ${BOUNDARY_X} 40 L ${BOUNDARY_X} 430`}
+      class="ch-boundary ch-part"
+      style={`--step: ${INPUTS.length + 2}`}
+    ></path>
+
+    <!-- ── Rótulos de entrada, cada uno sobre su conductor ── -->
+    <text x={LABEL_X} y="34" class="ch-heading">Lo que nos envías</text>
+
+    {
+      INPUTS.map((input, i) => (
+        <text
+          x={LABEL_X}
+          y={ROW_Y[i]! - 12}
+          class={`ch-label ${input.key ? "is-key" : ""} ch-part`}
+          style={`--step: ${i}`}
+        >
+          {input.label}
+        </text>
+      ))
+    }
+
+    <!-- ── Los seis conductores ──
+         Se trazan en orden con el mecanismo compartido de tokens.css: sin
+         JavaScript se sirven ya trazados. -->
+    {
+      INPUTS.map((input, i) => (
+        <path
+          d={wire(i)}
+          class={`ch-wire ${input.key ? "is-key" : ""} trace-draw`}
+          style={`transition-delay: ${i * STEP + 80}ms`}
+        />
+      ))
+    }
+
+    <!-- ── El conector: el caso montado ── -->
+    <g class="ch-part" style={`--step: ${INPUTS.length}`}>
+      {
+        LANE_Y.map((y) => (
+          <circle cx={HUB.x} cy={y} r="2.5" class="ch-contact" />
+        ))
+      }
+      <rect
+        x={HUB.x}
+        y={HUB.y}
+        width={HUB.w}
+        height={HUB.h}
+        rx="2"
+        class="ch-hub"
+      />
+      <path
+        d={`M ${HUB.x + 14} ${HUB.y + 12} L ${HUB.x + HUB.w - 14} ${HUB.y + 12}`}
+        class="ch-hub-etch"
+      ></path>
+      <path
+        d={`M ${HUB.x + 14} ${HUB.y + HUB.h - 12} L ${HUB.x + HUB.w - 14} ${HUB.y + HUB.h - 12}`}
+        class="ch-hub-etch"
+      ></path>
+    </g>
+
+    <!-- ── La salida ── -->
+    <path
+      d={OUTPUT}
+      class="ch-wire is-out trace-draw"
+      style={`transition-delay: ${OUT_DELAY}ms`}
+    ></path>
+
+    <!-- ── Revisión: un contacto, no una respuesta ── -->
+    <g class="ch-end" style={`--end-delay: ${END_DELAY}ms`}>
+      <circle cx={REVIEW.x} cy={REVIEW.y} r="10" class="ch-pad-ring" />
+      <circle cx={REVIEW.x} cy={REVIEW.y} r="4.5" class="ch-pad-core" />
+      <text x={REVIEW.x} y={REVIEW.y - 26} class="ch-heading" text-anchor="middle">
+        Al taller
+      </text>
+    </g>
+  </svg>
+</figure>
+
+<style>
+  .ch {
+    margin: 0;
+  }
+
+  .ch-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* A 375px cada píxel de ancho es legibilidad del esquema, igual que en los
+     dibujos de las páginas de servicio. */
+  @media (max-width: 47.9375rem) {
+    .ch-svg {
+      width: calc(100% + 2.5rem);
+      margin-inline: -1.25rem;
+    }
+  }
+
+  /* ── Materiales ──────────────────────────────────────────
+     Cobre para lo que conduce, grafito para lo que sostiene: los mismos que
+     el resto de los dibujos del sitio. */
+  .ch-wire {
+    stroke: color-mix(in srgb, var(--jm-copper-400) 52%, transparent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .ch-wire.is-key {
+    stroke: var(--jm-copper-400);
+    stroke-width: 3.25;
+  }
+
+  .ch-wire.is-out {
+    stroke: var(--jm-copper-400);
+    stroke-width: 4;
+  }
+
+  .ch-contact {
+    fill: var(--jm-copper-300);
+  }
+
+  .ch-hub {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-graphite-400);
+    stroke-width: 1.5;
+  }
+
+  .ch-hub-etch {
+    stroke: var(--jm-graphite-500);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+
+  .ch-boundary {
+    stroke: var(--jm-graphite-400);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 10;
+  }
+
+  .ch-pad-ring {
+    fill: var(--color-surface-bench);
+    stroke: var(--jm-copper-400);
+    stroke-width: 2.5;
+  }
+
+  .ch-pad-core {
+    fill: var(--jm-copper-400);
+  }
+
+  .ch-label,
+  .ch-heading {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /*
+   * Por debajo de 768px el esquema se escala a poco más de un tercio y un
+   * rótulo de 14 unidades queda en 5 píxeles, que no se lee. Como cada rótulo
+   * va sobre su conductor y no en una columna estrecha, aquí sí pueden crecer.
+   */
+  @media (max-width: 47.9375rem) {
+    .ch-label,
+    .ch-heading {
+      font-size: 28px;
+    }
+  }
+
+  .ch-label {
+    fill: var(--jm-graphite-400);
+  }
+
+  .ch-label.is-key {
+    fill: var(--color-ink-inverse);
+  }
+
+  .ch-heading {
+    fill: var(--color-accent-on-dark);
+  }
+
+  /* ── Coreografía ─────────────────────────────────────────
+     Una sola pasada al entrar en pantalla. Todo cuelga de `.js-anim`, así que
+     sin JavaScript y con movimiento reducido el esquema se sirve completo:
+     conductores trazados, conector puesto y contacto marcado. */
+  :global(.js-anim) .ch-part {
+    opacity: 0;
+    transition: opacity var(--duration-reveal) var(--ease-out);
+    transition-delay: calc(var(--step) * 130ms);
+  }
+
+  :global(.js-anim) .ch-svg.is-visible .ch-part {
+    opacity: 1;
+  }
+
+  /* El trazado compartido dura 1,6 s, que para seis conductores encadenados
+     sería eterno. Aquí van más rápidos. */
+  :global(.js-anim) .ch-wire {
+    transition-duration: 820ms;
+  }
+
+  :global(.js-anim) .ch-end {
+    opacity: 0;
+    transition:
+      opacity var(--duration-slow) var(--ease-out),
+      transform var(--duration-slow) var(--ease-settle);
+    transition-delay: var(--end-delay);
+    transform: scale(0.75);
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+
+  :global(.js-anim) .ch-svg.is-visible .ch-end {
+    opacity: 1;
+    transform: none;
+  }
+</style>

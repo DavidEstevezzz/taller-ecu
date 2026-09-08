@@ -1,0 +1,124 @@
+---
+/**
+ * Carcasa del CONCEPTO B. No la use ninguna página pública.
+ *
+ * Es una copia de responsabilidades, no de código: monta su propio `<head>`,
+ * su propia hoja de estilos, su propia tipografía, su propia cabecera y su
+ * propio pie. No toca `PublicLayout`, `Seo`, `SiteHeader` ni `SiteFooter`, de
+ * modo que **nada de lo que se pruebe aquí puede alterar el sitio**.
+ *
+ * Tres reglas que esta carcasa garantiza y que hay una prueba vigilando
+ * (`web/test/concept-b.test.ts`):
+ *
+ *   1. `noindex, nofollow` siempre.
+ *   2. **Sin canónica.** No es una página pública definitiva, así que no
+ *      declara serlo. Tampoco apunta a la página real: sería decir que este
+ *      borrador es una variante de aquella, y no lo es.
+ *   3. Fuera del sitemap (filtro en `astro.config.mjs`) y bloqueada en
+ *      `robots.txt`.
+ */
+import { SITE } from "../config/site";
+
+/* Una sola familia, con el eje de anchura: es el sistema tipográfico entero.
+   Solo la carga esta carcasa; ninguna página del sitio la ve. */
+import "@fontsource-variable/archivo/wdth.css";
+import "../styles/concept-b.css";
+
+/*
+ * El subconjunto latino, precargado. El titular de portada es lo primero que se
+ * pinta y va en esta fuente: sin la precarga, el navegador no descubre el
+ * archivo hasta haber leído la hoja de estilos, y el titular parpadea. Se
+ * importa como URL para que sea la ruta con hash del build, no una escrita a
+ * mano que se rompa en silencio.
+ */
+import archivoLatin from "@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2?url";
+
+import ConceptoBHeader from "../components/concepto-b/ConceptoBHeader.astro";
+import ConceptoBFooter from "../components/concepto-b/ConceptoBFooter.astro";
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<!doctype html>
+<html lang={SITE.lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <!-- Maqueta interna: ni se indexa, ni se sigue, ni se declara canónica. -->
+    <meta name="robots" content="noindex, nofollow" />
+
+    <link
+      rel="preload"
+      href={archivoLatin}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#ecedee" />
+
+    <!--
+      Interruptores de movimiento, antes de pintar. `cb-motion` solo se activa
+      si hay JavaScript Y no se ha pedido menos movimiento; todo lo que
+      arranca oculto cuelga de él, así que sin este script la página se sirve
+      entera y visible.
+    -->
+    <script is:inline>
+      (function () {
+        var root = document.documentElement;
+        root.classList.add("cb-js");
+
+        try {
+          if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            root.classList.add("cb-motion");
+          }
+        } catch (error) {
+          /* Sin matchMedia se queda quieta, que es el lado seguro. */
+        }
+      })();
+    </script>
+  </head>
+
+  <body>
+    <a href="#contenido" class="cb-skip">Saltar al contenido</a>
+    <ConceptoBHeader />
+    <main id="contenido">
+      <slot />
+    </main>
+    <ConceptoBFooter />
+  </body>
+</html>
+
+<style>
+  /* El enlace de salto: fuera de pantalla hasta que recibe el foco. */
+  .cb-skip {
+    position: absolute;
+    inset-inline-start: 0.75rem;
+    inset-block-start: -4rem;
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding-inline: 1rem;
+    background-color: var(--cb-ink);
+    color: var(--cb-paper);
+    font-size: var(--cb-small);
+    font-weight: 600;
+    text-decoration: none;
+    transition: inset-block-start var(--cb-fast) var(--cb-ease);
+  }
+
+  .cb-skip:focus-visible {
+    inset-block-start: 0.75rem;
+  }
+</style>

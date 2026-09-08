@@ -1,0 +1,733 @@
+---
+import { px, py, topFace, sideFaces, box, trace, grid } from "../lib/iso";
+
+/**
+ * La transferencia entre dos unidades — la firma de /servicios/clonacion-ecu.
+ *
+ * Las otras dos páginas de servicio bajan por la pieza: reprogramación abre
+ * la capa de software (`MapLayer`), reparación baja a la placa (`FaultTrace`).
+ * Ésta no baja: se mueve **de lado**. Son dos unidades, no una, y lo que
+ * viaja entre ellas no es la caja, es la información.
+ *
+ * Lo que dibuja, y por qué cada decisión:
+ *
+ * - **La original no se vacía.** Las capas de la izquierda NO se van: lo que
+ *   cruza es una copia. Un dibujo en el que la pila de la izquierda se
+ *   desmonta contaría que la original queda inservible, que es exactamente lo
+ *   contrario de lo que ocurre.
+ * - **La de sustitución empieza con huecos**, dibujados a trazos. Una unidad
+ *   compatible sin la información del vehículo no es todavía la centralita de
+ *   ese coche: ése es el argumento entero de la página.
+ * - **Las capas son tipos de información, no contenido.** Retículas, líneas y
+ *   pads. Ni una cifra, ni un código, ni una dirección de memoria, ni una
+ *   medida. Misma regla que `MapLayer`, `FaultTrace` y `EcuExploded`.
+ * - **Nada de esto es un procedimiento.** No se dibuja por dónde se lee, con
+ *   qué se lee ni en qué orden se escribe: el dibujo cuenta *qué* tiene que
+ *   conservarse, no *cómo* se hace.
+ * - **La comprobación es un paso, no un adorno.** Mientras no se verifica que
+ *   la unidad de sustitución hace en el vehículo lo que hacía la original, no
+ *   hay trabajo terminado.
+ *
+ * Cómo degrada, que es lo que decide toda la implementación:
+ *
+ *   sin JavaScript      → el dibujo se sirve COMPLETO: las cuatro capas ya
+ *                         están en las dos unidades y la comprobación hecha.
+ *                         Los cinco pasos son una lista normal, con sus
+ *                         títulos como texto y no como botones.
+ *   movimiento reducido → el dibujo también se sirve completo. Los botones
+ *                         existen (controlar no es moverse) y saltan de un
+ *                         estado a otro sin recorrido.
+ *
+ * El recorrido lo conduce el visitante con los botones, NO el desplazamiento:
+ * el scroll ya conduce el recorrido de la placa en la página de reparación, y
+ * repetir el mecanismo habría hecho hermanas dos páginas que tienen que
+ * distinguirse. Se reproduce una sola vez al entrar en pantalla, para que se
+ * entienda sin tener que descubrir el control, y ahí se queda: no hay bucle.
+ */
+interface Props {
+  id?: string;
+  class?: string;
+}
+
+const { id = "identity-transfer", class: className = "" } = Astro.props;
+
+/* ── Las dos unidades ──────────────────────────────────────
+   Misma proyección dimétrica 2:1 y mismo chaflán que el resto del sitio.
+   Comparten `Y` y se separan solo en `OX`: en esta proyección eso es un
+   desplazamiento horizontal puro, así que las capas cruzan en línea recta. */
+const W = 176;
+const D = 108;
+const C = 22;
+const T = 24;
+
+const OX_A = 300;
+const OX_B = 800;
+const Y_UNIT = 500;
+
+/** Lo que se desplaza una copia al cruzar. */
+const DX = OX_B - OX_A;
+
+/* ── Las capas ─────────────────────────────────────────────
+   Planos flotando sobre cada unidad. La de arriba es la primera que cruza, y
+   desde ahí la secuencia baja: la misma dirección en la que se lee la página.
+   Dibujadas en ese mismo orden, que además es de atrás hacia delante. */
+const PW = 126;
+const PD = 64;
+/** Las capas van centradas sobre su unidad. */
+const PLATE_DX = 3;
+/*
+ * Alturas de la pila, en el orden en que cruzan las capas: la primera arriba.
+ *
+ * Estuvo al revés, con la primera abajo, y el dibujo se leía en contra de sí
+ * mismo: la lista de pasos avanza hacia abajo y la secuencia subía, así que
+ * bajando por la página la animación iba en dirección contraria a la lectura.
+ * El orden de la pila lo manda la lista, no la intuición de que el software es
+ * el cimiento: estos planos flotan, no se apoyan en nada.
+ */
+const PLATE_Y = [96, 196, 296, 396];
+
+/* Contenido de cada plano: qué CLASE de información es, nunca cuál.
+   Cuatro texturas distintas para que no parezcan cuatro veces lo mismo. */
+function plateContent(ox: number, oy: number, kind: number): string[] {
+  if (kind === 0) {
+    // El programa: renglones.
+    return [16, 32, 48].map((v) => trace(ox, oy, 12, v, [[1, 102]]));
+  }
+
+  if (kind === 1) {
+    // La calibración: la tabla que es, con las casillas vacías.
+    return grid(px(ox, 12, 12), py(oy, 12, 12), PW - 24, PD - 24, 6, 4);
+  }
+
+  if (kind === 2) {
+    // Configuración e identificadores: campos, dibujados como campos.
+    return [
+      trace(ox, oy, 16, 20, [[1, 42]]),
+      trace(ox, oy, 70, 20, [[1, 42]]),
+      trace(ox, oy, 16, 34, [[1, 30]]),
+      trace(ox, oy, 58, 34, [[1, 54]]),
+      trace(ox, oy, 16, 48, [[1, 66]]),
+    ];
+  }
+
+  // Adaptación: puntos sueltos, lo que se ha ido acumulando con el uso.
+  return [
+    [22, 18],
+    [46, 26],
+    [70, 16],
+    [96, 30],
+    [34, 42],
+    [62, 48],
+    [88, 44],
+    [108, 52],
+  ].map(([u, v]) => trace(ox, oy, u!, v!, [[1, 5]]));
+}
+
+interface Plate {
+  outline: string;
+  content: string[];
+  leader: string;
+  labelX: number;
+  labelY: number;
+}
+
+/** Una capa, en el lado que se le pida. */
+function plate(ox: number, kind: number, index: number): Plate {
+  const oy = PLATE_Y[index]!;
+  const originX = ox + PLATE_DX;
+
+  return {
+    outline: topFace(originX, oy, PW, PD, 0),
+    content: plateContent(originX, oy, kind),
+    // El rótulo cuelga del vértice izquierdo del plano.
+    leader: `M ${(px(originX, 0, PD) - 8).toFixed(1)} ${py(oy, 0, PD).toFixed(1)} L 196 ${py(oy, 0, PD).toFixed(1)}`,
+    labelX: 186,
+    labelY: py(oy, 0, PD) + 5,
+  };
+}
+
+/*
+ * Las cuatro capas, en el orden en que cruzan: de arriba abajo, que es el
+ * mismo en el que se leen los pasos.
+ *
+ * `short` es el rótulo del dibujo; el nombre completo y la explicación viven
+ * en los pasos de abajo. Están aquí y no en site.ts porque están atados a la
+ * geometría: cambiar el orden sin mover el plano dejaría el dibujo diciendo
+ * otra cosa que el texto.
+ */
+const LAYERS = [
+  { key: "software", short: "Software" },
+  { key: "calibracion", short: "Calibración" },
+  { key: "configuracion", short: "Configuración" },
+  { key: "adaptacion", short: "Adaptación" },
+] as const;
+
+const SOURCE = LAYERS.map((_, i) => plate(OX_A, i, i));
+const TARGET = LAYERS.map((_, i) => plate(OX_B, i, i));
+
+/* ── Piezas de cada unidad ─────────────────────────────────
+   Conector que cabalga sobre el borde delantero, como en la unidad real. */
+function connector(ox: number) {
+  return {
+    body: box(ox, Y_UNIT, 110, 86, 44, 34, 18),
+    pins: Array.from({ length: 4 }, (_, i) => {
+      const u = 118 + i * 10;
+      const x = px(ox, u, 120);
+      const y = py(Y_UNIT, u, 120);
+      return `M ${x.toFixed(1)} ${y.toFixed(1)} L ${x.toFixed(1)} ${(y + 11).toFixed(1)}`;
+    }),
+  };
+}
+
+/** Grabados de la carcasa: textura, no información. */
+function etch(ox: number): string[] {
+  return [
+    trace(ox, Y_UNIT, 24, 26, [[1, 96]]),
+    trace(ox, Y_UNIT, 24, 46, [[1, 72]]),
+  ];
+}
+
+const UNIT_A = {
+  top: topFace(OX_A, Y_UNIT, W, D, C),
+  sides: sideFaces(OX_A, Y_UNIT, W, D, C, T),
+  etch: etch(OX_A),
+  connector: connector(OX_A),
+  centre: px(OX_A, W / 2, D / 2),
+};
+
+const UNIT_B = {
+  top: topFace(OX_B, Y_UNIT, W, D, C),
+  sides: sideFaces(OX_B, Y_UNIT, W, D, C, T),
+  etch: etch(OX_B),
+  connector: connector(OX_B),
+  centre: px(OX_B, W / 2, D / 2),
+};
+
+const LABEL_Y = py(Y_UNIT, W, D) + T + 64;
+
+/* La comprobación: la unidad de sustitución queda conectada al vehículo.
+   Una pista que sale de su conector y termina en un pad, que es el motivo del
+   logotipo. Sin anillo alrededor: ese recurso ya marca el punto de
+   intervención en la página de reparación y el componente intervenido en los
+   diagramas de servicio; una tercera vez lo convertiría en decoración. */
+const VERIFY_TRACE = trace(OX_B, Y_UNIT, 132, 120, [
+  [1, 70],
+  [2, 40],
+]);
+const VERIFY_PAD: [number, number] = [
+  px(OX_B, 202, 160),
+  py(Y_UNIT, 202, 160),
+];
+
+/* ── Los cinco pasos ───────────────────────────────────────
+   Cuatro capas y una comprobación. Sin numerar, como el recorrido de la
+   placa: lo que ordena la secuencia es la pila, no un procedimiento del
+   taller. Ninguno afirma que toda unidad guarde lo mismo ni que todo se
+   traslade siempre; eso lo dice expresamente el tercero y el pie del dibujo. */
+const STEPS = [
+  {
+    kind: "Capa",
+    title: "El software",
+    body:
+      "El programa con el que funciona la unidad. Es lo que hace que sepa " +
+      "gobernar ese motor y no otro, y lo primero que tiene que estar para que " +
+      "lo demás signifique algo.",
+  },
+  {
+    kind: "Capa",
+    title: "La calibración",
+    body:
+      "Las tablas con las que ese programa trabaja. Es la misma capa sobre la " +
+      "que actúa una reprogramación; aquí no se toca, se traslada tal y como " +
+      "está.",
+  },
+  {
+    kind: "Capa",
+    title: "La configuración y los identificadores",
+    body:
+      "Lo que ata la unidad a ESE vehículo: cómo está configurada y los datos " +
+      "con los que el resto del vehículo la reconoce. Sin esto, una unidad " +
+      "compatible sigue siendo una unidad ajena.",
+  },
+  {
+    kind: "Capa",
+    title: "Los datos de adaptación",
+    body:
+      "Lo que la unidad ha ido ajustando con el uso. Según el caso se " +
+      "traslada, se deja que vuelvan a generarse o no procede: no todas las " +
+      "unidades guardan lo mismo ni se leen igual.",
+  },
+  {
+    kind: "Comprobación",
+    title: "Que ocupe el lugar de la original",
+    body:
+      "Se comprueba que la unidad de sustitución hace en el vehículo lo que " +
+      "hacía la anterior. Hasta ahí no hay trabajo terminado, y si algo no " +
+      "encaja se dice antes de dar nada por cerrado.",
+  },
+] as const;
+
+const titleId = `${id}-t`;
+const descId = `${id}-d`;
+---
+
+<div
+  class={`it ${className}`}
+  data-identity-transfer
+  style={`--it-dx: ${DX}px`}
+>
+  <div class="it-frame">
+    <svg
+      viewBox="20 60 1000 700"
+      class="it-svg"
+      role="img"
+      aria-labelledby={`${titleId} ${descId}`}
+      fill="none"
+    >
+      <title id={titleId}>
+        Traslado de información entre dos centralitas compatibles
+      </title>
+      <desc id={descId}>
+        Dibujo esquemático de dos centralitas en perspectiva, una junto a otra.
+        Sobre la de la izquierda, la original, flotan cuatro planos rotulados
+        —software, calibración, configuración y adaptación—. Sobre la de la
+        derecha, la unidad de sustitución, hay cuatro huecos dibujados a trazos
+        que se van ocupando con una copia de cada plano. Al final, la unidad de
+        la derecha queda marcada como la que ocupa el lugar de la original. No
+        hay valores, códigos ni medidas: representa qué tipo de información
+        tiene que conservarse, no un contenido real ni un procedimiento.
+      </desc>
+
+      <!-- ── Las dos unidades ── -->
+      {
+        [UNIT_A, UNIT_B].map((unit, i) => (
+          <g class="it-unit" data-unit={i === 0 ? "a" : "b"}>
+            {unit.sides.map((d) => (
+              <path d={d} class="face-side" />
+            ))}
+            <path d={unit.top} class="face-top" />
+            {unit.etch.map((d) => (
+              <path d={d} class="etch" />
+            ))}
+            {unit.connector.body.sides.map((d) => (
+              <path d={d} class="part-side" />
+            ))}
+            <path d={unit.connector.body.top} class="part-top" />
+            {unit.connector.pins.map((d) => (
+              <path d={d} class="connector-pin" />
+            ))}
+          </g>
+        ))
+      }
+
+      <!-- ── Los huecos de la unidad de sustitución ──
+           Se dibujan siempre: son el argumento de la página. Una unidad
+           compatible sin la información del vehículo tiene huecos. -->
+      {TARGET.map((p) => <path d={p.outline} class="it-slot" />)}
+
+      <!-- ── Las capas de la original ──
+           No se mueven nunca: lo que cruza es una copia. -->
+      {
+        SOURCE.map((p, i) => (
+          <g class="it-source" data-layer={i}>
+            <path d={p.outline} class="plane-fill" />
+            {p.content.map((d) => (
+              <path d={d} class="plane-line" />
+            ))}
+            <path d={p.outline} class="plane-edge" />
+            <path d={p.leader} class="leader" />
+            <text x={p.labelX} y={p.labelY} class="plane-label" text-anchor="end">
+              {LAYERS[i]!.short}
+            </text>
+          </g>
+        ))
+      }
+
+      <!-- ── Las copias ──
+           Cada una parte encima de su original y cruza hasta su hueco. -->
+      {
+        TARGET.map((p, i) => (
+          <g class="it-copy" data-copy={i}>
+            <path d={p.outline} class="plane-fill" />
+            {p.content.map((d) => (
+              <path d={d} class="plane-line" />
+            ))}
+            <path d={p.outline} class="plane-edge" />
+          </g>
+        ))
+      }
+
+      <!-- ── La comprobación ── -->
+      <g class="it-verify">
+        <path d={UNIT_B.top} class="verify-outline" />
+        <path d={VERIFY_TRACE} class="verify-trace" />
+        <ellipse cx={VERIFY_PAD[0]} cy={VERIFY_PAD[1]} rx="7" ry="3.5" class="verify-pad" />
+      </g>
+
+      <!-- ── Rótulos de las unidades ──
+           Dos juegos: por debajo de 768px el dibujo se escala a menos de la
+           mitad y un rótulo de 14 unidades queda en 5 píxeles, que no se lee.
+           El corto va más grande y con menos texto, que es lo único que cabe
+           sin salirse del encuadre. Los rótulos de las capas no tienen
+           versión corta: ahí manda la lista de pasos, que los nombra enteros
+           justo debajo. -->
+      <g class="unit-labels-lg">
+        <text x={UNIT_A.centre} y={LABEL_Y} class="unit-label" text-anchor="middle">
+          La original
+        </text>
+        <text x={UNIT_B.centre} y={LABEL_Y} class="unit-label" text-anchor="middle">
+          La de sustitución
+        </text>
+      </g>
+
+      <g class="unit-labels-sm" aria-hidden="true">
+        <text x={UNIT_A.centre} y={LABEL_Y} class="unit-label" text-anchor="middle">
+          Original
+        </text>
+        <text x={UNIT_B.centre} y={LABEL_Y} class="unit-label" text-anchor="middle">
+          Sustitución
+        </text>
+      </g>
+    </svg>
+
+    <p class="it-caption">
+      Dibujo esquemático: los planos representan tipos de información, no un
+      contenido real, y el dibujo no muestra ningún procedimiento. Qué
+      interviene en cada caso depende de la unidad, porque no todas guardan lo
+      mismo ni se leen de la misma manera.
+    </p>
+  </div>
+
+  <ol class="it-steps" aria-label="Qué se traslada, capa a capa">
+    {
+      STEPS.map((step, i) => (
+        <li class="it-step" data-it-step={i}>
+          <p class="label-technical it-step-kind">{step.kind}</p>
+          <h3 class="display it-step-title" data-it-title>
+            {step.title}
+          </h3>
+          <p class="it-step-body">{step.body}</p>
+        </li>
+      ))
+    }
+  </ol>
+</div>
+
+<style>
+  .it {
+    display: grid;
+    gap: 2.5rem;
+  }
+
+  .it-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* A 375px cada píxel de ancho es legibilidad: el dibujo se sale del
+     contenedor hasta el borde de la pantalla, igual que el de la placa. */
+  @media (max-width: 47.9375rem) {
+    .it-svg {
+      width: calc(100% + 2.5rem);
+      margin-inline: -1.25rem;
+    }
+  }
+
+  .it-caption {
+    margin-top: 1.5rem;
+    max-width: 40rem;
+    border-left: 2px solid var(--color-border-inverse);
+    padding-left: 1.25rem;
+    font-size: 0.8125rem;
+    line-height: 1.65;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  /* ── Materiales ──────────────────────────────────────────
+     Los mismos que EcuExploded, ServiceDiagram y FaultTrace: los dibujos del
+     sitio son ventanas al mismo banco de trabajo, no cuatro paletas. */
+  .face-top {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-graphite-500);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  .face-side {
+    fill: var(--jm-graphite-800);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  .etch {
+    stroke: var(--jm-graphite-600);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .part-top {
+    fill: var(--jm-graphite-600);
+    stroke: var(--jm-graphite-400);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .part-side {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-graphite-500);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .connector-pin {
+    stroke: var(--jm-copper-300);
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+
+  /* ── Los planos de información ──
+     Sin masa: son lo intangible, como la capa de software del despiece. */
+  .plane-fill {
+    fill: color-mix(in srgb, var(--jm-copper-500) 12%, transparent);
+  }
+
+  .plane-line {
+    stroke: color-mix(in srgb, var(--jm-copper-300) 48%, transparent);
+    stroke-width: 1.25;
+    stroke-linecap: round;
+  }
+
+  .plane-edge {
+    fill: none;
+    stroke: var(--jm-copper-400);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  /* El hueco: el mismo plano, sin nada dentro. */
+  .it-slot {
+    fill: none;
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.5;
+    stroke-dasharray: 7 6;
+    stroke-linejoin: round;
+  }
+
+  .leader {
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.25;
+    stroke-dasharray: 4 4;
+  }
+
+  .plane-label,
+  .unit-label {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    fill: var(--color-ink-inverse);
+  }
+
+  .plane-label {
+    fill: var(--jm-graphite-400);
+  }
+
+  /* Por debajo de 768px el dibujo se escala a un tercio: los rótulos de las
+     capas quedarían en cinco píxeles. Se retiran junto con sus líneas de
+     guía, y quien los necesite los tiene enteros en la lista de pasos y en la
+     descripción del dibujo. */
+  .unit-labels-sm {
+    display: none;
+  }
+
+  @media (max-width: 47.9375rem) {
+    .plane-label,
+    .leader,
+    .unit-labels-lg {
+      display: none;
+    }
+
+    .unit-labels-sm {
+      display: block;
+    }
+
+    .unit-label {
+      font-size: 30px;
+    }
+  }
+
+  /* ── La comprobación ── */
+  .verify-trace {
+    stroke: var(--jm-copper-400);
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .verify-pad {
+    fill: var(--jm-copper-400);
+  }
+
+  .verify-outline {
+    fill: none;
+    stroke: var(--jm-copper-400);
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+  }
+
+  /* ── Los cinco pasos ───────────────────────────────────── */
+  .it-steps {
+    display: grid;
+    gap: 2.25rem;
+  }
+
+  @media (min-width: 48rem) {
+    .it-steps {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 2.5rem 3rem;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .it {
+      gap: 3.5rem;
+    }
+
+    .it-steps {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0 1.75rem;
+    }
+  }
+
+  /* El estado se marca con el filete de arriba y con la etiqueta, nunca
+     bajando el contraste del texto: lo que hay que leer se lee siempre. */
+  .it-step {
+    border-top: 2px solid var(--color-accent-on-dark);
+    padding-top: 1.25rem;
+    transition: border-color var(--duration-slow) var(--ease-out);
+  }
+
+  .it-step-kind {
+    color: var(--color-accent-on-dark);
+    transition: color var(--duration-slow) var(--ease-out);
+  }
+
+  .it-step-title {
+    margin-top: 0.6rem;
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    color: var(--color-ink-inverse);
+  }
+
+  .it-step-body {
+    margin-top: 0.7rem;
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  /*
+   * El título se convierte en botón SOLO si hay JavaScript: un control que no
+   * controla nada es peor que no tenerlo. Lo hace el script, no el CSS.
+   */
+  .it-step-title :global(button) {
+    display: block;
+    width: 100%;
+    min-height: 2.75rem;
+    border: 0;
+    background: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+    transition: color var(--duration-base) var(--ease-out);
+  }
+
+  .it-step-title :global(button:hover) {
+    color: var(--color-accent-on-dark);
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     Estados conducidos.
+     Todo lo de arriba es el estado COMPLETO: es lo que se ve sin
+     JavaScript y con movimiento reducido hasta que alguien pulsa.
+     ═══════════════════════════════════════════════════════ */
+
+  .it.is-driven .it-step {
+    border-color: var(--color-border-inverse);
+  }
+
+  .it.is-driven .it-step[data-state="pending"] .it-step-kind {
+    color: var(--color-ink-inverse-muted);
+  }
+
+  .it.is-driven .it-step[data-state="done"] {
+    border-color: color-mix(
+      in srgb,
+      var(--color-accent-on-dark) 45%,
+      transparent
+    );
+  }
+
+  .it.is-driven .it-step[data-state="active"] {
+    border-color: var(--color-accent-on-dark);
+  }
+
+  /* La copia parte encima de su original y cruza. */
+  .it.is-driven .it-copy {
+    transition:
+      transform var(--duration-assembly) var(--ease-settle),
+      opacity var(--duration-slow) var(--ease-out);
+  }
+
+  .it.is-driven .it-copy[data-state="hidden"] {
+    transform: translateX(calc(var(--it-dx) * -1));
+    opacity: 0;
+  }
+
+  /* El rótulo de la capa que está cruzando. */
+  .it.is-driven .it-source .plane-label,
+  .it.is-driven .it-source .plane-edge,
+  .it.is-driven .it-source .plane-fill {
+    transition:
+      fill var(--duration-slow) var(--ease-out),
+      stroke var(--duration-slow) var(--ease-out);
+  }
+
+  .it.is-driven .it-source[data-state="active"] .plane-label {
+    fill: var(--color-accent-on-dark);
+  }
+
+  /* La comprobación no está hasta que se llega a ella. */
+  .it.is-driven .it-verify {
+    opacity: 0;
+    transition: opacity var(--duration-slow) var(--ease-out);
+  }
+
+  .it.is-driven[data-step="4"] .it-verify {
+    opacity: 1;
+  }
+
+  /* Al comprobar, la que sale del vehículo se apaga. */
+  .it.is-driven .it-unit {
+    transition: opacity var(--duration-slow) var(--ease-out);
+  }
+
+  .it.is-driven[data-step="4"] .it-unit[data-unit="a"],
+  .it.is-driven[data-step="4"] .it-source {
+    opacity: 0.42;
+  }
+
+  .it.is-driven .it-source {
+    transition: opacity var(--duration-slow) var(--ease-out);
+  }
+</style>
+
+<script>
+  import "../scripts/identity-transfer";
+</script>

@@ -1,0 +1,132 @@
+---
+/**
+ * Identidad de JM Repro Cars.
+ *
+ * El símbolo es geometría pura (no depende de ninguna fuente) y va en línea
+ * para poder heredar `currentColor` y la variable `--brand-trace`.
+ * El wordmark es texto HTML real, no <text> dentro del SVG: así usa la fuente
+ * cargada, es seleccionable y accesible.
+ *
+ * Los archivos sueltos para uso externo están en public/brand/.
+ * Este componente es el ÚNICO sitio donde se dibuja la marca.
+ *
+ * Revisión de escala: la marca se quedaba pequeña dentro de una cabecera de
+ * 40 px y desaparecía. Ahora el símbolo parte de 44 px y el wordmark va en la
+ * condensada de la misma superfamilia, en versalitas, con el aire de una
+ * placa de características. Sigue siendo una sola pieza que se sustituye
+ * entera el día que llegue el logotipo definitivo.
+ */
+interface Props {
+  tone?: "default" | "inverse";
+  size?: "sm" | "md" | "lg";
+  /** `false` para renderizar sin enlace (cabecera del panel, login). */
+  href?: string | false;
+  /** Solo el símbolo, sin texto. */
+  markOnly?: boolean;
+  class?: string;
+}
+
+const {
+  tone = "default",
+  size = "md",
+  href = "/",
+  markOnly = false,
+  class: className = "",
+} = Astro.props;
+
+const inverse = tone === "inverse";
+
+/*
+ * El wordmark no parte nunca («JM / REPRO» en dos líneas queda fatal), así que
+ * en pantallas estrechas es la marca la que encoge, no el texto el que se
+ * rompe. Sin esto la cabecera desbordaba 7 px a 375 px de ancho.
+ */
+const markSize = {
+  sm: "size-8 sm:size-9",
+  md: "size-9 sm:size-11",
+  lg: "size-12 sm:size-14",
+}[size];
+const nameSize = {
+  sm: "text-base sm:text-lg",
+  md: "text-[1.15rem] sm:text-[1.4rem]",
+  lg: "text-[1.5rem] sm:text-[1.9rem]",
+}[size];
+const tagSize = {
+  sm: "text-[0.52rem] sm:text-[0.55rem]",
+  md: "text-[0.56rem] sm:text-[0.62rem]",
+  lg: "text-[0.64rem] sm:text-[0.72rem]",
+}[size];
+
+const markColor = inverse ? "text-ink-inverse" : "text-ink";
+const nameColor = inverse ? "text-ink-inverse" : "text-ink";
+const tagColor = inverse ? "text-accent-on-dark" : "text-accent";
+const traceColor = inverse ? "var(--color-accent-on-dark)" : "var(--color-accent)";
+
+const Tag = href === false ? "span" : "a";
+---
+
+<Tag
+  {...href === false ? {} : { href }}
+  class={`group inline-flex items-center gap-2.5 sm:gap-3 ${className}`}
+  aria-label={href === false ? undefined : "JM Repro Cars, ir al inicio"}
+>
+  <svg
+    viewBox="0 0 48 48"
+    class={`${markSize} shrink-0 ${markColor}`}
+    style={`--brand-trace: ${traceColor}`}
+    fill="none"
+    role="img"
+    aria-label={markOnly ? "JM Repro Cars" : undefined}
+    aria-hidden={markOnly ? undefined : "true"}
+  >
+    <!-- Chasis: silueta de conector de centralita con esquina achaflanada -->
+    <path
+      d="M4 9.5A2.5 2.5 0 0 1 6.5 7h29.9c.66 0 1.3.26 1.77.73l5.1 5.1c.47.47.73 1.11.73 1.77V38.5A2.5 2.5 0 0 1 41.5 41h-35A2.5 2.5 0 0 1 4 38.5Z"
+      stroke="currentColor"
+      stroke-width="2.4"
+      stroke-linejoin="round"></path>
+    <!-- Pines del conector -->
+    <path
+      d="M13 7V3.5M20 7V3.5M27 7V3.5"
+      stroke="currentColor"
+      stroke-width="2.4"
+      stroke-linecap="round"></path>
+    <!-- Monograma JM -->
+    <path
+      d="M17.5 16.5v9.2a4.3 4.3 0 0 1-4.3 4.3h0a4.3 4.3 0 0 1-4.2-3.4"
+      stroke="currentColor"
+      stroke-width="3"
+      stroke-linecap="round"></path>
+    <path
+      d="M21.5 31V17.6l6.2 7.4 6.2-7.4V31"
+      stroke="currentColor"
+      stroke-width="3"
+      stroke-linecap="round"
+      stroke-linejoin="round"></path>
+    <!-- Pista de circuito y pad de contacto -->
+    <circle cx="12" cy="34.5" r="2" fill="var(--brand-trace)"></circle>
+    <path
+      d="M14.6 34.5h14.8M34 34.5h4.2"
+      stroke="var(--brand-trace)"
+      stroke-width="2.4"
+      stroke-linecap="round"></path>
+  </svg>
+
+  {
+    !markOnly && (
+      <span class="flex flex-col leading-none">
+        <span
+          class={`font-display font-bold whitespace-nowrap uppercase tracking-[0.02em] ${nameSize} ${nameColor}`}
+        >
+          JM Repro
+        </span>
+        <span
+          class={`label-technical mt-1.5 ${tagSize} ${tagColor}`}
+          style="letter-spacing: 0.34em"
+        >
+          Cars
+        </span>
+      </span>
+    )
+  }
+</Tag>

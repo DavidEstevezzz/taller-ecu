@@ -1,0 +1,96 @@
+---
+import WhatsAppLink from "./WhatsAppLink.astro";
+import { CONTACT } from "../config/site";
+
+/**
+ * Llamada final. Va en cobre a propósito: separa visualmente el cierre de
+ * la página del pie oscuro, en lugar de encadenar bandas grafito.
+ *
+ * Es el único sitio del sitio donde el cobre ocupa toda una banda. Ese
+ * privilegio es lo que lo convierte en «aquí se actúa».
+ */
+interface Props {
+  title?: string;
+  body?: string;
+  message?: string;
+  /**
+   * Salida secundaria, opcional. Va como enlace de texto y no como segundo
+   * botón: sobre cobre, dos botones claros compiten y ninguno gana. La usa
+   * /sobre-nosotros para ofrecer también /contacto sin restarle al WhatsApp,
+   * que sigue siendo la acción principal de todo el sitio.
+   */
+  secondaryHref?: string;
+  secondaryLabel?: string;
+}
+
+const {
+  title = "Cuéntanos qué le pasa al vehículo.",
+  body = "Marca, modelo, motor y qué síntoma tiene. Si tienes el código de error o una foto de la centralita, mejor todavía.",
+  message = "Hola, os escribo por un vehículo. Marca y modelo:",
+  secondaryHref,
+  secondaryLabel,
+} = Astro.props;
+---
+
+<section class="relative overflow-hidden bg-accent" aria-labelledby="titulo-cta">
+  <!-- Un eco de la pista: entra por la izquierda y muere bajo el titular. -->
+  <svg
+    class="pointer-events-none absolute inset-y-0 left-0 h-full w-full opacity-[0.18]"
+    viewBox="0 0 1200 240"
+    preserveAspectRatio="xMinYMid slice"
+    fill="none"
+    aria-hidden="true"
+  >
+    <path
+      d="M -40 40 L 180 40 L 220 80 L 620 80 M -40 200 L 320 200 L 356 164 L 700 164"
+      stroke="var(--color-on-accent)"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"></path>
+    <circle cx="620" cy="80" r="6" fill="var(--color-on-accent)"></circle>
+    <circle cx="700" cy="164" r="6" fill="var(--color-on-accent)"></circle>
+  </svg>
+
+  <div
+    class="relative mx-auto flex max-w-(--container-wide) flex-col gap-10 px-5 py-16 sm:px-8 lg:flex-row lg:items-end lg:justify-between lg:gap-16 lg:px-10 lg:py-20 xl:px-14"
+  >
+    <div class="max-w-2xl">
+      <h2
+        id="titulo-cta"
+        class="display text-h2 text-on-accent text-balance"
+      >
+        {title}
+      </h2>
+      <p class="mt-5 max-w-(--container-prose) text-lead text-on-accent/90">
+        {body}
+      </p>
+    </div>
+
+    <div class="shrink-0">
+      <!-- Sobre cobre, el botón claro es el que contrasta. -->
+      <WhatsAppLink
+        size="lg"
+        variant="onAccent"
+        label="Abrir WhatsApp"
+        message={message}
+      />
+      <p class="mt-4 text-sm text-on-accent/85">
+        {CONTACT.whatsappDisplay}
+      </p>
+
+      {
+        secondaryHref && secondaryLabel && (
+          <p class="mt-3">
+            <a
+              href={secondaryHref}
+              class="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-on-accent underline underline-offset-4 decoration-on-accent/40 hover:decoration-on-accent"
+            >
+              {secondaryLabel}
+              <span aria-hidden="true">→</span>
+            </a>
+          </p>
+        )
+      }
+    </div>
+  </div>
+</section>

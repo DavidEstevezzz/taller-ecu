@@ -1,0 +1,415 @@
+---
+import { Image } from "astro:assets";
+
+import PublicLayout from "../layouts/PublicLayout.astro";
+import Button from "../components/Button.astro";
+import WhatsAppLink from "../components/WhatsAppLink.astro";
+import FinalCta from "../components/FinalCta.astro";
+import SignalStrata from "../components/SignalStrata.astro";
+import {
+  ABOUT,
+  CONTACT,
+  HOW_MESSAGE,
+  INTERVENTIONS,
+  SITE,
+  SITE_URL,
+} from "../config/site";
+
+import benchImage from "../assets/photos/manos-placa-precision.jpg";
+
+/*
+ * /sobre-nosotros — quién está detrás, y por qué eso importa.
+ *
+ * El riesgo de esta página es conocido: acabar en una biografía de empresa con
+ * tarjetas de valores. La regla que lo evita es la misma del resto del sitio:
+ * **cada frase tiene que aportar un dato, una razón o un criterio**. Si solo
+ * describe lo buenos que somos, sobra.
+ *
+ * Tres decisiones que conviene no deshacer:
+ *
+ * - **No repite /como-trabajamos ni /servicios.** Aquí no se cuenta el flujo
+ *   de una consulta ni qué es cada servicio: se cuenta qué aporta el oficio
+ *   antes de tocar nada. Las dos páginas se enlazan desde dentro del texto.
+ * - **Ni una cifra de resultados.** Ni vehículos, ni clientes, ni plazos, ni
+ *   garantías. La única cifra de la página son los años, y es provisional:
+ *   vive en `ABOUT`, marcada `PENDING_CLIENT_CONFIRMATION`, junto con todo lo
+ *   demás que hay que repasar con el cliente (`ABOUT_TO_CONFIRM`).
+ * - **La fotografía no representa a nadie ni a ninguna instalación.** Es de
+ *   banco de imágenes, sin rostro ni marcas, y el nombre del responsable NO se
+ *   escribe encima: va en el raíl de datos, que es un sitio distinto. El día
+ *   que llegue un retrato real ocupa el mismo hueco sin tocar la composición.
+ *   Ver docs/image-sources.md.
+ *
+ * Coste en JavaScript: **cero bytes propios**. El corte estratigráfico usa el
+ * mecanismo `.trace-draw` que ya existe, igual que /como-trabajamos.
+ */
+
+/*
+ * Datos estructurados. **Sin cifras, sin personas y sin dirección**: nada de
+ * eso está confirmado, y un `foundingDate` o un `founder` inventados serían
+ * exactamente la clase de afirmación que esta página evita en su texto. Solo
+ * el nodo de organización que ya declara /contacto —nombre, dominio, teléfono
+ * y zona, todo publicado por el cliente— y la propia página.
+ */
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organizacion`,
+      name: SITE.name,
+      url: SITE_URL,
+      description: SITE.description,
+      telephone: CONTACT.phoneE164,
+      areaServed: { "@type": "Place", name: CONTACT.area },
+    },
+    {
+      "@type": "AboutPage",
+      "@id": `${SITE_URL}/sobre-nosotros#pagina`,
+      url: `${SITE_URL}/sobre-nosotros`,
+      name: `Sobre nosotros · ${SITE.name}`,
+      inLanguage: SITE.locale,
+      about: { "@id": `${SITE_URL}/#organizacion` },
+    },
+  ],
+};
+
+/** El raíl del hero: cuatro datos, ninguno inventado por su cuenta. */
+const FACTS = [
+  { label: "Al frente", value: ABOUT.owner.name },
+  { label: "Experiencia", value: ABOUT.experience.short },
+  { label: "Para quién", value: ABOUT.audienceShort },
+  { label: "Zona", value: CONTACT.area },
+];
+---
+
+<PublicLayout
+  title="Sobre nosotros: más de veinte años de electrónica del automóvil"
+  description="Quién está detrás de JM Repro Cars: más de veinte años reprogramando, reparando y clonando centralitas para particulares y talleres. Churriana de la Vega, Granada."
+  path="/sobre-nosotros"
+  jsonLd={jsonLd}
+>
+  <!-- ═══════════════════════════════════════════════════════════════
+       HERO — editorial, en papel cálido.
+
+       La portada abre en el banco de trabajo y /contacto también; ésta abre
+       en claro y con una fotografía a media página, que es el gesto de una
+       página sobre personas. La cabecera oscura sigue enmarcándola arriba.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="bg-canvas" aria-labelledby="titulo-sobre">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 pb-16 pt-14 sm:px-8 lg:px-10 lg:pb-20 lg:pt-20 xl:px-14"
+    >
+      <div class="grid items-center gap-12 lg:grid-cols-12 lg:gap-14">
+        <div class="lg:col-span-7">
+          <p class="label-technical text-accent">Sobre nosotros</p>
+
+          <h1
+            id="titulo-sobre"
+            class="display mt-5 max-w-3xl text-display text-ink text-balance"
+          >
+            Más de veinte años aprendiendo dónde mirar
+          </h1>
+
+          <p class="mt-8 max-w-(--container-prose) text-lead text-ink-muted">
+            {ABOUT.lead}
+          </p>
+
+          <div class="mt-9 flex flex-wrap items-center gap-3">
+            <WhatsAppLink
+              size="lg"
+              label="Cuéntanos tu caso"
+              message={HOW_MESSAGE}
+            />
+            <Button href="/servicios" variant="secondary" size="lg">
+              Ver todos los servicios
+            </Button>
+          </div>
+        </div>
+
+        <!--
+          La fotografía. Vertical a propósito: es el formato de un retrato, y
+          es el hueco que ocupará el del responsable cuando exista. No lleva
+          rótulo encima, y su `alt` describe lo que se ve, no de quién es.
+        -->
+        <figure class="lg:col-span-5">
+          <div
+            class="relative aspect-4/3 overflow-hidden border border-border bg-surface-sunken sm:aspect-16/10 lg:aspect-4/5"
+          >
+            <Image
+              src={benchImage}
+              alt="Manos trabajando con una herramienta de precisión sobre una placa electrónica en un banco de trabajo"
+              widths={[560, 760, 1100]}
+              sizes="(min-width: 1024px) 40vw, 100vw"
+              class="absolute inset-0 h-full w-full object-cover"
+              loading="eager"
+              fetchpriority="high"
+            />
+          </div>
+        </figure>
+      </div>
+
+      <!-- Raíl de datos: el mismo idioma que el hero de la portada. -->
+      <dl
+        class="mt-14 grid gap-x-10 gap-y-7 border-t border-border pt-9 sm:grid-cols-2 lg:mt-16 lg:grid-cols-4"
+      >
+        {
+          FACTS.map((fact, i) => (
+            <div class="reveal" style={`--reveal-delay: ${i * 80}ms`}>
+              <dt class="label-technical text-accent">{fact.label}</dt>
+              <dd class="display mt-3 text-h3 text-ink">{fact.value}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       LA EXPERIENCIA APLICADA — dos bloques, y ninguno cuenta el proceso.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="border-y border-border bg-surface"
+    aria-labelledby="titulo-experiencia"
+  >
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-24 xl:px-14"
+    >
+      <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="reveal lg:col-span-4">
+          <p class="label-technical text-accent">La experiencia aplicada</p>
+          <h2
+            id="titulo-experiencia"
+            class="display mt-5 text-h2 text-ink text-balance"
+          >
+            No es una lista de averías aprendidas.
+          </h2>
+        </div>
+
+        <div class="lg:col-span-7">
+          {
+            ABOUT.applied.map((item, i) => (
+              <div
+                class="reveal mt-10 border-t border-border pt-6 first:mt-0"
+                style={`--reveal-delay: ${i * 90}ms`}
+              >
+                <span
+                  class="mb-5 block h-0.5 w-10 bg-accent"
+                  aria-hidden="true"
+                />
+                <h3 class="display text-h3 text-ink">{item.title}</h3>
+                <p class="mt-3 max-w-(--container-prose) leading-relaxed text-ink-muted">
+                  {item.body}
+                </p>
+              </div>
+            ))
+          }
+
+          <p class="reveal mt-10 max-w-(--container-prose) text-sm text-ink-muted">
+            Cómo se recorre un caso desde el primer mensaje está en{" "}
+            <a
+              href="/como-trabajamos"
+              class="font-medium text-accent underline-offset-4 hover:underline"
+            >
+              cómo trabajamos
+            </a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EL CORTE — la pieza propia de esta página, en el banco de trabajo.
+       Ver src/components/SignalStrata.astro
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="on-dark relative overflow-hidden bg-surface-bench"
+    aria-labelledby="titulo-corte"
+  >
+    <div
+      class="grid-technical-inverse absolute inset-0 opacity-25"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div
+      class="relative mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="grid gap-8 lg:grid-cols-12 lg:gap-16">
+        <h2
+          id="titulo-corte"
+          class="reveal display text-h2 text-ink-inverse text-balance lg:col-span-6"
+        >
+          El síntoma entra igual que siempre.
+        </h2>
+
+        <p
+          class="reveal max-w-(--container-prose) text-lead text-ink-inverse-muted lg:col-span-6"
+        >
+          Lo que ha cambiado es a qué profundidad está la causa. Cada
+          generación de electrónica añadió un sitio más donde puede esconderse,
+          y todos siguen ahí.
+        </p>
+      </div>
+
+      <div class="mt-14 lg:mt-16">
+        <SignalStrata id="sobre-corte" />
+      </div>
+
+      <!--
+        Los tres enlaces van en una sola expresión y sin saltos de línea
+        alrededor de las etiquetas: Astro conserva ese salto como espacio.
+      -->
+      <p class="reveal mt-14 max-w-(--container-prose) leading-relaxed text-ink-inverse-muted">
+        Según dónde acabe estando la causa, el trabajo es una {INTERVENTIONS.map((service, i) => (<Fragment>{i === 0 ? "" : i === INTERVENTIONS.length - 1 ? " o una " : ", una "}<a href={service.href} class="font-medium text-accent-on-dark underline-offset-4 hover:underline">{service.nameLower}</a></Fragment>))}. Decidirlo es la parte que no se puede saltar.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PARTICULAR O TALLER
+
+       Un solo cuadro partido en dos, no dos tarjetas: lo que se cuenta es
+       que son dos entradas al mismo trabajo, y dos cajas idénticas dirían
+       justo lo contrario. Los conductores de abajo convergen, que es lo que
+       hacen los dos perfiles.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="bg-canvas" aria-labelledby="titulo-perfiles">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <h2
+        id="titulo-perfiles"
+        class="reveal display max-w-3xl text-h2 text-ink text-balance"
+      >
+        El mismo trabajo, dos puntos de partida.
+      </h2>
+
+      <div class="reveal mt-12 border border-border bg-surface">
+        <div class="grid md:grid-cols-2">
+          {
+            ABOUT.audiences.map((audience) => (
+              <div class="border-b border-border p-8 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0 lg:p-10">
+                <p class="label-technical text-accent">{audience.label}</p>
+                <p class="mt-5 max-w-(--container-prose) text-lead leading-relaxed text-ink">
+                  {audience.body}
+                </p>
+              </div>
+            ))
+          }
+        </div>
+
+        <!-- El punto donde convergen: dos conductores y un contacto. -->
+        <div class="border-t border-border bg-surface-sunken px-8 pb-8 pt-0 lg:px-10 lg:pb-10">
+          <svg
+            viewBox="0 0 1000 64"
+            class="block h-auto min-h-16 w-full"
+            fill="none"
+            aria-hidden="true"
+          >
+            <!--
+              Los dos conductores bajan por el centro de cada mitad —25 % y
+              75 %— y se juntan en un contacto. El trazo no engorda al
+              escalar: `non-scaling-stroke` lo deja en el mismo grosor que
+              las demás líneas de la página.
+            -->
+            <path
+              d="M 250 0 L 250 30 L 500 30 L 500 42 M 750 0 L 750 30 L 500 30"
+              stroke="var(--color-accent)"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              vector-effect="non-scaling-stroke"></path>
+            <circle
+              cx="500"
+              cy="50"
+              r="8"
+              fill="var(--color-surface-sunken)"
+              stroke="var(--color-accent)"
+              stroke-width="2"
+              vector-effect="non-scaling-stroke"></circle>
+            <circle cx="500" cy="50" r="3.5" fill="var(--color-accent)"></circle>
+          </svg>
+
+          <p class="mt-2 text-center text-lead text-ink text-balance">
+            {ABOUT.audienceShared}
+          </p>
+
+          <p class="mt-3 text-center text-sm text-ink-muted">
+            Trabajamos sobre {ABOUT.vehicles.toLowerCase()}.
+          </p>
+
+          <div
+            class="mt-7 flex flex-wrap items-center justify-center gap-x-8 gap-y-3"
+          >
+            <a
+              href="/contacto"
+              class="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-accent hover:text-accent-hover"
+            >
+              Elegir plantilla en contacto
+              <span aria-hidden="true">→</span>
+            </a>
+            <a
+              href="/como-trabajamos#que-enviar"
+              class="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-accent hover:text-accent-hover"
+            >
+              Qué necesitamos para revisar un caso
+              <span aria-hidden="true">→</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TRES PRINCIPIOS — tres, y muy cortos. Se pueden comprobar en una
+       conversación real, que es lo que los separa de un valor de empresa.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="border-t border-border bg-surface"
+    aria-labelledby="titulo-principios"
+  >
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-24 xl:px-14"
+    >
+      <div class="grid gap-10 lg:grid-cols-12 lg:gap-16">
+        <h2
+          id="titulo-principios"
+          class="reveal display text-h2 text-ink text-balance lg:col-span-4"
+        >
+          Tres reglas, y no hay más.
+        </h2>
+
+        <dl class="grid gap-x-10 gap-y-9 sm:grid-cols-3 lg:col-span-8">
+          {
+            ABOUT.principles.map((principle, i) => (
+              <div
+                class="reveal border-t border-border pt-6"
+                style={`--reveal-delay: ${i * 90}ms`}
+              >
+                <span
+                  class="mb-4 block h-0.5 w-8 bg-accent"
+                  aria-hidden="true"
+                />
+                <dt class="display text-h3 text-ink">{principle.title}</dt>
+                <dd class="mt-3 text-sm leading-relaxed text-ink-muted">
+                  {principle.body}
+                </dd>
+              </div>
+            ))
+          }
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <FinalCta
+    title="Cuéntanos qué vehículo tienes y qué necesitas."
+    body="Con el vehículo, el motor y lo que ocurre basta para empezar. Si te falta algún dato, escribe igualmente."
+    message={HOW_MESSAGE}
+    secondaryHref="/contacto"
+    secondaryLabel="O elige una plantilla por servicio"
+  />
+</PublicLayout>

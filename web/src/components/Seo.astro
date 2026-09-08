@@ -1,0 +1,88 @@
+---
+import { SITE, SITE_URL } from "../config/site";
+import { normalisePath } from "../lib/path";
+
+/**
+ * Metadatos de una página. Único sitio donde se construyen título,
+ * descripción, canónica, Open Graph y Twitter Card.
+ *
+ * El dominio sale siempre de src/config/domain.mjs: no se escribe a mano.
+ */
+interface Props {
+  title: string;
+  description?: string;
+  /** Ruta canónica sin dominio, p. ej. "/servicios". */
+  path?: string;
+  /** Panel privado y páginas de error. */
+  noindex?: boolean;
+  /** Imagen social; ruta relativa al dominio. */
+  image?: string;
+  /**
+   * Datos estructurados de la página, ya montados como objeto.
+   *
+   * Se serializan aquí y no en la página por la misma razón que el resto de
+   * los metadatos: un `<script type="application/ld+json">` suelto en una
+   * plantilla es una etiqueta de cabecera escrita fuera de su sitio. La
+   * página decide QUÉ declara; este componente, cómo se emite.
+   */
+  jsonLd?: Record<string, unknown> | null;
+}
+
+const {
+  title,
+  description = SITE.description,
+  path,
+  noindex = false,
+  image,
+  jsonLd = null,
+} = Astro.props;
+
+/*
+ * Canonical normalizada: sin `.html` y sin barra final. La normalización vive
+ * en src/lib/path.ts porque la cabecera necesita exactamente la misma.
+ */
+const canonical = new URL(normalisePath(path ?? Astro.url.pathname), SITE_URL)
+  .href;
+const fullTitle = title === SITE.name ? title : `${title} · ${SITE.name}`;
+const imageUrl = image ? new URL(image, SITE_URL).href : undefined;
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+
+{
+  noindex && (
+    <meta name="robots" content="noindex, nofollow" />
+  )
+}
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content={SITE.name} />
+<meta property="og:locale" content="es_ES" />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+{imageUrl && <meta property="og:image" content={imageUrl} />}
+
+<meta name="twitter:card" content={imageUrl ? "summary_large_image" : "summary"} />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+{imageUrl && <meta name="twitter:image" content={imageUrl} />}
+
+{
+  /*
+   * `is:inline` para que Astro no lo trate como un módulo que empaquetar: no
+   * es JavaScript, es una declaración que tiene que salir tal cual en el HTML.
+   */
+  jsonLd && (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd)} />
+  )
+}
+
+<!-- Favicon provisional: sustituir junto con el logo definitivo. -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<meta name="theme-color" content="#12171c" />

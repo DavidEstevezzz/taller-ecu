@@ -1,0 +1,380 @@
+/**
+ * CONCEPTO C — «Banco». Hoja de estilos propia y aislada.
+ *
+ * Ninguna página pública la importa y ella no importa nada del sitio: ni
+ * Tailwind, ni `tokens.css`. Es la condición que hace comparable la maqueta:
+ * nada de lo que se pruebe aquí puede alcanzar a otra página.
+ *
+ * El sistema, en una frase: la página es la placa frontal de un instrumento.
+ * Un chasis gris aluminio sobre una mesa más oscura, módulos separados por
+ * líneas grabadas de un píxel, rótulos en monoespaciada de sistema, una sola
+ * tinta de señal —azul de instrumento— reservada para estado y acción, y una
+ * única ventana oscura: el registrador del banco. Sin fotografía: el lenguaje
+ * gráfico es el dibujo técnico.
+ */
+
+/* ═══════════════════════════════════════════════════
+   RESET MÍNIMO
+   ═══════════════════════════════════════════════════ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+img,
+svg,
+canvas,
+iframe {
+  display: block;
+  max-inline-size: 100%;
+}
+
+button,
+input,
+a {
+  font: inherit;
+  color: inherit;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+/* `hidden` gana siempre: hay componentes que ponen `display` propio y el
+   atributo tiene que poder apagarlos igualmente. */
+[hidden] {
+  display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════
+   TOKENS
+   ═══════════════════════════════════════════════════ */
+
+:root {
+  /* La mesa y el chasis. Gris aluminio neutro: ni papel (Concepto B) ni
+     grafito nocturno (Concepto A). El tercer polo es literalmente gris. */
+  --cc-ground: #b3b7b4;
+  --cc-chassis: #d8dad7;
+  --cc-face: #e9ebe8;
+  --cc-recess: #cdd0cd;
+
+  /* Tintas. */
+  --cc-ink: #171a1c;
+  --cc-ink-2: #40474b;
+  --cc-ink-3: #59615f;
+
+  /* Líneas grabadas. */
+  --cc-line: #b7bbb7;
+  --cc-line-soft: #c8cbc8;
+  --cc-line-strong: #171a1c;
+
+  /* La señal: un solo color funcional, azul de instrumento. Nunca decora:
+     marca estado o acción. */
+  --cc-signal: #2547d0;
+  --cc-signal-deep: #1c37a6;
+  --cc-on-signal: #ffffff;
+
+  /* La ventana oscura del registrador. */
+  --cc-display: #161b1d;
+  --cc-display-grid: #262e31;
+  --cc-display-line: #394245;
+  --cc-on-display: #e8ebe9;
+  --cc-on-display-2: #9aa5a3;
+  --cc-trace-stock: #97a1a0;
+  --cc-trace-tuned: #7da2ff;
+
+  /* Tipografía. Barlow —herencia DIN, la letra de la señalética industrial—
+     para todo el texto; la monoespaciada del sistema para los rótulos
+     grabados, como la serigrafía de un panel. */
+  --cc-font: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --cc-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas,
+    monospace;
+
+  --cc-mega: clamp(2.1rem, 1.35rem + 3.1vw, 3.6rem);
+  --cc-h2: clamp(1.45rem, 1.15rem + 1.2vw, 2.05rem);
+  --cc-h3: 1.15rem;
+  --cc-lead: clamp(1.05rem, 1rem + 0.25vw, 1.2rem);
+  --cc-body: 1rem;
+  --cc-small: 0.875rem;
+  --cc-micro: 0.6875rem;
+
+  /* Métrica del chasis. */
+  --cc-pad: clamp(1rem, 0.6rem + 1.8vw, 2rem);
+  --cc-gutter: clamp(0.75rem, 2vw, 1.5rem);
+  --cc-radius: 2px;
+
+  --cc-fast: 140ms;
+  --cc-ease: cubic-bezier(0.3, 0, 0.2, 1);
+}
+
+/* ═══════════════════════════════════════════════════
+   BASE
+   ═══════════════════════════════════════════════════ */
+
+body {
+  background-color: var(--cc-ground);
+  color: var(--cc-ink);
+  font-family: var(--cc-font);
+  font-size: var(--cc-body);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  padding: clamp(0.5rem, 2vw, 1.75rem);
+}
+
+::selection {
+  background-color: var(--cc-signal);
+  color: var(--cc-on-signal);
+}
+
+:focus-visible {
+  outline: 2px solid var(--cc-signal);
+  outline-offset: 2px;
+}
+
+.cc-display-zone :focus-visible {
+  outline-color: var(--cc-trace-tuned);
+}
+
+/* El chasis: la placa entera, con su canto. */
+.cc-chassis {
+  max-inline-size: 82rem;
+  margin-inline: auto;
+  background-color: var(--cc-chassis);
+  border: 1px solid var(--cc-line-strong);
+  border-radius: var(--cc-radius);
+}
+
+/* ═══════════════════════════════════════════════════
+   TIPOGRAFÍA
+   ═══════════════════════════════════════════════════ */
+
+.cc-mega {
+  font-size: var(--cc-mega);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.cc-h2 {
+  font-size: var(--cc-h2);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.cc-h3 {
+  font-size: var(--cc-h3);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.cc-lead {
+  font-size: var(--cc-lead);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.cc-small {
+  font-size: var(--cc-small);
+  line-height: 1.55;
+}
+
+.cc-muted {
+  color: var(--cc-ink-2);
+}
+
+/* El rótulo grabado: la serigrafía del panel. */
+.cc-micro {
+  font-family: var(--cc-mono);
+  font-size: var(--cc-micro);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cc-ink-3);
+}
+
+/* ═══════════════════════════════════════════════════
+   MÓDULOS
+   ═══════════════════════════════════════════════════ */
+
+/* Fila del chasis: cada sección es un módulo o un grupo de módulos. */
+.cc-row {
+  border-top: 1px solid var(--cc-line-strong);
+}
+
+.cc-row:first-child {
+  border-top: 0;
+}
+
+/* Retícula con junta de un píxel: la línea es el fondo que asoma. */
+.cc-grid {
+  display: grid;
+  gap: 1px;
+  background-color: var(--cc-line-strong);
+}
+
+.cc-module {
+  background-color: var(--cc-chassis);
+  padding: var(--cc-pad);
+  min-inline-size: 0;
+}
+
+.cc-module--face {
+  background-color: var(--cc-face);
+}
+
+.cc-module--recess {
+  background-color: var(--cc-recess);
+}
+
+/* Cabecera de módulo: rótulo a la izquierda, meta a la derecha. */
+.cc-modhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block-end: clamp(1rem, 0.6rem + 1.5vw, 1.75rem);
+}
+
+/* ═══════════════════════════════════════════════════
+   CONTROLES
+   ═══════════════════════════════════════════════════ */
+
+.cc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-block-size: 2.9rem;
+  padding-inline: 1.35rem;
+  border: 1px solid var(--cc-signal);
+  border-radius: var(--cc-radius);
+  background-color: var(--cc-signal);
+  color: var(--cc-on-signal);
+  font-weight: 600;
+  font-size: var(--cc-body);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--cc-fast) var(--cc-ease),
+    border-color var(--cc-fast) var(--cc-ease),
+    color var(--cc-fast) var(--cc-ease);
+}
+
+.cc-btn:hover {
+  background-color: var(--cc-signal-deep);
+  border-color: var(--cc-signal-deep);
+}
+
+.cc-btn--ghost {
+  background-color: transparent;
+  border-color: var(--cc-ink);
+  color: var(--cc-ink);
+}
+
+.cc-btn--ghost:hover {
+  background-color: var(--cc-ink);
+  color: var(--cc-face);
+}
+
+.cc-btn__icon {
+  inline-size: 1.05em;
+  block-size: 1.05em;
+  fill: currentColor;
+}
+
+.cc-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.cc-link:hover {
+  color: var(--cc-signal);
+}
+
+/* Chip de estado: texto + fondo. El color nunca es el único portador. */
+.cc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  font-family: var(--cc-mono);
+  font-size: var(--cc-micro);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.3em 0.7em;
+  border: 1px solid var(--cc-ink-3);
+  border-radius: var(--cc-radius);
+  color: var(--cc-ink-2);
+  white-space: nowrap;
+}
+
+.cc-chip--live {
+  border-color: var(--cc-signal);
+  background-color: var(--cc-signal);
+  color: var(--cc-on-signal);
+}
+
+/* Solo para lectores de pantalla. */
+.cc-sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════
+   COMPATIBILIDAD CON src/scripts/configurator.ts
+   (el script compartido habla el idioma de clases del sitio)
+   ═══════════════════════════════════════════════════ */
+
+.hidden {
+  display: none;
+}
+
+[data-configurator-frame] iframe {
+  inline-size: 100%;
+  border: 0;
+}
+
+[data-configurator] [role="status"] {
+  border-top: 1px solid var(--cc-line);
+  padding: 1.1rem var(--cc-pad);
+}
+
+[data-configurator] [role="status"] p {
+  font-size: var(--cc-small);
+  line-height: 1.55;
+  color: var(--cc-ink-2);
+  max-inline-size: 62ch;
+}
+
+[data-configurator] [role="status"] p:first-child {
+  font-weight: 600;
+  color: var(--cc-ink);
+}
+
+[data-configurator] [role="status"] p + p {
+  margin-block-start: 0.4rem;
+}

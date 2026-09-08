@@ -1,0 +1,126 @@
+---
+import BrandMark from "./BrandMark.astro";
+import { SERVICES, CONTACT, LEGAL_NOTICE, SITE } from "../config/site";
+
+/**
+ * Pie único. Marca, navegación, contacto y franja legal viven en la MISMA
+ * banda oscura: antes eran tres bloques encadenados y parecían tres pies.
+ * La separación interna se hace con líneas, no con cambios de fondo.
+ */
+const year = new Date().getFullYear();
+---
+
+<footer class="on-dark mt-auto bg-surface-inverse">
+  <div class="mx-auto max-w-(--container-wide) px-5 sm:px-8 lg:px-10 xl:px-14">
+    <!-- Bloque principal -->
+    <div class="grid gap-10 py-16 md:grid-cols-12 lg:gap-14">
+      <div class="md:col-span-4">
+        <BrandMark tone="inverse" size="lg" />
+        <p class="mt-5 max-w-xs text-sm leading-relaxed text-ink-inverse-muted">
+          Software de automoción: diagnóstico DTC, reprogramación, reparación
+          y clonación de centralitas para talleres y particulares.
+        </p>
+      </div>
+
+      <nav class="md:col-span-3" aria-labelledby="pie-servicios">
+        <h2 id="pie-servicios" class="label-technical text-ink-inverse-muted">
+          Servicios
+        </h2>
+        <ul class="mt-4 space-y-2.5">
+          <li>
+            <a
+              href="/servicios"
+              class="text-sm text-ink-inverse underline-offset-4 hover:text-accent-on-dark hover:underline"
+            >
+              Todos los servicios
+            </a>
+          </li>
+          {
+            SERVICES.map((service) => (
+              <li>
+                <a
+                  href={service.href}
+                  class="text-sm text-ink-inverse-muted underline-offset-4 hover:text-accent-on-dark hover:underline"
+                >
+                  {service.name}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <nav class="md:col-span-2" aria-labelledby="pie-empresa">
+        <h2 id="pie-empresa" class="label-technical text-ink-inverse-muted">
+          Empresa
+        </h2>
+        <ul class="mt-4 space-y-2.5">
+          <li>
+            <a
+              href="/como-trabajamos"
+              class="text-sm text-ink-inverse-muted underline-offset-4 hover:text-accent-on-dark hover:underline"
+            >
+              Cómo trabajamos
+            </a>
+          </li>
+          <li>
+            <a
+              href="/sobre-nosotros"
+              class="text-sm text-ink-inverse-muted underline-offset-4 hover:text-accent-on-dark hover:underline"
+            >
+              Sobre nosotros
+            </a>
+          </li>
+          <li>
+            <a
+              href="/servicios#preguntas"
+              class="text-sm text-ink-inverse-muted underline-offset-4 hover:text-accent-on-dark hover:underline"
+            >
+              Preguntas habituales
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="md:col-span-3">
+        <h2 class="label-technical text-ink-inverse-muted">Contacto</h2>
+        <p class="mt-4 text-sm text-ink-inverse-muted">
+          Escríbenos por WhatsApp con los datos del vehículo.
+        </p>
+        <a
+          href={`https://wa.me/${CONTACT.whatsappNumber}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="mt-3 inline-flex min-h-11 items-center gap-2 text-base font-medium text-ink-inverse underline-offset-4 hover:text-accent-on-dark hover:underline"
+        >
+          {CONTACT.whatsappDisplay}
+        </a>
+
+        <!-- La página de contacto va en esta columna, no en «Empresa»: quien
+             busca cómo escribir mira aquí, no en la lista de páginas. -->
+        <p>
+          <a
+            href="/contacto"
+            class="inline-flex min-h-11 items-center text-sm text-ink-inverse-muted underline-offset-4 hover:text-accent-on-dark hover:underline"
+          >
+            Plantillas por servicio
+          </a>
+        </p>
+      </div>
+    </div>
+
+    <!-- Franja legal: misma banda, separada por una línea -->
+    <div class="border-t border-border-inverse py-8">
+      <p class="max-w-3xl text-xs leading-relaxed text-ink-inverse-muted">
+        {LEGAL_NOTICE}
+      </p>
+
+      <div
+        class="mt-6 flex flex-wrap items-center justify-between gap-4 text-xs text-ink-inverse-muted"
+      >
+        <p>© {year} {SITE.name}</p>
+        <!-- Las páginas legales llegarán con los datos fiscales del cliente. -->
+      </div>
+    </div>
+  </div>
+</footer>

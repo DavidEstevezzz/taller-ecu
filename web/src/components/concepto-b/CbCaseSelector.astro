@@ -1,0 +1,764 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ *  «TU CASO» — la pieza que da identidad al Concepto B
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * El Concepto A **enseña**: dibuja una banda de entrega y deja que el
+ * visitante mire cómo cambia según el objetivo. Esta página **aconseja**: hace
+ * tres preguntas sobre el vehículo y sobre quien lo conduce, y responde con
+ * una de las cinco opciones del abanico, la plantilla de WhatsApp ya redactada
+ * y el vehículo correcto en la imagen. No es la misma interacción con otra
+ * apariencia: la de A describe el producto, la de aquí ordena una consulta.
+ *
+ * ── Qué hace cada capa ──────────────────────────────────────────────────
+ *
+ * **HTML.** Tres grupos de radios nativos dentro de tres `<fieldset>`. Es el
+ * control real: flechas para moverse dentro del grupo, tabulador entre grupos,
+ * y estado expuesto sin una línea de guion.
+ *
+ * **CSS.** Toda la lógica de qué se ve. Las reglas se GENERAN aquí abajo a
+ * partir de `COMBOS`, así que la tabla de decisión existe **una sola vez**: si
+ * alguien cambia el mapeo, cambian a la vez el CSS y los datos que lee el
+ * script. Sin JavaScript la página sigue respondiendo a cada elección.
+ *
+ * **JavaScript** (`src/scripts/concept-b-case.ts`). Lo que el CSS no puede
+ * hacer: redactar el mensaje de WhatsApp con las respuestas, enseñarlo tal
+ * cual antes de enviarlo, anunciar el cambio a un lector de pantalla, marcar
+ * la opción vigente en el índice y llevar la barra de estado. Nada de eso es
+ * necesario para leer ni para escribir: sin él, el enlace lleva la plantilla
+ * en blanco de siempre.
+ *
+ * ── Lo que esta pieza NO hace ───────────────────────────────────────────
+ *
+ * No calcula nada. No hay potencias, ni porcentajes, ni curvas, ni promesas.
+ * Ordena una consulta y dice por dónde se empieza, que es exactamente lo que
+ * podemos sostener antes de ver el vehículo. La frase de cierre —lo
+ * confirmamos con los datos— no es un descargo: es el estado real del caso.
+ */
+import { Image } from "astro:assets";
+
+import CbWhatsApp from "./CbWhatsApp.astro";
+import {
+  CONTACT,
+  REPRO_MESSAGE,
+  REPRO_MESSAGE_LINES,
+  REPRO_OPTIONS,
+} from "../../config/site";
+
+import cocheImage from "../../assets/photos/concepto-b-coche-barrido.jpg";
+import motoImage from "../../assets/photos/concepto-b-moto-curva.jpg";
+
+/* ── Las tres preguntas ────────────────────────────────────────────────
+   Tres, y no cinco: son las únicas cuyo cambio mueve la respuesta. */
+
+const VEHICULOS = [
+  { id: "coche", label: "Coche" },
+  { id: "moto", label: "Moto" },
+] as const;
+
+/**
+ * Cómo se usa el vehículo. `goal` es lo que se escribe en la plantilla de
+ * WhatsApp; está redactado en primera persona porque lo firma el visitante.
+ */
+const USOS = [
+  {
+    id: "diario",
+    label: "A diario",
+    hint: "Ciudad, trayectos cortos, atascos",
+    goal: "que responda mejor en el uso diario",
+  },
+  {
+    id: "carretera",
+    label: "Carretera",
+    hint: "Muchos kilómetros, autovía y puerto",
+    goal: "aprovecharlo mejor en carretera, cuidando el consumo",
+  },
+  {
+    id: "exigente",
+    label: "Conducción exigente",
+    hint: "Sé qué quiero notar y cuándo",
+    goal: "una entrega ajustada a mi forma de conducir",
+  },
+  {
+    id: "carga",
+    label: "Con carga",
+    hint: "Remolque, herramienta, vehículo cargado",
+    goal: "más empuje con el vehículo cargado o con remolque",
+  },
+] as const;
+
+const ESTADOS = [
+  { id: "serie", label: "De serie", mods: "no, está de serie" },
+  { id: "modificado", label: "Con modificaciones", mods: "sí" },
+  { id: "nolose", label: "No lo sé", mods: "no lo sé" },
+] as const;
+
+/**
+ * La tabla de decisión. Devuelve **por dónde empezar**, no un presupuesto.
+ *
+ * Reglas, en este orden:
+ *   moto            → Motos, sea cual sea el uso.
+ *   con modificaciones → Stage 2, que es la opción escrita para eso.
+ *   de serie        → según el uso.
+ *
+ * «No lo sé» se trata como «de serie» a propósito: es la respuesta honesta
+ * cuando no se sabe, y no puede empujar a nadie hacia la opción más cara.
+ */
+function decidir(vehiculo: string, estado: string, uso: string | null): string {
+  if (vehiculo === "moto") return "motos";
+  if (estado === "modificado") return "stage-2";
+  if (uso === null) return "none";
+  if (uso === "diario") return "stage-1";
+  if (uso === "carretera") return "consumo";
+  return "personalizada";
+}
+
+/** La segunda opción que también encaja. Depende solo de la primera. */
+const TAMBIEN: Record<string, string | null> = {
+  "stage-1": "consumo",
+  "stage-2": "personalizada",
+  personalizada: "stage-1",
+  consumo: "stage-1",
+  motos: null,
+};
+
+const OPCION_POR_ID = Object.fromEntries(
+  REPRO_OPTIONS.map((option) => [option.id, option])
+);
+
+/* ── Generación del CSS de estado ──────────────────────────────────────
+   Un `:has()` por combinación. Sale de la misma tabla que los datos del
+   script, así que no hay dos verdades que puedan separarse. */
+
+const USOS_CON_VACIO: (string | null)[] = [null, ...USOS.map((u) => u.id)];
+
+const reglas: string[] = [".cbc [data-cb-opt] { display: none; }"];
+
+for (const vehiculo of VEHICULOS) {
+  for (const estado of ESTADOS) {
+    for (const uso of USOS_CON_VACIO) {
+      const seleccion =
+        uso === null
+          ? ":not(:has(.cbc__radio--uso:checked))"
+          : `:has(#cb-u-${uso}:checked)`;
+
+      const selector =
+        `.cbc:has(#cb-v-${vehiculo.id}:checked)` +
+        `:has(#cb-e-${estado.id}:checked)${seleccion}`;
+
+      reglas.push(
+        `${selector} [data-cb-opt="${decidir(vehiculo.id, estado.id, uso)}"] { display: block; }`
+      );
+    }
+  }
+}
+
+/* Los huecos de la línea de estado: mismo mecanismo, un valor visible cada
+   vez. Sin JavaScript la línea se compone igual. */
+reglas.push(".cbc [data-cb-slot] { display: none; }");
+for (const vehiculo of VEHICULOS) {
+  reglas.push(
+    `.cbc:has(#cb-v-${vehiculo.id}:checked) [data-cb-slot="v-${vehiculo.id}"] { display: inline; }`
+  );
+}
+for (const uso of USOS) {
+  reglas.push(
+    `.cbc:has(#cb-u-${uso.id}:checked) [data-cb-slot="u-${uso.id}"] { display: inline; }`
+  );
+}
+reglas.push(
+  `.cbc:not(:has(.cbc__radio--uso:checked)) [data-cb-slot="u-none"] { display: inline; }`
+);
+for (const estado of ESTADOS) {
+  reglas.push(
+    `.cbc:has(#cb-e-${estado.id}:checked) [data-cb-slot="e-${estado.id}"] { display: inline; }`
+  );
+}
+
+/* La imagen del vehículo elegido. Las dos van servidas; el CSS enseña una. */
+reglas.push(
+  `.cbc:has(#cb-v-moto:checked) [data-cb-plate="coche"] { opacity: 0; }`,
+  `.cbc:has(#cb-v-moto:checked) [data-cb-plate="moto"] { opacity: 1; }`
+);
+
+const estadoCss = reglas.join("\n");
+
+/* ── Datos para el script ─────────────────────────────────────────────
+   Todo sale de `site.ts` o de las listas de arriba: el script no inventa
+   ni una palabra del mensaje. */
+
+const combos: Record<string, string> = {};
+for (const vehiculo of VEHICULOS) {
+  for (const estado of ESTADOS) {
+    for (const uso of USOS_CON_VACIO) {
+      combos[`${vehiculo.id}|${estado.id}|${uso ?? ""}`] = decidir(
+        vehiculo.id,
+        estado.id,
+        uso
+      );
+    }
+  }
+}
+
+const encabezado = REPRO_MESSAGE_LINES[0];
+
+const datos = {
+  base: [...REPRO_MESSAGE_LINES],
+  /* La variante de moto se deriva del encabezado de `site.ts`, no se copia:
+     si allí cambia la frase, aquí cambia sola. */
+  encabezados: {
+    coche: encabezado,
+    moto: `${encabezado.replace(/\.$/, "")} para una moto.`,
+  },
+  campos: {
+    mods: REPRO_MESSAGE_LINES.find((line) => line.startsWith("Modificaciones")),
+    objetivo: REPRO_MESSAGE_LINES.at(-1),
+  },
+  objetivos: Object.fromEntries(USOS.map((uso) => [uso.id, uso.goal])),
+  modificaciones: Object.fromEntries(
+    ESTADOS.map((estado) => [estado.id, estado.mods])
+  ),
+  nombres: Object.fromEntries(
+    REPRO_OPTIONS.map((option) => [option.id, option.name])
+  ),
+  combos,
+  numero: CONTACT.whatsappNumber,
+};
+---
+
+<style is:inline set:html={estadoCss}></style>
+
+<!--
+  Un `<div role="group">`, no un `<form>`: aquí no se envía nada a ningún sitio
+  —lo que sale de la página es el enlace de WhatsApp que el visitante decide
+  abrir— y un formulario sin destino solo añade la posibilidad de que una tecla
+  Intro recargue la página.
+-->
+<div
+  class="cbc"
+  role="group"
+  aria-labelledby="cb-caso-titulo"
+  data-cb-case
+  data-cb-datos={JSON.stringify(datos)}
+>
+  <div class="cbc__grid">
+    <div class="cbc__asks">
+      <fieldset class="cbc__ask">
+        <legend class="cb-micro cbc__legend">Qué conduces</legend>
+        <div class="cbc__chips">
+          {
+            VEHICULOS.map((vehiculo, i) => (
+              <label class="cbc__chip">
+                <input
+                  class="cbc__radio"
+                  type="radio"
+                  name="cb-vehiculo"
+                  id={`cb-v-${vehiculo.id}`}
+                  value={vehiculo.id}
+                  checked={i === 0}
+                />
+                <span class="cbc__chipText">{vehiculo.label}</span>
+              </label>
+            ))
+          }
+        </div>
+      </fieldset>
+
+      <fieldset class="cbc__ask">
+        <legend class="cb-micro cbc__legend">Cómo lo usas</legend>
+        <div class="cbc__chips cbc__chips--stack">
+          {
+            USOS.map((uso) => (
+              <label class="cbc__chip cbc__chip--wide">
+                <input
+                  class="cbc__radio cbc__radio--uso"
+                  type="radio"
+                  name="cb-uso"
+                  id={`cb-u-${uso.id}`}
+                  value={uso.id}
+                />
+                <span class="cbc__chipText">
+                  {uso.label}
+                  <span class="cbc__chipHint">{uso.hint}</span>
+                </span>
+              </label>
+            ))
+          }
+        </div>
+      </fieldset>
+
+      <fieldset class="cbc__ask">
+        <legend class="cb-micro cbc__legend">Qué lleva montado</legend>
+        <div class="cbc__chips">
+          {
+            ESTADOS.map((estado, i) => (
+              <label class="cbc__chip">
+                <input
+                  class="cbc__radio"
+                  type="radio"
+                  name="cb-estado"
+                  id={`cb-e-${estado.id}`}
+                  value={estado.id}
+                  checked={i === 0}
+                />
+                <span class="cbc__chipText">{estado.label}</span>
+              </label>
+            ))
+          }
+        </div>
+      </fieldset>
+    </div>
+
+    <!--
+      El vehículo elegido. No es decoración: es la única confirmación visual
+      de que la página ha entendido la primera respuesta. Las dos imágenes van
+      servidas y el CSS funde de una a otra.
+    -->
+    <figure class="cbc__plate">
+      <div class="cbc__plateFrame">
+        <Image
+          src={cocheImage}
+          alt="Un coche circulando de día por una carretera, captado con barrido: la carrocería nítida y el entorno movido"
+          widths={[480, 720, 1080]}
+          sizes="(min-width: 64rem) 32rem, 100vw"
+          class="cbc__plateImg"
+          data-cb-plate="coche"
+          loading="lazy"
+        />
+        <Image
+          src={motoImage}
+          alt="Una moto inclinada en una curva de carretera de montaña, con el piloto con casco integral"
+          widths={[480, 720, 1080]}
+          sizes="(min-width: 64rem) 32rem, 100vw"
+          class="cbc__plateImg"
+          data-cb-plate="moto"
+          loading="lazy"
+        />
+      </div>
+      <figcaption class="cb-micro cb-muted cbc__plateCap">
+        Imagen de referencia. No es un trabajo del taller.
+      </figcaption>
+    </figure>
+  </div>
+
+  <!-- ── La respuesta ───────────────────────────────────────────────── -->
+  <div class="cbc__out">
+    <p class="cbc__build">
+      <span class="cbc__buildLabel cb-micro">Lo que has elegido</span>
+      <span class="cbc__buildLine">
+        <span class="cbc__token" data-cb-token>
+          {
+            VEHICULOS.map((vehiculo) => (
+              <span data-cb-slot={`v-${vehiculo.id}`}>{vehiculo.label}</span>
+            ))
+          }
+        </span>
+        <span class="cbc__buildSep" aria-hidden="true">/</span>
+        <span class="cbc__token" data-cb-token>
+          <span data-cb-slot="u-none">Sin elegir</span>
+          {USOS.map((uso) => <span data-cb-slot={`u-${uso.id}`}>{uso.label}</span>)}
+        </span>
+        <span class="cbc__buildSep" aria-hidden="true">/</span>
+        <span class="cbc__token" data-cb-token>
+          {
+            ESTADOS.map((estado) => (
+              <span data-cb-slot={`e-${estado.id}`}>{estado.label}</span>
+            ))
+          }
+        </span>
+      </span>
+    </p>
+
+    <div class="cbc__outBody">
+      <div class="cbc__panels">
+        <div class="cbc__panel" data-cb-opt="none">
+          <h3 class="cb-h3 cbc__panelTitle">Elige cómo lo usas</h3>
+          <p class="cb-lead cb-muted cbc__panelBody">
+            Con esas tres respuestas te decimos por cuál de las cinco opciones
+            tiene sentido empezar, y te dejamos el mensaje escrito.
+          </p>
+        </div>
+
+        {
+          REPRO_OPTIONS.map((option) => {
+            const tambien = TAMBIEN[option.id];
+            const otra = tambien ? OPCION_POR_ID[tambien] : null;
+
+            return (
+              <div class="cbc__panel" data-cb-opt={option.id}>
+                <p class="cb-micro cb-muted">Por aquí se empieza</p>
+                {/* Encabezado de verdad: quien navega por encabezados tiene
+                    que encontrar el nombre de la opción. Los paneles ocultos van
+                    con `display: none` y no ensucian el árbol. */}
+                <h3 class="cbc__panelTitle cb-h2">{option.name}</h3>
+                <p class="cbc__panelBody cb-lead">{option.body}</p>
+                {otra && (
+                  <p class="cbc__also cb-muted">
+                    También encaja: <strong>{otra.name}</strong>. Lo vemos con los
+                    datos del vehículo.
+                  </p>
+                )}
+              </div>
+            );
+          })
+        }
+      </div>
+
+      <div class="cbc__side">
+        <div class="cbc__act">
+          <CbWhatsApp
+            class="cbc__send"
+            label="Escribir con estos datos"
+            message={REPRO_MESSAGE}
+            data-cb-link
+          />
+          <p class="cbc__actNote cb-muted">
+            Se abre WhatsApp con el mensaje empezado. Puedes cambiarlo antes de
+            enviarlo.
+          </p>
+        </div>
+
+        <!-- La vista previa nace oculta: sin JavaScript no habría nada que
+             previsualizar y un recuadro vacío sería peor que ninguno. -->
+        <div class="cbc__preview" data-cb-preview hidden>
+          <p class="cb-micro cb-muted">Se enviará esto</p>
+          <pre class="cbc__previewText" data-cb-previewText></pre>
+        </div>
+      </div>
+    </div>
+
+    <p class="cb-sr" role="status" aria-live="polite" data-cb-status></p>
+  </div>
+
+  <!-- El abanico completo, siempre legible: la elección no esconde el resto -->
+  <div class="cbc__index">
+    <p class="cb-micro cb-muted cbc__indexTitle">Las cinco opciones</p>
+    <ul class="cbc__indexList">
+      {
+        REPRO_OPTIONS.map((option) => (
+          <li class="cbc__indexItem" data-cb-mark={option.id}>
+            <span class="cbc__indexName">{option.name}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</div>
+
+<script>
+  import "../../scripts/concept-b-case";
+</script>
+
+<style>
+  .cbc {
+    display: grid;
+    gap: clamp(2rem, 1rem + 3vw, 3.5rem);
+  }
+
+  .cbc__grid {
+    display: grid;
+    gap: clamp(1.75rem, 1rem + 3vw, 3rem);
+  }
+
+  .cbc__asks {
+    display: grid;
+    gap: 1.75rem;
+    align-content: start;
+  }
+
+  .cbc__legend {
+    color: var(--cb-ink-2);
+    margin-bottom: 0.75rem;
+  }
+
+  .cbc__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .cbc__chips--stack {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  @media (min-width: 40rem) {
+    .cbc__chips--stack {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* El control. El radio real está ahí, enfocable; lo que se ve es la
+     etiqueta, que ocupa toda la superficie pulsable. */
+  .cbc__chip {
+    position: relative;
+    display: flex;
+  }
+
+  .cbc__radio {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 1rem;
+    inline-size: 1px;
+    block-size: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .cbc__chipText {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.15rem;
+    min-height: 3rem;
+    inline-size: 100%;
+    padding: 0.6rem 1.1rem;
+    border: 1px solid var(--cb-line-strong);
+    background-color: transparent;
+    font-size: var(--cb-small);
+    font-weight: 600;
+    font-variation-settings: "wdth" 104;
+    cursor: pointer;
+    transition:
+      background-color var(--cb-fast) var(--cb-ease),
+      color var(--cb-fast) var(--cb-ease),
+      border-color var(--cb-fast) var(--cb-ease);
+  }
+
+  .cbc__chip--wide .cbc__chipText {
+    padding-block: 0.7rem;
+  }
+
+  .cbc__chipHint {
+    font-size: 0.8125rem;
+    font-weight: 400;
+    font-variation-settings: "wdth" 96;
+    color: var(--cb-ink-2);
+    transition: color var(--cb-fast) var(--cb-ease);
+  }
+
+  .cbc__chipText:hover {
+    border-color: var(--cb-ink);
+  }
+
+  /* Estado elegido: relleno de tinta. Sin color, y por tanto legible para
+     quien no distingue colores; el peso y el fondo ya lo dicen. */
+  .cbc__radio:checked + .cbc__chipText {
+    background-color: var(--cb-ink);
+    border-color: var(--cb-ink);
+    color: var(--cb-paper);
+  }
+
+  .cbc__radio:checked + .cbc__chipText .cbc__chipHint {
+    color: color-mix(in srgb, var(--cb-paper) 74%, transparent);
+  }
+
+  .cbc__radio:focus-visible + .cbc__chipText {
+    outline: 2px solid var(--cb-ink);
+    outline-offset: 3px;
+  }
+
+  /* ── La lámina del vehículo ── */
+
+  .cbc__plate {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 0.6rem;
+    align-content: start;
+  }
+
+  .cbc__plateFrame {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background-color: var(--cb-paper-3);
+  }
+
+  .cbc__plateImg {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    transition: opacity var(--cb-slow) var(--cb-ease);
+  }
+
+  .cbc__plateImg[data-cb-plate="coche"] {
+    object-position: 50% 58%;
+    opacity: 1;
+  }
+
+  .cbc__plateImg[data-cb-plate="moto"] {
+    object-position: 50% 48%;
+    opacity: 0;
+  }
+
+  .cbc__plateCap {
+    letter-spacing: 0.14em;
+  }
+
+  /* ── La respuesta ── */
+
+  .cbc__out {
+    display: grid;
+    gap: 1.5rem;
+    border-top: 2px solid var(--cb-ink);
+    padding-top: clamp(1.5rem, 1rem + 2vw, 2.5rem);
+  }
+
+  /* La respuesta ocupa el ancho entero: el texto a la izquierda y lo que hay
+     que hacer con él —el botón y lo que se va a enviar— a la derecha. Puesto
+     todo en una columna dejaba media página vacía y alargaba la sección. */
+  .cbc__outBody {
+    display: grid;
+    gap: 1.75rem;
+  }
+
+  .cbc__build {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .cbc__buildLabel {
+    color: var(--cb-ink-2);
+  }
+
+  /* La línea de estado. Es el elemento tipográfico que la página usa como
+     firma: anchura máxima, versalitas y las tres respuestas separadas por
+     barras, como el código de una versión. */
+  .cbc__buildLine {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35em;
+    font-size: clamp(1.3rem, 0.95rem + 1.6vw, 2.3rem);
+    font-weight: 800;
+    font-variation-settings: "wdth" 122;
+    letter-spacing: -0.015em;
+    line-height: 1.05;
+    text-transform: uppercase;
+  }
+
+  .cbc__buildSep {
+    color: var(--cb-line-strong);
+    font-weight: 400;
+  }
+
+  .cbc__token {
+    transition: font-variation-settings var(--cb-fast) var(--cb-ease);
+  }
+
+  .cbc__panels {
+    display: grid;
+  }
+
+  .cbc__panel {
+    grid-area: 1 / 1;
+    max-width: 46em;
+  }
+
+  .cbc__panelTitle {
+    margin-top: 0.35rem;
+  }
+
+  .cbc__panelBody {
+    margin-top: 0.9rem;
+  }
+
+  .cbc__also {
+    margin-top: 0.9rem;
+    font-size: var(--cb-small);
+  }
+
+  .cbc__also strong {
+    font-weight: 700;
+    color: var(--cb-ink);
+  }
+
+  .cbc__side {
+    display: grid;
+    gap: 1.25rem;
+    align-content: start;
+  }
+
+  .cbc__act {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.9rem 1.25rem;
+  }
+
+  .cbc__actNote {
+    font-size: var(--cb-small);
+    max-width: 26em;
+  }
+
+  .cbc__preview {
+    border: 1px solid var(--cb-line);
+    background-color: var(--cb-paper-2);
+    padding: 1rem 1.15rem;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .cbc__previewText {
+    margin: 0;
+    font-family: inherit;
+    font-size: var(--cb-small);
+    font-variation-settings: "wdth" 96;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  /* ── El índice de opciones ── */
+
+  .cbc__index {
+    display: grid;
+    gap: 0.75rem;
+    border-top: 1px solid var(--cb-line);
+    padding-top: 1.25rem;
+  }
+
+  .cbc__indexList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.5rem;
+  }
+
+  .cbc__indexItem {
+    font-size: var(--cb-small);
+    font-weight: 600;
+    font-variation-settings: "wdth" 100;
+    color: var(--cb-ink-2);
+  }
+
+  /* Marcado por el script: sin JavaScript es un listado, no un estado. */
+  .cbc__indexItem[data-cb-current] {
+    color: var(--cb-ink);
+  }
+
+  .cbc__indexItem[data-cb-current] .cbc__indexName {
+    box-shadow: inset 0 -0.5em 0 var(--cb-paper-3);
+  }
+
+  @media (min-width: 64rem) {
+    .cbc__grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 32rem);
+      align-items: stretch;
+    }
+
+    .cbc__plateFrame {
+      aspect-ratio: auto;
+      block-size: 100%;
+      min-block-size: 24rem;
+    }
+
+    .cbc__outBody {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
+      gap: clamp(2rem, 1rem + 3vw, 4rem);
+      align-items: start;
+    }
+  }
+</style>

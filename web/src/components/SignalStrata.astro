@@ -1,0 +1,463 @@
+---
+/**
+ * El corte estratigráfico — la firma de /sobre-nosotros.
+ *
+ * Cada página tiene su dibujo y ninguno se repite: la portada despieza la
+ * pieza, los servicios dibujan la capa sobre la que actúan, /como-trabajamos
+ * traza el mazo de una consulta. Aquí lo que hay que dibujar no es una
+ * centralita: es **por qué hace falta oficio para encontrar una avería**, que
+ * es lo único que una página sobre nosotros puede demostrar sin inventarse
+ * nada.
+ *
+ * Qué dibuja, y por qué:
+ *
+ * - **Un solo conductor de cobre que cruza el dibujo de lado a lado.** Es el
+ *   síntoma: entra igual que siempre —el coche va mal— y sale por el otro
+ *   extremo. No cambia de forma en todo el recorrido, y ésa es la idea.
+ * - **Cuatro generaciones de electrónica, de izquierda a derecha.** El eje
+ *   horizontal es tiempo, y por eso los rótulos de los extremos dicen «antes»
+ *   y «hoy» en lugar de una fecha: **no hay ninguna fecha en el dibujo**, como
+ *   no hay ninguna cifra en ningún otro del sitio.
+ * - **Cada generación añade una capa**, dibujada como una barra más en la
+ *   pila. La nueva va marcada; las heredadas, en grafito. No es una lista de
+ *   tecnologías: es la cuenta de sitios donde puede estar la causa.
+ * - **El conductor baja hasta la capa más profunda de cada generación** y
+ *   vuelve a subir. Cada zambullida es más honda que la anterior, y ese perfil
+ *   descendente es el argumento entero de la página: lo que ha cambiado no es
+ *   el síntoma, es a qué profundidad está la respuesta.
+ * - **Ni una cifra, ni un código, ni una referencia, ni un valor de
+ *   calibración.** Misma regla que el resto de los dibujos.
+ *
+ * Por qué NO usa `iso.ts`: como `CaseHarness`, esto no es una pieza vista en
+ * el espacio, es una sección. Dibujarla en dimétrica la disfrazaría de
+ * centralita y diría algo que no es. La geometría se calcula igual —abajo, en
+ * este mismo archivo—, que es la regla que sí aplica: ningún `d="…"` a mano.
+ *
+ * Por qué los rótulos van en HTML y no dentro del SVG: a 375 px el dibujo se
+ * escala a poco más de un tercio, y ahí dentro un rótulo de cuatro palabras o
+ * no se lee o hay que hincharlo hasta romper la composición. Fuera son texto
+ * de verdad: se leen, se seleccionan, se traducen y se reordenan solos en una
+ * columna. Cada uno lleva su propia marca de profundidad, así que la
+ * correspondencia con la pila se sigue viendo cuando la rejilla deja de estar
+ * alineada bajo el dibujo.
+ *
+ * Coste en JavaScript: **cero**. El conductor se traza con el mecanismo
+ * `.trace-draw` que ya existe en tokens.css y que mide `motion.ts`; las capas
+ * y los contactos entran con un `transition-delay` calculado aquí. Sin
+ * JavaScript, o con movimiento reducido, el corte se sirve entero.
+ */
+interface Props {
+  id?: string;
+  class?: string;
+}
+
+const { id = "signal-strata", class: className = "" } = Astro.props;
+
+/*
+ * Las cuatro generaciones.
+ *
+ * Viven aquí, y no en site.ts, por la misma razón que los pasos de
+ * `FaultTrace` o las capas de `IdentityTransfer`: están atadas a la geometría
+ * —una generación es una columna y una capa más—, y separarlas del dibujo
+ * solo conseguiría que alguien añadiera una quinta sin ver que no cabe.
+ *
+ * Ninguna afirma una fecha, un fabricante ni un protocolo. Describen lo que
+ * cualquiera que haya abierto un coche de cada época ha visto: que hay un
+ * sitio más donde mirar.
+ */
+const ERAS = [
+  {
+    title: "Un testigo encendido",
+    body: "La electrónica avisaba de que algo iba mal. Encontrar el qué era trabajo de taller, no de la unidad.",
+  },
+  {
+    title: "Códigos guardados",
+    body: "La unidad empieza a registrar lo que ha fallado. El equipo de diagnosis lo lee, pero un código señala un síntoma, no una causa.",
+  },
+  {
+    title: "Mapas y calibración",
+    body: "Cómo se comporta el motor pasa a depender de lo que hay escrito en la memoria. El mismo hardware, dos comportamientos distintos.",
+  },
+  {
+    title: "Unidades que se hablan",
+    body: "Ya no hay una centralita, sino varias comunicándose. El fallo puede estar en otra, o en lo que se dicen entre ellas.",
+  },
+] as const;
+
+/* ── Geometría ─────────────────────────────────────────────
+   Sección plana. El eje horizontal es tiempo; el vertical, profundidad.
+   Las columnas ocupan el ancho completo del viewBox para que la rejilla de
+   rótulos de abajo caiga exactamente bajo su pila. */
+const W = 1000;
+const H = 270;
+
+const COL_W = W / ERAS.length;
+
+/*
+ * Las capas se alinean a la IZQUIERDA de su columna, no al centro: así el
+ * borde izquierdo de cada pila cae exactamente sobre el de su rótulo, que
+ * empieza donde empieza su celda de la rejilla. Centradas quedaban medio
+ * ancho corridas y la correspondencia había que adivinarla.
+ */
+const layerX = (i: number): number => COL_W * i;
+/** Centro de la pila: por donde baja el conductor y donde va el contacto. */
+const cx = (i: number): number => layerX(i) + LAYER_W / 2;
+
+/** El raíl por el que entra el síntoma, arriba del todo. */
+const RAIL_Y = 60;
+
+/** Las capas: misma altura, mismo paso, todas colgando del mismo techo. */
+const LAYER_TOP = 108;
+const LAYER_H = 26;
+const LAYER_PITCH = 38;
+const LAYER_W = 190;
+
+const layerY = (depth: number): number => LAYER_TOP + depth * LAYER_PITCH;
+
+/** Hasta dónde baja el conductor en la generación i: al centro de su capa nueva. */
+const diveY = (i: number): number => layerY(i) + LAYER_H / 2;
+
+/** Media anchura de la zambullida. Más estrecha que la capa: la atraviesa. */
+const DIVE_W = 34;
+
+/**
+ * Los vértices del conductor, en orden: raíl, cuatro zambullidas y salida.
+ * Solo tramos horizontales y verticales, como una pista de verdad.
+ *
+ * Se guardan como puntos, y no directamente como `d`, porque de ellos salen
+ * dos cosas: el trazado y **los tiempos**. Ver más abajo.
+ */
+function conductorPoints(): [number, number][] {
+  const points: [number, number][] = [[0, RAIL_Y]];
+
+  ERAS.forEach((_, i) => {
+    const c = cx(i);
+    const y = diveY(i);
+    points.push(
+      [c - DIVE_W, RAIL_Y],
+      [c - DIVE_W, y],
+      [c + DIVE_W, y],
+      [c + DIVE_W, RAIL_Y]
+    );
+  });
+
+  points.push([W, RAIL_Y]);
+  return points;
+}
+
+const POINTS = conductorPoints();
+
+const CONDUCTOR = POINTS.map(
+  ([x, y], i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`
+).join(" ");
+
+/** Longitud acumulada del recorrido en cada vértice. */
+const LENGTHS = POINTS.reduce<number[]>((acc, point, i) => {
+  if (i === 0) return [0];
+  const previous = POINTS[i - 1]!;
+  return [
+    ...acc,
+    acc[i - 1]! + Math.hypot(point[0] - previous[0], point[1] - previous[1]),
+  ];
+}, []);
+
+const TOTAL = LENGTHS[LENGTHS.length - 1]!;
+
+/* ── Cadencia ──────────────────────────────────────────────
+   El trazo tarda `--duration-draw` en cruzar el dibujo, pero **no avanza a
+   velocidad constante**: `--ease-out` lo lanza rápido y lo posa despacio. Con
+   retardos repartidos a partes iguales, las capas aparecían tarde y la línea
+   llegaba antes que ellas. Así que los tiempos se calculan invirtiendo la
+   curva: dónde está el trazo, y no cuánto ha durado. */
+
+/** Los dos valores de `cubic-bezier(0.2, 0, 0, 1)`, la curva de tokens.css. */
+const EASE = { x1: 0.2, x2: 0, y1: 0, y2: 1 } as const;
+
+/** El polinomio de Bézier de un eje, con los extremos fijos en 0 y 1. */
+const bezier = (a: number, b: number, t: number): number =>
+  3 * (1 - t) * (1 - t) * t * a + 3 * (1 - t) * t * t * b + t * t * t;
+
+/** Debe coincidir con `--duration-draw`. */
+const DRAW_MS = 1600;
+
+/**
+ * En qué milisegundo alcanza el trazo la fracción `p` del recorrido.
+ * La curva es monótona, así que basta con partir por la mitad unas cuantas
+ * veces para invertirla.
+ */
+function timeAt(p: number): number {
+  let lo = 0;
+  let hi = 1;
+
+  for (let i = 0; i < 32; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (bezier(EASE.y1, EASE.y2, mid) < p) lo = mid;
+    else hi = mid;
+  }
+
+  return Math.round(bezier(EASE.x1, EASE.x2, (lo + hi) / 2) * DRAW_MS);
+}
+
+/** El vértice donde el conductor empieza a bajar hacia la generación i. */
+const enterIndex = (i: number): number => 1 + 4 * i;
+
+/**
+ * Las capas entran un poco antes de que la línea llegue a ellas: si aparecen
+ * a la vez, parece que las dibuja el trazo, y lo que se cuenta es lo
+ * contrario —ya estaban ahí, y hay que bajar a mirarlas—.
+ */
+const layerDelay = (i: number): number =>
+  Math.max(0, timeAt(LENGTHS[enterIndex(i)]! / TOTAL) - 200);
+
+/** El contacto se marca justo después de que el trazo pase por su punto. */
+const contactDelay = (i: number): number => {
+  const middle =
+    (LENGTHS[enterIndex(i) + 1]! + LENGTHS[enterIndex(i) + 2]!) / 2;
+  return timeAt(middle / TOTAL) + 60;
+};
+
+const titleId = `${id}-t`;
+const descId = `${id}-d`;
+---
+
+<figure class={`ss ${className}`}>
+  <!-- El eje del tiempo, en texto de verdad y fuera del dibujo. -->
+  <div class="ss-axis" aria-hidden="true">
+    <span class="label-technical">Antes</span>
+    <span class="ss-axis-rule"></span>
+    <span class="label-technical">Hoy</span>
+  </div>
+
+  <svg
+    viewBox={`0 0 ${W} ${H}`}
+    class="ss-svg"
+    role="img"
+    aria-labelledby={`${titleId} ${descId}`}
+    fill="none"
+  >
+    <title id={titleId}>
+      Cada generación de electrónica añade un sitio más donde puede estar la
+      causa
+    </title>
+    <desc id={descId}>
+      Sección: una señal recorre cuatro generaciones de electrónica del
+      automóvil, de las más antiguas a las actuales. En cada una baja hasta la
+      capa más profunda, y esa capa está cada vez más abajo. Las cuatro
+      generaciones están descritas en el texto que sigue al dibujo.
+    </desc>
+
+    <!-- ── Las pilas de capas ──
+         Una columna por generación; en cada una, las capas heredadas en
+         grafito y la nueva marcada en cobre. -->
+    {
+      ERAS.map((_, i) => (
+        <g class="ss-stack">
+          {Array.from({ length: i + 1 }, (_, depth) => (
+            <rect
+              x={layerX(i)}
+              y={layerY(depth)}
+              width={LAYER_W}
+              height={LAYER_H}
+              rx="2"
+              class={`ss-layer ${depth === i ? "is-new" : ""} ss-part`}
+              style={`--delay: ${layerDelay(i)}ms`}
+            />
+          ))}
+        </g>
+      ))
+    }
+
+    <!-- ── El conductor: el síntoma, que no cambia ──
+         Un solo trazo. Se dibuja con el mecanismo compartido de tokens.css:
+         sin JavaScript se sirve ya trazado. -->
+    <path d={CONDUCTOR} class="ss-wire trace-draw"></path>
+
+    <!-- ── Los contactos: dónde hay que mirar en cada generación ── -->
+    {
+      ERAS.map((_, i) => (
+        <g class="ss-contact" style={`--delay: ${contactDelay(i)}ms`}>
+          <circle cx={cx(i)} cy={diveY(i)} r="9" class="ss-pad-ring" />
+          <circle cx={cx(i)} cy={diveY(i)} r="4" class="ss-pad-core" />
+        </g>
+      ))
+    }
+  </svg>
+
+  <!-- ── Los rótulos: texto real, alineado bajo su pila a partir de 1024 px ── -->
+  <ol class="ss-eras">
+    {
+      ERAS.map((era, i) => (
+        <li class="ss-era">
+          {/* La marca de profundidad: tantas rayas como capas tiene esa
+              generación. Es lo que mantiene legible la correspondencia con el
+              dibujo cuando la rejilla se reordena en una columna. */}
+          <span class="ss-depth" aria-hidden="true">
+            {Array.from({ length: i + 1 }, (_, depth) => (
+              <span class={`ss-depth-mark ${depth === i ? "is-new" : ""}`} />
+            ))}
+          </span>
+          <h3 class="ss-era-title">{era.title}</h3>
+          <p class="ss-era-body">{era.body}</p>
+        </li>
+      ))
+    }
+  </ol>
+</figure>
+
+<style>
+  .ss {
+    margin: 0;
+  }
+
+  .ss-axis {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  .ss-axis-rule {
+    flex: 1;
+    block-size: 1px;
+    background-image: linear-gradient(
+      to right,
+      var(--color-border-inverse) 50%,
+      transparent 50%
+    );
+    background-size: 10px 1px;
+  }
+
+  .ss-svg {
+    display: block;
+    margin-top: 1.25rem;
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  /* A 375 px cada píxel de ancho cuenta, igual que en los demás dibujos. */
+  @media (max-width: 47.9375rem) {
+    .ss-svg {
+      inline-size: calc(100% + 2.5rem);
+      margin-inline: -1.25rem;
+    }
+  }
+
+  /* ── Materiales ──────────────────────────────────────────
+     Grafito lo que sostiene, cobre lo que conduce. */
+  .ss-layer {
+    fill: var(--jm-graphite-800);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.25;
+  }
+
+  .ss-layer.is-new {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-copper-400);
+    stroke-width: 1.75;
+  }
+
+  .ss-wire {
+    stroke: var(--jm-copper-400);
+    stroke-width: 3.25;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .ss-pad-ring {
+    fill: var(--color-surface-bench);
+    stroke: var(--jm-copper-300);
+    stroke-width: 2;
+  }
+
+  .ss-pad-core {
+    fill: var(--jm-copper-300);
+  }
+
+  /* ── Los rótulos ─────────────────────────────────────────
+     Cuatro columnas solo cuando caben; antes, dos; en móvil, una. */
+  .ss-eras {
+    display: grid;
+    gap: 2.25rem 0;
+    margin: 2.5rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 40rem) {
+    .ss-eras {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .ss-eras {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .ss-era {
+    padding-inline-end: 1.75rem;
+  }
+
+  .ss-depth {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-block-end: 0.9rem;
+  }
+
+  .ss-depth-mark {
+    inline-size: 1.75rem;
+    block-size: 3px;
+    background-color: var(--jm-graphite-600);
+  }
+
+  .ss-depth-mark.is-new {
+    background-color: var(--color-accent-on-dark);
+  }
+
+  .ss-era-title {
+    font-family: var(--font-display);
+    font-size: var(--text-h3);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: var(--color-ink-inverse);
+  }
+
+  .ss-era-body {
+    margin-block-start: 0.6rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  /* ── Coreografía ─────────────────────────────────────────
+     Una sola pasada al entrar en pantalla, colgada de `.js-anim`: sin
+     JavaScript y con movimiento reducido el corte se sirve completo. */
+  :global(.js-anim) .ss-part {
+    opacity: 0;
+    transition: opacity var(--duration-slow) var(--ease-out);
+    transition-delay: var(--delay);
+  }
+
+  :global(.js-anim) .ss-svg.is-visible .ss-part {
+    opacity: 1;
+  }
+
+  :global(.js-anim) .ss-contact {
+    opacity: 0;
+    transform: scale(0.6);
+    transform-origin: center;
+    transform-box: fill-box;
+    transition:
+      opacity var(--duration-base) var(--ease-out),
+      transform var(--duration-slow) var(--ease-settle);
+    transition-delay: var(--delay);
+  }
+
+  :global(.js-anim) .ss-svg.is-visible .ss-contact {
+    opacity: 1;
+    transform: none;
+  }
+</style>

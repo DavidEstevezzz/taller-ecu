@@ -1,0 +1,171 @@
+---
+import { PROCESS_STEPS } from "../config/site";
+
+/**
+ * Cómo trabajamos, como una pista de placa.
+ *
+ * Los cuatro pasos SÍ son una secuencia —un mensaje que entra, se valora, se
+ * trabaja y vuelve—, así que aquí numerar dice algo verdadero. Por eso los
+ * servicios perdieron su 01/02/03 y este bloque lo conserva: el número tiene
+ * que significar algo o sobra.
+ *
+ * La pista y el pad de contacto son el mismo motivo del logotipo. Se dibuja
+ * de izquierda a derecha al entrar en pantalla, una sola vez: no es un efecto
+ * en bucle. Sin JavaScript la pista se sirve ya trazada (ver tokens.css).
+ *
+ * Desde que existe /como-trabajamos, este bloque es **el resumen**, no la
+ * explicación: cuatro pasos para situarse, y un enlace a la página que cuenta
+ * el recorrido entero. Se conserva en la portada y en /servicios porque ahí
+ * hace falta un resumen; lo que no se hace es repetirlo con más palabras.
+ */
+interface Props {
+  eyebrow?: string;
+  title: string;
+  intro?: string;
+  /** El bloque se usa sobre grafito en la portada y en /servicios. */
+  headingId: string;
+  /** Ancla de la sección. La cabecera enlaza a /servicios#proceso. */
+  id?: string;
+}
+
+const {
+  eyebrow = "Cómo trabajamos",
+  title,
+  intro,
+  headingId,
+  id,
+} = Astro.props;
+
+/* Centros de columna en unidades del viewBox: 12,5 % / 37,5 % / 62,5 % / 87,5 %
+   de 1200, que es exactamente donde caen las cuatro columnas de la rejilla. */
+const PADS = [150, 450, 750, 1050];
+
+const bus =
+  "M -60 48 L 96 48 L 118 26 L 1082 26 L 1104 48 L 1260 48";
+const stubs = PADS.map((x) => `M ${x} 26 L ${x} 66`).join(" ");
+---
+
+<section
+  id={id}
+  class="on-dark relative scroll-mt-32 overflow-hidden bg-surface-inverse"
+  aria-labelledby={headingId}
+>
+  <div
+    class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+  >
+    <div class="reveal max-w-3xl">
+      <p class="label-technical text-accent-on-dark">{eyebrow}</p>
+      <h2
+        id={headingId}
+        class="display mt-5 text-h2 text-ink-inverse text-balance"
+      >
+        {title}
+      </h2>
+      {
+        intro && (
+          <p class="mt-5 max-w-(--container-prose) text-lead text-ink-inverse-muted">
+            {intro}
+          </p>
+        )
+      }
+    </div>
+
+    <!-- La pista solo se dibuja donde hay cuatro columnas que seguir. -->
+    <svg
+      viewBox="0 0 1200 66"
+      class="mt-16 hidden w-full lg:block"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path d={bus} class="bus trace-draw" />
+      <path d={stubs} class="stub trace-draw" style="transition-delay: 700ms" />
+      {
+        PADS.map((x, i) => (
+          <g class="pad-group" style={`--step: ${i}`}>
+            <circle cx={x} cy="26" r="9" class="pad-ring" />
+            <circle cx={x} cy="26" r="4" class="pad-core" />
+          </g>
+        ))
+      }
+    </svg>
+
+    <ol
+      class="mt-10 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:mt-0 lg:grid-cols-4"
+    >
+      {
+        PROCESS_STEPS.map((step, i) => (
+          <li
+            class="reveal relative border-l border-border-inverse pl-5 lg:border-l-0 lg:pl-0"
+            style={`--reveal-delay: ${i * 90}ms`}
+          >
+            <span
+              class="absolute -left-px top-1 h-8 w-0.5 bg-accent-on-dark lg:hidden"
+              aria-hidden="true"
+            />
+            <span class="label-technical text-accent-on-dark">
+              {step.index}
+            </span>
+            <h3 class="display mt-3 text-h3 text-ink-inverse">{step.title}</h3>
+            <p class="mt-2.5 text-sm leading-relaxed text-ink-inverse-muted">
+              {step.body}
+            </p>
+          </li>
+        ))
+      }
+    </ol>
+
+    <p class="reveal mt-12 lg:mt-14">
+      <a
+        href="/como-trabajamos"
+        class="group inline-flex min-h-11 items-center gap-2 text-sm font-medium text-accent-on-dark underline-offset-4 hover:underline"
+      >
+        Ver el recorrido completo de una consulta
+        <span
+          class="transition-transform duration-(--duration-base) group-hover:translate-x-1"
+          aria-hidden="true">→</span
+        >
+      </a>
+    </p>
+  </div>
+</section>
+
+<style>
+  .bus {
+    stroke: var(--color-accent-on-dark);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .stub {
+    stroke: color-mix(in srgb, var(--color-accent-on-dark) 55%, transparent);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .pad-ring {
+    fill: var(--color-surface-inverse);
+    stroke: var(--color-accent-on-dark);
+    stroke-width: 2.5;
+  }
+
+  .pad-core {
+    fill: var(--color-accent-on-dark);
+  }
+
+  :global(.js-anim) .pad-group {
+    opacity: 0;
+    transform: scale(0.4);
+    transform-origin: center;
+    transform-box: fill-box;
+    transition:
+      opacity var(--duration-base) var(--ease-out),
+      transform var(--duration-slow) var(--ease-settle);
+    transition-delay: calc(300ms + var(--step) * 260ms);
+  }
+
+  :global(.js-anim) svg:has(.trace-draw.is-visible) .pad-group {
+    opacity: 1;
+    transform: scale(1);
+  }
+</style>

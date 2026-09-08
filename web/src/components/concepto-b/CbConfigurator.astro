@@ -1,0 +1,185 @@
+---
+/**
+ * Configurador de Tuning-shop.com, con la piel del Concepto B.
+ *
+ * **La lógica no se duplica**: el marco lo sigue montando
+ * `src/scripts/configurator.ts`, el mismo archivo que usa el sitio, y sigue
+ * respetando lo que no se negocia (`docs/embed-tuning-shop.md`):
+ *
+ *   - no se carga hasta que el visitante lo pide, así que hasta entonces no
+ *     hay ni una petición ni una cookie de tercero;
+ *   - la atribución al proveedor está a la vista en los tres estados;
+ *   - el aviso de que sus cifras son orientativas vive en NUESTRO HTML;
+ *   - sin JavaScript se dice que no funciona y se ofrece la salida que sí.
+ *
+ * Lo único propio de este archivo son los contenedores y sus estilos: los
+ * `data-*` que el script busca son exactamente los mismos.
+ */
+import { TUNING_SHOP } from "../../config/embeds";
+import CbWhatsApp from "./CbWhatsApp.astro";
+import { REPRO_MESSAGE } from "../../config/site";
+
+interface Props {
+  headingId: string;
+}
+
+const { headingId } = Astro.props;
+---
+
+<div
+  class="cbx"
+  data-configurator
+  data-src={TUNING_SHOP.src}
+  data-min-height={String(TUNING_SHOP.minHeight)}
+>
+  <div class="cbx__head">
+    <p class="cb-micro cb-muted">Herramienta del proveedor</p>
+    <p class="cb-micro cb-muted">
+      <a
+        class="cb-link"
+        href={TUNING_SHOP.providerUrl}
+        target="_blank"
+        rel="noopener noreferrer">{TUNING_SHOP.provider}</a
+      >
+    </p>
+  </div>
+
+  <div class="cbx__intro" data-configurator-intro>
+    <h3 id={headingId} class="cb-h3 cbx__title">
+      Busca tu marca, tu modelo y tu motor
+    </h3>
+    <p class="cb-muted cbx__text">
+      {TUNING_SHOP.provider} mantiene un listado con cifras generales por
+      motorización. Sirve para hacerse una idea del orden de magnitud; no es una
+      respuesta sobre tu vehículo.
+    </p>
+    <p class="cbx__cookie cb-muted">
+      Al abrirlo se carga contenido suyo, que deja una cookie propia de sesión.
+      Hasta que lo abres no sale ni una petición.
+    </p>
+
+    <a
+      class="cb-btn cbx__open"
+      href={TUNING_SHOP.src}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-configurator-open
+    >
+      Calcular mejora
+    </a>
+  </div>
+
+  <!--
+    `hidden` como CLASE, no como atributo: el script compartido revela el
+    hueco con `classList.remove("hidden")`. La clase está definida en
+    `concept-b.css`, junto al resto de la compatibilidad con ese archivo.
+  -->
+  <div class="cbx__frame hidden" data-configurator-frame></div>
+
+  <div class="cbx__warn">
+    <p class="cbx__warnText">
+      <strong>Son cifras del proveedor, no nuestras.</strong> Describen una
+      motorización en general, no tu vehículo: no son mediciones nuestras, no
+      confirman compatibilidad y no son un presupuesto.
+    </p>
+  </div>
+</div>
+
+<noscript>
+  <div class="cbx__noscript">
+    <p>
+      El configurador de {TUNING_SHOP.provider} necesita JavaScript: sus listas y
+      sus resultados se generan en el navegador. Puedes <a
+        class="cb-link"
+        href={TUNING_SHOP.src}
+        target="_blank"
+        rel="noopener noreferrer">abrirlo en su propia web</a
+      >, o contarnos el vehículo y te decimos qué se puede hacer.
+    </p>
+    <CbWhatsApp class="cbx__nsCta" label="Escribir por WhatsApp" message={REPRO_MESSAGE} />
+  </div>
+</noscript>
+
+<script>
+  import "../../scripts/configurator";
+</script>
+
+<style>
+  .cbx {
+    border: 1px solid var(--cb-line-void);
+  }
+
+  .cbx__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    min-height: 3rem;
+    border-bottom: 1px solid var(--cb-line-void);
+    padding: 0.5rem clamp(1rem, 3vw, 1.75rem);
+  }
+
+  /* La atribución al proveedor es un enlace suelto, no una palabra dentro de
+     una frase: necesita área pulsable propia (24 px es el mínimo). */
+  .cbx__head .cb-link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 1.75rem;
+  }
+
+  .cbx__intro {
+    padding: clamp(2rem, 1rem + 4vw, 3.5rem) clamp(1rem, 3vw, 1.75rem);
+    max-width: 44em;
+  }
+
+  .cbx__text {
+    margin-top: 0.75rem;
+    font-size: var(--cb-small);
+    line-height: 1.6;
+  }
+
+  .cbx__cookie {
+    margin-top: 1.25rem;
+    border-left: 2px solid var(--cb-line-void);
+    padding-left: 0.9rem;
+    font-size: var(--cb-small);
+    line-height: 1.55;
+  }
+
+  .cbx__open {
+    margin-top: 1.75rem;
+  }
+
+  /* El aviso ocupa el ancho de la caja —si no, su línea superior se corta a
+     media caja y parece un error de maquetación— y es el texto de dentro el
+     que se limita a una medida legible. */
+  .cbx__warn {
+    border-top: 1px solid var(--cb-line-void);
+    padding: 1.25rem clamp(1rem, 3vw, 1.75rem);
+  }
+
+  .cbx__warnText {
+    font-size: var(--cb-small);
+    line-height: 1.6;
+    color: var(--cb-on-void-2);
+    max-width: 62ch;
+  }
+
+  .cbx__warn strong {
+    color: var(--cb-on-void);
+    font-weight: 700;
+  }
+
+  .cbx__noscript {
+    margin-top: 1.5rem;
+    border: 1px solid var(--cb-line-void);
+    padding: 1.5rem clamp(1rem, 3vw, 1.75rem);
+    font-size: var(--cb-small);
+    line-height: 1.6;
+    color: var(--cb-on-void-2);
+  }
+
+  .cbx__nsCta {
+    margin-top: 1.25rem;
+  }
+</style>

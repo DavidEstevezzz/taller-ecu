@@ -1,0 +1,158 @@
+---
+import WhatsAppLink from "./WhatsAppLink.astro";
+import { CONTACT } from "../config/site";
+
+/**
+ * Constructor del primer mensaje.
+ *
+ * El sitio ya precarga plantillas de WhatsApp desde varios botones. Aquí hace
+ * falta algo más, y por una razón concreta de esta página: **el visitante no
+ * siempre puede saber lo que le pediríamos**. Puede no tener las referencias,
+ * puede no distinguir la unidad original de la de sustitución y puede no haber
+ * recibido todavía la de recambio. Una plantilla fija con campos que no puede
+ * rellenar le dice, sin querer, que todavía no le toca escribir; y sí le toca.
+ *
+ * Así que la plantilla base pide solo lo que cualquiera sabe, y el visitante
+ * añade lo que tenga. De paso ve exactamente qué va a enviar antes de enviarlo,
+ * que es la parte que convierte un botón de WhatsApp en una consulta útil.
+ *
+ * Cómo degrada: sin JavaScript no hay casillas —el bloque de controles nace
+ * con `hidden` y lo abre el script—, pero la vista previa y el enlace están
+ * ahí, con la plantilla base completa y funcional. Nada esencial depende del
+ * JavaScript: son seis líneas de texto y un enlace normal.
+ */
+interface Props {
+  /** Líneas que siempre van en el mensaje. */
+  base: readonly string[];
+  /** Líneas que el visitante añade si le corresponden. */
+  options: readonly { id: string; label: string; line: string }[];
+  legend?: string;
+  label?: string;
+  class?: string;
+}
+
+const {
+  base,
+  options,
+  legend = "Añade lo que tengas a mano",
+  label = "Abrir WhatsApp con este mensaje",
+  class: className = "",
+} = Astro.props;
+
+const baseText = base.join("\n");
+---
+
+<div
+  class={`mb ${className}`}
+  data-msg-builder
+  data-msg-number={CONTACT.whatsappNumber}
+  data-msg-base={JSON.stringify(base)}
+>
+  <!-- Nace cerrado: sin JavaScript no hay casillas que no hagan nada. -->
+  <div data-msg-controls hidden>
+    <fieldset class="mb-fieldset">
+      <legend class="label-technical mb-legend">{legend}</legend>
+      <ul class="mb-options">
+        {
+          options.map((option) => (
+            <li>
+              <label class="mb-option">
+                <input
+                  type="checkbox"
+                  class="mb-checkbox"
+                  data-msg-option
+                  value={option.line}
+                />
+                <span>{option.label}</span>
+              </label>
+            </li>
+          ))
+        }
+      </ul>
+    </fieldset>
+  </div>
+
+  <div class="mb-preview">
+    <p class="label-technical mb-preview-title">Tu mensaje</p>
+    <pre class="mb-text" data-msg-preview>{baseText}</pre>
+  </div>
+
+  <p class="sr-only" data-msg-status aria-live="polite"></p>
+
+  <WhatsAppLink size="lg" label={label} message={baseText} data-msg-link />
+</div>
+
+<style>
+  .mb {
+    display: grid;
+    gap: 1.75rem;
+    justify-items: start;
+  }
+
+  .mb-fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .mb-legend {
+    padding: 0;
+    color: var(--color-ink-muted);
+  }
+
+  .mb-options {
+    margin-top: 1rem;
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .mb-option {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.85rem;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--color-ink);
+  }
+
+  .mb-checkbox {
+    inline-size: 1.15rem;
+    block-size: 1.15rem;
+    flex-shrink: 0;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+  }
+
+  .mb-preview {
+    width: 100%;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+  }
+
+  .mb-preview-title {
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.9rem 1.25rem;
+    color: var(--color-ink-muted);
+  }
+
+  /*
+   * El mensaje, en la tipografía de datos del sitio. Es lo que se va a
+   * enviar, literalmente: no una ilustración de lo que se enviaría.
+   */
+  .mb-text {
+    margin: 0;
+    padding: 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.85;
+    color: var(--color-ink);
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+</style>
+
+<script>
+  import "../scripts/message-builder";
+</script>
