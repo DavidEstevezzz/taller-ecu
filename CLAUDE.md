@@ -132,8 +132,75 @@ API del panel (`/api/admin/*`): **implementada y probada localmente, sin despleg
 - **El script CLI de alta del primer OWNER ya se ha probado contra PostgreSQL** en el
   entorno desechable de integración: crea el usuario con hash Argon2id y email
   normalizado. Funciona tanto con terminal interactivo como con entrada por tubería.
-- **El frontend existe pero no está desplegado**: portada pública, login y
-  resumen del panel. Ver `docs/frontend-design.md`.
+- **El frontend existe pero no está desplegado**: portada pública, hub de
+  servicios, **las cuatro páginas de servicio** —diagnóstico DTC, reprogramación,
+  reparación de ECU y clonación de ECU—, **`/como-trabajamos`**,
+  **`/contacto`**, **`/sobre-nosotros`**, login y resumen del panel. Ver
+  `docs/frontend-design.md`.
+- **`/servicios/reprogramacion` se reconstruyó entera con otra perspectiva.**
+  Dejó de explicar qué ocurre dentro de la centralita y pasó a responder **qué
+  se nota al volante**: hero fotográfico con un coche en movimiento, una banda
+  de entrega interactiva (`PowerBand.astro`), un acordeón de cinco opciones
+  (`ServiceOptions.astro`), el enlace al calculador externo y un cierre en
+  cobre con los cuatro datos que hay que enviar. **Es la primera página oscura
+  de principio a fin**, y el experimento de una posible evolución visual del
+  resto del sitio: no la extiendas a otras páginas sin acordarlo. Reglas
+  propias en `docs/frontend-design.md` §5.15–§5.17 y pruebas en
+  `web/test/repro.test.ts`.
+- **Existe un CONCEPTO B de reprogramación, y no es una página del sitio.**
+  Vive en `/conceptos/reprogramacion-b` y es una **maqueta interna** para
+  comparar dos direcciones artísticas de la misma página. `noindex, nofollow`,
+  fuera del sitemap, `Disallow` en robots, sin canónica y **sin un solo enlace
+  desde ninguna página pública**: solo se llega escribiendo la URL. No la
+  publiques, no la enlaces, no la des por adoptada y no la describas como parte
+  de la web. Tiene **sistema visual propio y aislado** —no importa Tailwind ni
+  `tokens.css`, no usa `PublicLayout`, `SiteHeader`, `SiteFooter` ni
+  `BrandMark`, y añade la única dependencia nueva del frontend,
+  `@fontsource-variable/archivo`—, de modo que nada de lo que se pruebe ahí
+  puede cambiar el aspecto del sitio. Razonamiento, referencias y pendientes en
+  `docs/concepto-b-reprogramacion.md`; reglas vigiladas por
+  `web/test/concept-b.test.ts`.
+- **Existe también un CONCEPTO C**, en `/conceptos/reprogramacion-c`, con las
+  mismas reglas que el B: maqueta interna, `noindex, nofollow`, fuera del
+  sitemap, `Disallow` en robots, sin canónica y sin un solo enlace desde
+  ninguna página pública. Dirección propia —«Banco»: chasis gris de
+  instrumento, sin fotografía, dibujo técnico, azul de señal y un pedal que
+  se mantiene pisado mientras un registrador traza la entrega— y sistema
+  visual aislado: hoja y carcasa propias, sin Tailwind ni `tokens.css`, sin
+  nada del B, y una dependencia nueva (`@fontsource/barlow`) que solo carga
+  su carcasa. Razonamiento en `docs/concepto-c-reprogramacion.md`; reglas
+  vigiladas por `web/test/concept-c.test.ts`. No lo publiques, no lo enlaces
+  y no lo describas como parte de la web.
+- **El abanico comercial de reprogramación está SIN CONFIRMAR.** «Stage 1»,
+  «Stage 2», «orientada al consumo» y «motos» son una propuesta de cómo nombrar
+  el servicio, no contenido verificado: cada una tiene su línea en
+  `REPRO_OPTIONS_TO_CONFIRM` (`web/src/config/site.ts`). No las describas como
+  servicios confirmados. **La gestión de cambio automático NO se publica.**
+- **`/servicios/diagnostico-dtc` vende capacidad de resolución, no
+  procedimiento.** Se rehízo entera por eso: la primera versión documentaba el
+  método —anatomía de un código, cinco tramos del análisis, quince líneas de
+  escenario, la plantilla de WhatsApp a la vista— en 1.396 palabras. Hoy tiene
+  **cinco secciones y 320 palabras visibles**, y la regla que la ordena es *una
+  necesidad, una interacción, un abanico de soluciones y una llamada a la
+  acción*. Si vas a añadirle algo, tiene que servir a una de las cuatro; si no,
+  no entra. Hay pruebas de la densidad en `web/test/dtc.test.ts`.
+- **Sigue escrita en términos de método, no de alcance.** El cliente ha
+  confirmado que su especialidad es el software —«repros, DTCs, etc.»— y la web
+  lo posiciona así, pero la página **no afirma qué marcas, qué gestiones, qué
+  herramientas ni qué tipos de caso se atienden**. No la describas como un
+  catálogo de capacidades confirmadas. Ver `docs/site-architecture.md` §11.
+- **PENDIENTE DE INTEGRACIÓN, y no se toca en la fase de frontend:** el
+  clasificador del agente de WhatsApp y el CHECK de `requests.service_type`
+  siguen teniendo cuatro valores (`REPROGRAMMING`, `ECU_REPAIR`, `ECU_CLONING`,
+  `OTHER`). Una consulta de diagnosis entra hoy como `OTHER`. La plantilla de
+  WhatsApp de la página identifica el servicio en lenguaje natural, así que el
+  orquestador puede extraerlo sin cambios; **añadir un valor al enum es una
+  migración y una revisión del workflow, y se acuerda aparte**.
+- **`/sobre-nosotros` es una maqueta para enseñar al cliente.** Todo lo que dice
+  sobre él —quién está al frente, los años de experiencia, los vehículos que se
+  atienden— es **provisional**: vive en `ABOUT` (`web/src/config/site.ts`),
+  marcado `PENDING_CLIENT_CONFIRMATION`, con el listado de lo que hay que
+  confirmar en `ABOUT_TO_CONFIRM`. No la describas como contenido confirmado.
 - Nada de esto está desplegado: no describas la API del panel como activa o en
   producción.
 
@@ -338,12 +405,44 @@ tokens propios. Sin SSR: `output: "static"`.
 - **La capa HTTP del panel es `web/src/lib/api/`**: base relativa `/api`,
   `credentials: "include"`, sin tokens en `localStorage`. No dupliques `fetch` en
   un componente.
-- **La web pública lleva ~2,4 kB de JavaScript en línea**, y ni una línea es
-  necesaria para leerla: `web/src/scripts/motion.ts` solo añade revelado al
-  entrar en pantalla, el trazado de la pista del proceso, el paralaje del
-  despiece y el marcado del índice de `/servicios`. **Sin librería de
-  animación**: IntersectionObserver y rAF bastan. Si añades una isla de React a
-  una página pública, justifica por qué.
+- **La web pública lleva ~2,9 kB de JavaScript en línea**, y ni una línea es
+  necesaria para leerla: `web/src/scripts/motion.ts` añade revelado al entrar en
+  pantalla, el trazado de la pista del proceso, el paralaje del despiece, el
+  cierre de los menús de la cabecera y el marcado del índice de `/servicios`.
+  Tres páginas añaden lo suyo, y solo en ellas:
+  `web/src/scripts/symptom-route.ts` (1,4 kB en `/servicios/diagnostico-dtc`)
+  traza el camino de la señal **cuando el visitante elige un caso** y enciende
+  la unidad al llegar; la elección en sí es un grupo de radios resuelto con CSS
+  y funciona sin él;
+  `web/src/scripts/fault-trace.ts` (1,4 kB en `/servicios/reparacion-ecu`)
+  conduce el paso a paso del recorrido por la placa **con el desplazamiento**, y
+  solo si hay JavaScript, no se ha pedido menos movimiento y caben dos columnas
+  (≥1024 px); `web/src/scripts/identity-transfer.ts` (1,4 kB) y
+  `web/src/scripts/message-builder.ts` (0,8 kB), en
+  `/servicios/clonacion-ecu`, conducen el traslado entre unidades **con
+  botones** y arman la plantilla de WhatsApp;
+  `web/src/scripts/power-band.ts` (1,5 kB en `/servicios/reprogramacion`)
+  **deforma** la curva de entrega de un objetivo a otro y la hace nacer sobre la
+  de partida al entrar en pantalla; el selector es un grupo de radios resuelto
+  con CSS y las cinco curvas van dibujadas en el HTML, así que sin él no falta
+  nada. Esa misma página lleva **dos scripts en línea de una línea larga cada
+  uno**: el que cierra la primera opción del acordeón por debajo de 768 px, y
+  nada más —el acordeón es `<details>` y se abre solo; el salto al configurador
+  es un ancla, y el desplazamiento suave lo pone `scroll-behavior` de
+  `tokens.css`—. **`/como-trabajamos`,
+  `/contacto` y `/sobre-nosotros` no añaden ni un byte**: el esquema de la primera se traza con el
+  mecanismo `.trace-draw` que ya existe, y en las dos el selector es un grupo de
+  radios resuelto con CSS. En `/contacto` eso incluye los conductores del cuadro
+  de conexiones, su encendido al enfocar una ruta (`:has()`) y el pulso al
+  cambiar de variante: todo CSS. En `/sobre-nosotros`, el corte estratigráfico
+  (`SignalStrata.astro`) se traza con ese mismo mecanismo `.trace-draw` y
+  calcula sus retardos invirtiendo la curva de la animación, en compilación.
+  Total por página: 2,9 kB en la portada, en `/servicios`, en
+  `/como-trabajamos`, en `/contacto` y en `/sobre-nosotros`; 4,4 kB en
+  diagnóstico; 4,3 kB en reparación; 5,0 kB en clonación; 4,4 kB en
+  reprogramación.
+  **Sin librería de animación**: IntersectionObserver, rAF y temporizadores
+  bastan. Si añades una isla de React a una página pública, justifica por qué.
 - **Nada que haya que leer puede empezar oculto.** El interruptor `js-anim` lo
   pone un script en línea del `<head>` y solo se activa si hay JavaScript **y**
   el visitante no ha pedido menos movimiento; todas las reglas que ocultan algo
@@ -351,18 +450,63 @@ tokens propios. Sin SSR: `output: "static"`.
   entera y visible. Está verificado con capturas reales en ambos modos.
 - **Los dibujos de centralita se calculan, no se escriben a mano.** La
   proyección vive en `web/src/lib/iso.ts` y la usan `EcuExploded.astro` (la
-  firma del hero) y `ServiceDiagram.astro` (uno por servicio). Si tocas la
-  geometría, tócala ahí: hay un solo sistema de ejes en todo el sitio.
+  firma del hero), `ServiceDiagram.astro` (uno por servicio),
+  `FaultTrace.astro` (el recorrido por la placa de `/servicios/reparacion-ecu`) e
+  `IdentityTransfer.astro` (el traslado entre dos unidades de
+  `/servicios/clonacion-ecu`).
+  Si tocas la geometría, tócala ahí: hay un solo sistema de ejes en todo el
+  sitio. **Las excepciones son cuatro**, y las cuatro calculan su geometría
+  igualmente: `CaseHarness.astro` (`/como-trabajamos`), que no dibuja una
+  centralita sino un esquema de cableado; `SignalStrata.astro`
+  (`/sobre-nosotros`), que dibuja una sección con cuatro generaciones de
+  electrónica; `SymptomRoute.astro` (`/servicios/diagnostico-dtc`), cuyo
+  campo de pistas es plano aunque la unidad a la que llegan sí use `iso.ts`; y
+  `PowerBand.astro` (`/servicios/reprogramacion`), que no dibuja ninguna
+  centralita sino dos curvas de entrega sobre un plano cartesiano.
+  **`MapLayer.astro` se retiró**: dibujaba la retícula de un mapa de
+  calibración para el hero de reprogramación, y esa página se rehízo alrededor
+  del vehículo. Está en el historial de Git.
 - **Ningún dibujo lleva cifras, códigos ni medidas.** Un mapa de calibración se
   representa como la retícula que es, sin escribir un solo valor: inventar datos
   técnicos está prohibido también en un SVG.
-- **Los tres servicios no se numeran.** Son alternativas, no una secuencia; se
+- **No se publica ningún código de avería concreto**, ni real ni «de ejemplo»,
+  en ninguna página. Qué significa un código depende del vehículo, de la unidad
+  y del contexto, así que escribir uno completo es afirmar algo que no podemos
+  sostener. `web/test/dtc.test.ts` recorre todo `web/src` y falla si aparece uno.
+- **Los servicios no se numeran.** Son alternativas, no una secuencia; se
   distinguen por la capa sobre la que actúan (`depth` en `site.ts`) y por su
   dibujo. El único 01–04 del sitio es el del proceso, que sí es una secuencia.
+  **Son cuatro y no son cuatro cosas del mismo tipo**: tres son intervenciones
+  sobre la unidad y la primera —el diagnóstico DTC— es el análisis que decide
+  cuál de las tres hace falta, o si no hace falta ninguna. Esa diferencia es el
+  campo `kind`, y `INTERVENTIONS` es la lista de las tres: las frases que
+  enumeran en qué puede acabar un caso usan esa lista, no `SERVICES`, porque un
+  diagnóstico no es un desenlace.
+  Las zonas del recorrido de `FaultTrace` tampoco se numeran: su orden es
+  geométrico —el que encuentra la señal saliendo del conector—, no un
+  procedimiento. Las capas de `IdentityTransfer`, igual: son la pila, no los
+  pasos de un trabajo.
 - **La cabecera solo enseña destinos que sean una página pública real.** Nada de
   anclas disfrazadas de página compitiendo en la barra principal. Lo decide el
   campo `page` de cada servicio en `site.ts`; las secciones internas viven en el
-  pie y en enlaces contextuales.
+  pie y en enlaces contextuales. Rellenar `page` es lo único que hay que hacer
+  al crear una página: cabecera, pie, tarjetas de la portada y enlaces laterales
+  se actualizan solos. **Desde que hay más de una página de servicio, la
+  barra las agrupa en un desplegable «Servicios»**: cuatro destinos más el botón
+  de WhatsApp no caben a 1024 px sin partir una etiqueta en dos líneas, y eso
+  rompe `--header-height`. Es un `<details>`, como el menú de móvil: funciona
+  sin JavaScript, va por teclado y no depende de `hover`, que en táctil no
+  existe. **Al lado del desplegable van las páginas de nivel 1**, hoy «Cómo
+  trabajamos», «Sobre nosotros» y «Contacto»; se añaden al array `PAGES` de
+  `SiteHeader.astro`. **Con esas tres la barra está llena a 1024 px** —caben
+  porque el relleno de los enlaces se aprieta entre 1024 y 1280—: la siguiente
+  habrá que agruparla bajo un desplegable, no encoger nombres. Lo que
+  nunca entra en la barra es un ancla: «Preguntas habituales» sigue siendo una
+  sección de `/servicios` y sigue viviendo en el pie y en el menú de móvil. **La comparación de rutas pasa siempre por
+  `web/src/lib/path.ts`**: con `build.format: "file"` el `pathname` trae el
+  `.html` en compilación, y compararlo en crudo funciona en `astro dev` y falla
+  en producción, que es como el `aria-current` de la cabecera estuvo muerto sin
+  que se notara.
 - **Una sola petición a terceros en toda la web pública**, y está declarada en
   `web/src/config/embeds.ts`: el configurador de Tuning-shop.com de
   `/servicios/reprogramacion`. Reglas que no se negocian: **no se carga hasta que
@@ -370,6 +514,11 @@ tokens propios. Sin SSR: `output: "static"`.
   se oculta, el aviso de que sus cifras son orientativas vive en NUESTRO HTML y no
   dentro del marco, y no se toca el DOM interior del marco. Si hace falta otra
   excepción, va en ese archivo y se documenta. Ver `docs/embed-tuning-shop.md`.
+  **El botón «Calcular mejora» (`CalcLink.astro`) NO enlaza fuera**: es un ancla
+  interna a `#configurador`, para no obligar a recorrer la página entera. Va en
+  el hero y en una pestaña lateral pegajosa. Si algún día se enlaza fuera de
+  verdad, `embeds.ts` explica por qué `tuning-shop.com/demo/` no vale como
+  destino y por qué `rel="noreferrer"` rompería el enlace.
 - **Las cifras del proveedor no se afirman nunca como propias.** No son
   mediciones nuestras, no salen de un banco, no confirman compatibilidad y no son
   un presupuesto. Tampoco se copian a nuestro HTML ni se generan páginas por
@@ -382,6 +531,24 @@ tokens propios. Sin SSR: `output: "static"`.
   backend real de `127.0.0.1:3000` por descuido.
 - **No inventes datos del cliente**: ni cifras, ni premios, ni plazos, ni precios,
   ni testimonios, ni dirección. Ver `docs/site-architecture.md` §11.
+- **Los datos provisionales sin confirmar viven en un solo objeto y no se
+  publican.** `CONTACT_PENDING_CONFIRMATION` (`web/src/config/site.ts`) guarda
+  hoy una dirección y un correo marcados `PENDING_CLIENT_CONFIRMATION`. Ninguna
+  página los importa, y `web/test/contact.test.ts` falla si aparecen en una
+  plantilla.
+- **`ABOUT` es el caso contrario, y la diferencia importa.** Es contenido
+  provisional que **sí se publica**, porque `/sobre-nosotros` es una maqueta
+  para que el cliente la corrija, y una maqueta que no se ve no se corrige. Lo
+  que nunca entra ahí: cifras de resultados, garantías, certificaciones,
+  maquinaria, instalaciones ni personas distintas del responsable. Cada dato
+  publicado tiene su línea en `ABOUT_TO_CONFIRM` diciendo de dónde sale, y
+  `web/test/about.test.ts` vigila las prohibiciones.
+- **Las plantillas de WhatsApp de `/contacto` son un contrato con el
+  orquestador.** Están en `CONTACT_ROUTES` y `CONTACT_HELP_ROUTE`, una por
+  servicio y variante (particular / taller). Su primera frase identifica el
+  servicio **en lenguaje natural**: nada de marcadores tipo
+  `SERVICE_TYPE=ECU_REPAIR`, que el visitante ve y borra. Todos los campos se
+  pueden dejar en blanco. Hay pruebas de las tres reglas.
 
 En desarrollo, `/api` se redirige al backend con el proxy de Vite, para que la
 cookie de sesión se comporte igual que en producción (mismo origen).

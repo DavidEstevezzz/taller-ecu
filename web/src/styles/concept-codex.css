@@ -1,0 +1,903 @@
+:root {
+  --cdx-void: #080b0e;
+  --cdx-carbon: #0d1217;
+  --cdx-surface: #121920;
+  --cdx-surface-raised: #1a232b;
+  --cdx-steel: #7f8b95;
+  --cdx-dim: #8f9aa3;
+  --cdx-muted: #b8c0c6;
+  --cdx-paper: #f2efe9;
+  --cdx-copper: #c66734;
+  --cdx-copper-deep: #9f4521;
+  --cdx-copper-bright: #f0a071;
+  --cdx-line: #2c3740;
+  --cdx-line-strong: #4e5a64;
+  --cdx-grid: #202a32;
+  --cdx-focus: #ffd2b6;
+  --cdx-display: "Barlow", sans-serif;
+  --cdx-body: "IBM Plex Sans", sans-serif;
+  --cdx-mono: "JetBrains Mono", monospace;
+  --cdx-wrap: 92rem;
+  --cdx-gutter: clamp(1.15rem, 3vw, 3.6rem);
+  --cdx-safe-start: max(var(--cdx-gutter), env(safe-area-inset-left));
+  --cdx-safe-end: max(var(--cdx-gutter), env(safe-area-inset-right));
+  --cdx-fast: 180ms;
+  --cdx-slow: 520ms;
+  --cdx-ease: cubic-bezier(.16, 1, .3, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-inline-size: 20rem;
+  scroll-behavior: smooth;
+  scroll-padding-block-start: 1rem;
+  background: var(--cdx-void);
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 75% 24%, rgb(198 103 52 / .07), transparent 24rem),
+    var(--cdx-carbon);
+  color: var(--cdx-paper);
+  font-family: var(--cdx-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body,
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body :where(h1, h2, h3, p, ul, ol, dl, dd, figure) {
+  margin: 0;
+}
+
+body :where(ul, ol) {
+  padding: 0;
+  list-style: none;
+}
+
+body :where(a) {
+  color: inherit;
+}
+
+body :where(img, svg) {
+  display: block;
+}
+
+body :where(button, a, label, summary) {
+  touch-action: manipulation;
+}
+
+body :where(:focus-visible) {
+  outline: 3px solid var(--cdx-focus);
+  outline-offset: 3px;
+}
+
+.cdx-sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.cdx-skip {
+  position: fixed;
+  inset-block-start: max(.8rem, env(safe-area-inset-top));
+  inset-inline-start: max(.8rem, env(safe-area-inset-left));
+  z-index: 100;
+  display: inline-flex;
+  min-block-size: 3rem;
+  align-items: center;
+  padding-inline: 1rem;
+  background: var(--cdx-paper);
+  color: var(--cdx-void);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-7rem);
+  transition: transform var(--cdx-fast) var(--cdx-ease);
+}
+
+.cdx-skip:focus-visible {
+  transform: translateY(0);
+}
+
+.cdx-wrap {
+  inline-size: min(100%, var(--cdx-wrap));
+  margin-inline: auto;
+  padding-inline-start: var(--cdx-safe-start);
+  padding-inline-end: var(--cdx-safe-end);
+}
+
+.cdx-kicker {
+  color: var(--cdx-copper-bright);
+  font-family: var(--cdx-mono);
+  font-size: .7rem;
+  font-weight: 500;
+  letter-spacing: .14em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+/* ── Cabecera ─────────────────────────────────────────────── */
+
+.cdx-header {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 30;
+  display: flex;
+  min-block-size: 5rem;
+  align-items: center;
+  gap: clamp(.8rem, 2vw, 2rem);
+  border-block-end: 1px solid rgb(242 239 233 / .16);
+  padding-inline-start: var(--cdx-safe-start);
+  padding-inline-end: var(--cdx-safe-end);
+  background: linear-gradient(to bottom, rgb(8 11 14 / .88), rgb(8 11 14 / .35));
+}
+
+.cdx-brand {
+  display: inline-flex;
+  min-block-size: 3rem;
+  align-items: center;
+  gap: .7rem;
+  flex: none;
+  text-decoration: none;
+}
+
+.cdx-brand__mark {
+  display: inline-flex;
+  inline-size: 2.35rem;
+  block-size: 2.35rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cdx-copper-bright);
+  color: var(--cdx-copper-bright);
+  font-family: var(--cdx-display);
+  font-size: .95rem;
+  font-weight: 800;
+  letter-spacing: -.04em;
+  transform: skewX(-7deg);
+}
+
+.cdx-brand__name {
+  font-family: var(--cdx-display);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.cdx-header__tag {
+  display: none;
+  color: var(--cdx-dim);
+  font-family: var(--cdx-mono);
+  font-size: .62rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.cdx-nav {
+  display: none;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 2rem);
+  margin-inline-start: auto;
+}
+
+.cdx-nav a {
+  display: inline-flex;
+  min-block-size: 2.75rem;
+  align-items: center;
+  border-block-end: 1px solid transparent;
+  color: var(--cdx-muted);
+  font-size: .82rem;
+  text-decoration: none;
+  transition: border-color var(--cdx-fast) var(--cdx-ease), color var(--cdx-fast) var(--cdx-ease);
+}
+
+.cdx-nav a:hover {
+  border-color: var(--cdx-copper-bright);
+  color: var(--cdx-paper);
+}
+
+.cdx-header__cta {
+  margin-inline-start: auto;
+  min-block-size: 2.75rem;
+  padding-inline: 1rem;
+  font-size: .82rem;
+}
+
+/* ── Botones: dos planos y presión real ───────────────────── */
+
+.cdx-btn {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  min-block-size: 3.15rem;
+  align-items: center;
+  justify-content: center;
+  gap: .65rem;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  padding: .75rem 1.25rem;
+  cursor: pointer;
+  font-family: var(--cdx-body);
+  font-size: .92rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 4px 0 var(--cdx-copper-deep), 0 13px 28px rgb(0 0 0 / .28);
+  transition: transform var(--cdx-fast) var(--cdx-ease), box-shadow var(--cdx-fast) var(--cdx-ease), border-color var(--cdx-fast) var(--cdx-ease), background-color var(--cdx-fast) var(--cdx-ease), color var(--cdx-fast) var(--cdx-ease);
+}
+
+.cdx-btn::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  z-index: -1;
+  border: 1px solid rgb(255 255 255 / .13);
+  pointer-events: none;
+}
+
+.cdx-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--cdx-copper-deep), 0 18px 34px rgb(0 0 0 / .34);
+}
+
+.cdx-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--cdx-copper-deep), 0 8px 18px rgb(0 0 0 / .28);
+}
+
+.cdx-btn--primary {
+  background: linear-gradient(135deg, var(--cdx-copper-bright), var(--cdx-copper));
+  color: var(--cdx-void);
+}
+
+.cdx-btn--quiet {
+  border-color: var(--cdx-line-strong);
+  background: rgb(13 18 23 / .82);
+  color: var(--cdx-paper);
+  box-shadow: 0 4px 0 #050709, 0 13px 28px rgb(0 0 0 / .24);
+}
+
+.cdx-btn--quiet:hover {
+  border-color: var(--cdx-copper-bright);
+  background: var(--cdx-surface-raised);
+  box-shadow: 0 6px 0 #050709, 0 18px 34px rgb(0 0 0 / .32);
+}
+
+.cdx-btn--onCopper {
+  background: var(--cdx-void);
+  color: var(--cdx-paper);
+  box-shadow: 0 4px 0 rgb(242 239 233 / .34), 0 13px 28px rgb(52 16 4 / .2);
+}
+
+.cdx-btn--onCopper:hover {
+  box-shadow: 0 6px 0 rgb(242 239 233 / .34), 0 18px 34px rgb(52 16 4 / .24);
+}
+
+.cdx-btn__icon {
+  inline-size: 1.05rem;
+  block-size: 1.05rem;
+  flex: none;
+}
+
+/* ── Hero ─────────────────────────────────────────────────── */
+
+.cdx-hero {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  min-block-size: max(46rem, 92svh);
+  align-items: end;
+  overflow: hidden;
+  background: var(--cdx-void);
+}
+
+.cdx-hero__image {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  object-position: 62% 50%;
+  filter: saturate(.9) contrast(1.04);
+}
+
+.cdx-hero__wash {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    linear-gradient(to top, var(--cdx-void) 0, rgb(8 11 14 / .94) 14%, rgb(8 11 14 / .55) 48%, rgb(8 11 14 / .4) 100%),
+    linear-gradient(to right, rgb(8 11 14 / .98) 0, rgb(8 11 14 / .86) 42%, rgb(8 11 14 / .14) 76%, rgb(8 11 14 / .35) 100%);
+}
+
+/*
+  Insets FISICOS a propósito. Con `writing-mode: vertical-rl` las propiedades
+  lógicas cambian de eje sobre el propio elemento: `inset-block-start` pasaba a
+  ser «desde la derecha» y `inset-inline-end` «desde abajo», así que la palabra
+  nacía descolgada y se recortaba por arriba y por abajo.
+
+  El tamaño se elige para que las catorce letras quepan dentro del hero: si la
+  firma no se lee entera, deja de ser una firma y es un borrón.
+*/
+.cdx-hero__side {
+  position: absolute;
+  right: clamp(.35rem, 1.4vw, 1.75rem);
+  top: 50%;
+  z-index: -1;
+  color: transparent;
+  font-family: var(--cdx-display);
+  font-size: clamp(2.4rem, 5.2vw, 5.5rem);
+  font-weight: 800;
+  letter-spacing: .015em;
+  line-height: 1;
+  text-transform: uppercase;
+  -webkit-text-stroke: 1px rgb(242 239 233 / .22);
+  writing-mode: vertical-rl;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.cdx-hero__content {
+  inline-size: min(100%, var(--cdx-wrap));
+  margin-inline: auto;
+  padding-block: 8.5rem 14rem;
+  padding-inline-start: var(--cdx-safe-start);
+  padding-inline-end: var(--cdx-safe-end);
+}
+
+.cdx-hero__kicker {
+  max-inline-size: 34rem;
+}
+
+.cdx-hero h1 {
+  max-inline-size: 9.5ch;
+  margin-block-start: 1.1rem;
+  font-family: var(--cdx-display);
+  font-size: clamp(3rem, 11vw, 8.4rem);
+  font-weight: 800;
+  letter-spacing: -.06em;
+  line-height: .81;
+  text-transform: uppercase;
+  text-shadow: 0 18px 60px rgb(0 0 0 / .48);
+}
+
+.cdx-hero h1 em {
+  position: relative;
+  color: var(--cdx-copper-bright);
+  font-style: italic;
+  font-weight: 800;
+}
+
+/*
+  El `em` ocupa dos líneas, así que un subrayado absoluto colgado de él caía
+  fuera del titular y tachaba el párrafo siguiente. La misma marca de cobre,
+  ahora en flujo y a tamaño de regla, no puede solaparse con nada.
+*/
+.cdx-hero__lead {
+  max-inline-size: 39rem;
+  margin-block-start: 2.1rem;
+  color: var(--cdx-muted);
+  font-size: clamp(1.05rem, 1rem + .5vw, 1.32rem);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.cdx-hero__lead::before {
+  content: "";
+  display: block;
+  inline-size: 4.75rem;
+  block-size: 3px;
+  margin-block-end: 1.5rem;
+  background: var(--cdx-copper-bright);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--cdx-copper) 60%, transparent);
+}
+
+.cdx-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin-block-start: 2rem;
+}
+
+.cdx-hero__rail {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr;
+  border-block-start: 1px solid rgb(242 239 233 / .19);
+  background: rgb(8 11 14 / .72);
+}
+
+.cdx-hero__rail > div {
+  min-block-size: 5.4rem;
+  border-block-end: 1px solid rgb(242 239 233 / .12);
+  padding-block: .85rem;
+  padding-inline-start: var(--cdx-safe-start);
+  padding-inline-end: var(--cdx-safe-end);
+}
+
+.cdx-hero__rail dt {
+  color: var(--cdx-copper-bright);
+  font-family: var(--cdx-mono);
+  font-size: .62rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.cdx-hero__rail dd {
+  margin-block-start: .22rem;
+  color: var(--cdx-paper);
+  font-size: .88rem;
+  font-weight: 500;
+}
+
+.cdx-hero__trail {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 9rem;
+  z-index: 1;
+  inline-size: 100%;
+  block-size: 9rem;
+  pointer-events: none;
+}
+
+.cdx-hero__trailGlow,
+.cdx-hero__trailLine {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+}
+
+.cdx-hero__trailGlow {
+  stroke: var(--cdx-copper);
+  stroke-width: 18;
+  opacity: .18;
+}
+
+.cdx-hero__trailLine {
+  stroke: var(--cdx-copper-bright);
+  stroke-width: 2;
+  opacity: .7;
+}
+
+/* ── Secciones y continuidad ──────────────────────────────── */
+
+.cdx-section {
+  position: relative;
+  scroll-margin-block-start: 1rem;
+  padding-block: clamp(4.2rem, 8vw, 8rem);
+}
+
+.cdx-sectionHead {
+  display: grid;
+  gap: 1.2rem 3rem;
+  margin-block-end: clamp(2rem, 4vw, 3.5rem);
+}
+
+.cdx-sectionHead h2,
+.cdx-data__intro h2,
+.cdx-close h2 {
+  max-inline-size: 16ch;
+  margin-block-start: .9rem;
+  font-family: var(--cdx-display);
+  font-size: clamp(2.35rem, 5vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -.04em;
+  line-height: .95;
+  overflow-wrap: break-word;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+/* El cierre es el final del recorrido y puede permitirse más presencia. */
+.cdx-close h2 {
+  max-inline-size: 14ch;
+  font-size: clamp(2.5rem, 5.4vw, 5rem);
+}
+
+.cdx-sectionHead__lead {
+  max-inline-size: 33rem;
+  border-block-start: 1px solid var(--cdx-line);
+  padding-block-start: 1.15rem;
+  color: var(--cdx-muted);
+  font-size: 1.02rem;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+
+.cdx-sense {
+  z-index: 3;
+  margin-block-start: -1px;
+  background:
+    linear-gradient(160deg, rgb(198 103 52 / .08), transparent 24rem),
+    var(--cdx-carbon);
+}
+
+.cdx-sense::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0;
+  inline-size: min(34vw, 32rem);
+  block-size: 1px;
+  background: var(--cdx-copper-bright);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--cdx-copper) 40%, transparent);
+}
+
+.cdx-pivot {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(2rem, 1fr) minmax(0, auto);
+  align-items: center;
+  gap: 1rem;
+  border-block: 1px solid var(--cdx-line);
+  padding-block: 1rem;
+  padding-inline-start: var(--cdx-safe-start);
+  padding-inline-end: var(--cdx-safe-end);
+  background: var(--cdx-void);
+  color: var(--cdx-dim);
+  font-family: var(--cdx-mono);
+  font-size: .62rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.cdx-pivot i {
+  position: relative;
+  display: block;
+  block-size: 1px;
+  background: var(--cdx-line-strong);
+}
+
+.cdx-pivot i::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-start: 50%;
+  inline-size: .45rem;
+  block-size: .45rem;
+  border: 1px solid var(--cdx-copper-bright);
+  border-radius: 50%;
+  background: var(--cdx-void);
+  transform: translateY(-50%);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--cdx-copper) 55%, transparent);
+}
+
+.cdx-stages {
+  background:
+    linear-gradient(112deg, transparent 0 68%, rgb(240 160 113 / .035) 68% 69%, transparent 69%),
+    var(--cdx-carbon);
+}
+
+.cdx-data {
+  border-block-start: 1px solid var(--cdx-line);
+  background:
+    radial-gradient(circle at 78% 42%, rgb(198 103 52 / .12), transparent 28rem),
+    var(--cdx-void);
+}
+
+.cdx-data__grid {
+  display: grid;
+  gap: 2.5rem clamp(2rem, 5vw, 6rem);
+}
+
+/*
+  Vive en una columna estrecha y pegajosa junto a la herramienta: a la escala
+  anterior, «MOTORIZACIÓN.» se salía de su columna y se comía la tarjeta.
+*/
+.cdx-data__intro h2 {
+  max-inline-size: 13ch;
+  font-size: clamp(2rem, 3.1vw, 3.1rem);
+}
+
+.cdx-data__intro > p:last-child {
+  max-inline-size: 34rem;
+  margin-block-start: 1.35rem;
+  color: var(--cdx-muted);
+  font-size: 1.03rem;
+  line-height: 1.65;
+}
+
+.cdx-data__tool {
+  min-inline-size: 0;
+}
+
+/* ── Acceso persistente a datos ───────────────────────────── */
+
+/*
+  Era una pestaña vertical pegada al borde: el mismo enredo de ejes lógicos del
+  hero la dejaba suelta a media página, con la etiqueta cortada y el icono
+  tumbado. Ahora es una pastilla horizontal con insets físicos, legible de un
+  vistazo y fuera del camino de la lectura.
+*/
+.cdx-calc {
+  position: fixed;
+  /*
+    Cuando el margen exterior del contenido da de sí, la pastilla se sale de la
+    columna de lectura en vez de flotar encima; si no cabe, vuelve al borde.
+  */
+  right: max(1.15rem, env(safe-area-inset-right), calc((100vw - var(--cdx-wrap)) / 2 - 11rem));
+  bottom: max(1.15rem, env(safe-area-inset-bottom));
+  z-index: 40;
+  display: none;
+  min-block-size: 3rem;
+  align-items: center;
+  gap: .6rem;
+  border: 1px solid color-mix(in srgb, var(--cdx-copper) 55%, transparent);
+  border-radius: 2px;
+  padding: .7rem 1.15rem;
+  background: rgb(8 11 14 / .94);
+  color: var(--cdx-paper);
+  font-size: .84rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+  text-decoration: none;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 16px 34px rgb(0 0 0 / .5), inset 0 1px 0 rgb(242 239 233 / .07);
+  transition: opacity var(--cdx-fast) var(--cdx-ease), transform var(--cdx-fast) var(--cdx-ease), border-color var(--cdx-fast) var(--cdx-ease), background-color var(--cdx-fast) var(--cdx-ease);
+}
+
+/*
+  Un atajo deja de ser un atajo cuando ya estás donde lleva: a partir de la
+  sección de datos se aparta en lugar de flotar sobre el texto y sobre el
+  cierre de cobre. Sin JavaScript simplemente se queda, que es inofensivo.
+*/
+.cdx-calc.is-away {
+  opacity: 0;
+  transform: translateY(.75rem);
+  pointer-events: none;
+}
+
+.cdx-calc svg {
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+  fill: none;
+  stroke: var(--cdx-copper-bright);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cdx-calc:hover {
+  transform: translateY(-2px);
+  border-color: var(--cdx-copper-bright);
+  background: rgb(18 25 32 / .97);
+}
+
+/* ── Cierre ───────────────────────────────────────────────── */
+
+.cdx-close {
+  position: relative;
+  overflow: hidden;
+  padding-block: clamp(4rem, 7vw, 7rem);
+  background: var(--cdx-copper);
+  color: var(--cdx-void);
+}
+
+.cdx-close::before {
+  content: "";
+  position: absolute;
+  inset-inline-end: -12%;
+  inset-block-start: -30%;
+  inline-size: 56%;
+  aspect-ratio: 1;
+  border: 1px solid rgb(8 11 14 / .18);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4rem rgb(8 11 14 / .035), 0 0 0 9rem rgb(8 11 14 / .03);
+}
+
+.cdx-close__grid {
+  position: relative;
+  display: grid;
+  gap: 2.5rem 6rem;
+}
+
+.cdx-close__kicker {
+  color: #321408;
+}
+
+.cdx-close__lead {
+  max-inline-size: 42rem;
+  margin-block-start: 1.3rem;
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.cdx-close__action {
+  display: grid;
+  justify-items: start;
+  align-content: start;
+  gap: 1.2rem;
+}
+
+.cdx-close__action ul {
+  inline-size: 100%;
+  border-block-start: 1px solid rgb(8 11 14 / .35);
+}
+
+.cdx-close__action li {
+  border-block-end: 1px solid rgb(8 11 14 / .28);
+  padding-block: .62rem;
+  font-family: var(--cdx-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.cdx-close__action > p {
+  font-family: var(--cdx-mono);
+  font-size: .76rem;
+  letter-spacing: .08em;
+}
+
+/* ── Pie ──────────────────────────────────────────────────── */
+
+.cdx-footer {
+  display: grid;
+  gap: 1.5rem 4rem;
+  border-block-start: 1px solid var(--cdx-line);
+  padding-block: 2.2rem;
+  padding-inline-start: var(--cdx-safe-start);
+  padding-inline-end: var(--cdx-safe-end);
+  background: #050709;
+  color: var(--cdx-dim);
+}
+
+.cdx-footer__brand {
+  color: var(--cdx-paper);
+  font-family: var(--cdx-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cdx-footer__meta,
+.cdx-footer__legal {
+  font-size: .75rem;
+  line-height: 1.6;
+}
+
+.cdx-footer__meta {
+  margin-block-start: .25rem;
+  font-family: var(--cdx-mono);
+  letter-spacing: .06em;
+}
+
+.cdx-footer__legal {
+  max-inline-size: 72rem;
+}
+
+/* ── Compatibilidad con el cargador compartido ────────────── */
+
+.hidden {
+  display: none;
+}
+
+[data-configurator-frame] iframe {
+  display: block;
+  inline-size: 100%;
+  border: 0;
+}
+
+[data-configurator] [role="status"] {
+  border-block-start: 1px solid var(--cdx-line);
+  padding: 1.2rem clamp(1rem, 3vw, 1.8rem);
+}
+
+[data-configurator] [role="status"] p {
+  max-inline-size: 66rem;
+  color: var(--cdx-muted);
+  font-size: .84rem;
+  line-height: 1.6;
+}
+
+[data-configurator] [role="status"] p:first-child {
+  color: var(--cdx-paper);
+  font-weight: 600;
+}
+
+[data-configurator] [role="status"] p + p {
+  margin-block-start: .35rem;
+}
+
+/* ── Movimiento: un único gesto de entrada ────────────────── */
+
+.cdx-motion .cdx-hero__content > * {
+  opacity: 0;
+  transform: translateY(18px);
+  animation: cdx-enter .72s var(--cdx-ease) forwards;
+}
+
+.cdx-motion .cdx-hero__content > :nth-child(2) { animation-delay: 80ms; }
+.cdx-motion .cdx-hero__content > :nth-child(3) { animation-delay: 150ms; }
+.cdx-motion .cdx-hero__content > :nth-child(4) { animation-delay: 220ms; }
+
+.cdx-motion .cdx-hero__trailLine {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: cdx-draw 1.1s .35s var(--cdx-ease) forwards;
+}
+
+@keyframes cdx-enter {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cdx-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+
+@media (min-width: 40rem) {
+  .cdx-header__tag { display: block; }
+  .cdx-hero__rail { grid-template-columns: repeat(3, minmax(0, 1fr)); padding-inline-start: var(--cdx-safe-start); padding-inline-end: var(--cdx-safe-end); }
+  .cdx-hero__rail > div { border-block-end: 0; border-inline-end: 1px solid rgb(242 239 233 / .13); padding-inline: 1.25rem; }
+  .cdx-hero__content { padding-block-end: 10rem; }
+  .cdx-hero__trail { inset-block-end: 5.2rem; }
+  .cdx-close__action li { font-size: 1.25rem; }
+}
+
+@media (min-width: 58rem) {
+  .cdx-nav { display: flex; }
+  .cdx-header__cta { margin-inline-start: 0; }
+  .cdx-sectionHead { grid-template-columns: minmax(0, 1.2fr) minmax(18rem, .8fr); align-items: end; }
+  .cdx-sectionHead__lead { justify-self: end; }
+  .cdx-data__grid { grid-template-columns: minmax(18rem, 4.5fr) minmax(0, 7.5fr); align-items: start; }
+  .cdx-data__intro { position: sticky; inset-block-start: 2rem; }
+  .cdx-close__grid { grid-template-columns: minmax(0, 7fr) minmax(20rem, 5fr); align-items: start; }
+  .cdx-footer { grid-template-columns: auto 1fr; align-items: end; }
+  .cdx-footer__legal { justify-self: end; text-align: end; }
+}
+
+@media (min-width: 75rem) {
+  .cdx-calc { display: inline-flex; }
+  .cdx-hero__calc { display: none; }
+}
+
+@media (max-width: 47.9375rem) {
+  /* Sobre una columna estrecha la firma vertical solo estorba a la lectura. */
+  .cdx-hero__side { display: none; }
+}
+
+@media (max-width: 39.9375rem) {
+  .cdx-header { min-block-size: 4.5rem; }
+  .cdx-header__cta { min-inline-size: 2.9rem; padding-inline: .8rem; }
+  .cdx-header__cta span:not(.cdx-sr) { display: none; }
+  .cdx-hero__content { padding-block-start: 7.2rem; padding-block-end: 19rem; }
+  .cdx-hero__rail > div { min-block-size: 4.4rem; }
+  .cdx-hero__trail { inset-block-end: 13.2rem; block-size: 7rem; }
+  .cdx-pivot { grid-template-columns: 1fr; }
+  .cdx-pivot i { inline-size: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  .cdx-btn:hover,
+  .cdx-btn:active { transform: none; }
+}

@@ -1,0 +1,103 @@
+---
+/**
+ * Carcasa aislada de la variante experimental «Túnel de par».
+ *
+ * No importa PublicLayout, tokens.css ni componentes de presentación del
+ * sitio. La comparación no debe cambiar ni un selector de las páginas A, B o
+ * C. Sí comparte los datos confirmados y las funciones de contacto.
+ */
+import { CONTACT, LEGAL_NOTICE, SITE } from "../config/site";
+import CdxWhatsApp from "../components/concepto-codex/CdxWhatsApp.astro";
+
+import "@fontsource/barlow/latin-600.css";
+import "@fontsource/barlow/latin-800.css";
+import "@fontsource/barlow/latin-800-italic.css";
+import "@fontsource/ibm-plex-sans/latin-400.css";
+import "@fontsource/ibm-plex-sans/latin-500.css";
+import "@fontsource/ibm-plex-sans/latin-600.css";
+import "@fontsource/jetbrains-mono/latin-500.css";
+import "../styles/concept-codex.css";
+
+import barlowDisplay from "@fontsource/barlow/files/barlow-latin-800-normal.woff2?url";
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+const year = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang={SITE.lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <!-- No hay canónica: es una maqueta interna, no una URL pública. -->
+    <link
+      rel="preload"
+      href={barlowDisplay}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#080b0e" />
+
+    <!--
+      Nada legible nace oculto. La clase de movimiento solo existe cuando hay
+      JavaScript y el visitante no ha pedido reducirlo.
+    -->
+    <script is:inline>
+      (function () {
+        var root = document.documentElement;
+        root.classList.add("cdx-js");
+        try {
+          if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            root.classList.add("cdx-motion");
+          }
+        } catch (error) {
+          /* Sin matchMedia se entrega la versión quieta y completa. */
+        }
+      })();
+    </script>
+  </head>
+
+  <body>
+    <a href="#contenido" class="cdx-skip">Saltar al contenido</a>
+
+    <header class="cdx-header">
+      <a class="cdx-brand" href="/" aria-label="JM Repro Cars, inicio">
+        <span class="cdx-brand__mark" aria-hidden="true">JM</span>
+        <span class="cdx-brand__name" translate="no">Repro Cars</span>
+      </a>
+
+      <p class="cdx-header__tag">Concepto experimental</p>
+
+      <nav class="cdx-nav" aria-label="Recorrido de la página">
+        <a href="#sensaciones">Qué notarás</a>
+        <a href="#configuraciones">Configuraciones</a>
+        <a href="#datos">Datos orientativos</a>
+      </nav>
+
+      <CdxWhatsApp class="cdx-header__cta" label="WhatsApp" />
+    </header>
+
+    <main id="contenido">
+      <slot />
+    </main>
+
+    <footer class="cdx-footer">
+      <div>
+        <p class="cdx-footer__brand" translate="no">{SITE.name}</p>
+        <p class="cdx-footer__meta">{CONTACT.area} · {year}</p>
+      </div>
+      <p class="cdx-footer__legal">{LEGAL_NOTICE}</p>
+    </footer>
+  </body>
+</html>

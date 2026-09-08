@@ -1,0 +1,118 @@
+---
+/**
+ * Tuning-shop.com bajo activación explícita, con piel local. La lógica de
+ * carga, sandbox y redimensionado sigue siendo la compartida.
+ */
+import { TUNING_SHOP } from "../../config/embeds";
+import { REPRO_MESSAGE } from "../../config/site";
+import CdxWhatsApp from "./CdxWhatsApp.astro";
+
+interface Props {
+  headingId: string;
+}
+
+const { headingId } = Astro.props;
+---
+
+<div
+  class="cdx-config"
+  data-configurator
+  data-src={TUNING_SHOP.src}
+  data-min-height={String(TUNING_SHOP.minHeight)}
+>
+  <div class="cdx-config__head">
+    <p class="cdx-kicker">Consulta orientativa</p>
+    <a
+      href={TUNING_SHOP.providerUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+    ><span translate="no">Datos de {TUNING_SHOP.provider}</span></a>
+  </div>
+
+  <div class="cdx-config__intro" data-configurator-intro>
+    <p class="cdx-config__signal" aria-hidden="true">
+      <span></span><span></span><span></span><span></span>
+    </p>
+    <h3 id={headingId}>Busca tu marca, modelo y motor</h3>
+    <p class="cdx-config__text">
+      El proveedor mantiene un listado con cifras generales por motorización.
+      Úsalo como referencia inicial; la respuesta sobre tu vehículo llega
+      después de revisar su versión, estado e historial.
+    </p>
+    <p class="cdx-config__privacy">
+      Al abrirlo se carga contenido de {TUNING_SHOP.provider}, que puede dejar
+      una cookie propia de sesión. Hasta ese momento no sale ninguna petición.
+    </p>
+    <a
+      class="cdx-btn cdx-btn--primary cdx-config__open"
+      href={TUNING_SHOP.src}
+      target="_blank"
+      rel="noopener"
+      referrerpolicy="origin"
+      data-configurator-open
+    >
+      Abrir el configurador
+      <span aria-hidden="true">↗</span>
+    </a>
+  </div>
+
+  <div class="cdx-config__frame hidden" data-configurator-frame></div>
+
+  <div class="cdx-config__warning">
+    <p>
+      <strong>Son cifras del proveedor, no mediciones de JM Repro Cars.</strong>
+      Describen una motorización en general, no confirman compatibilidad y no
+      son un presupuesto.
+    </p>
+  </div>
+</div>
+
+<noscript>
+  <div class="cdx-config__noscript">
+    <p>
+      La herramienta necesita JavaScript porque genera sus listas en el
+      navegador. Puedes
+      <a
+        href={TUNING_SHOP.src}
+        target="_blank"
+        rel="noopener"
+        referrerpolicy="origin"
+      >abrirla directamente en {TUNING_SHOP.provider}</a>, o consultar el
+      vehículo por WhatsApp.
+    </p>
+    <CdxWhatsApp
+      class="cdx-config__nsCta"
+      variant="quiet"
+      label="Consultar por WhatsApp"
+      message={REPRO_MESSAGE}
+    />
+  </div>
+</noscript>
+
+<script>
+  import "../../scripts/configurator";
+</script>
+
+<style>
+  .cdx-config { border: 1px solid var(--cdx-line); background: var(--cdx-surface); box-shadow: 0 26px 70px rgb(0 0 0 / .28); }
+  .cdx-config__head { display: flex; min-block-size: 3.4rem; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 2rem; border-block-end: 1px solid var(--cdx-line); padding: .7rem clamp(1rem, 3vw, 1.8rem); }
+  .cdx-config__head a { display: inline-flex; min-block-size: 2.75rem; align-items: center; color: var(--cdx-muted); font-size: .78rem; text-underline-offset: .25rem; }
+  .cdx-config__head a:hover { color: var(--cdx-paper); }
+  .cdx-config__intro { max-inline-size: 48rem; padding: clamp(1.7rem, 4vw, 3.2rem) clamp(1rem, 3vw, 1.8rem); }
+  .cdx-config__signal { display: flex; align-items: flex-end; gap: .28rem; block-size: 1.5rem; margin-block-end: 1.3rem; }
+  .cdx-config__signal span { inline-size: 2px; background: var(--cdx-copper-bright); box-shadow: 0 0 10px color-mix(in srgb, var(--cdx-copper) 50%, transparent); }
+  .cdx-config__signal span:nth-child(1) { block-size: 35%; }
+  .cdx-config__signal span:nth-child(2) { block-size: 68%; }
+  .cdx-config__signal span:nth-child(3) { block-size: 100%; }
+  .cdx-config__signal span:nth-child(4) { block-size: 52%; }
+  .cdx-config h3 { max-inline-size: 18ch; font-family: var(--cdx-display); font-size: clamp(1.55rem, 2.3vw, 2.3rem); font-weight: 800; line-height: 1; letter-spacing: -.03em; overflow-wrap: break-word; text-transform: uppercase; text-wrap: balance; }
+  .cdx-config__text { max-inline-size: 42rem; margin-block-start: 1.2rem; color: var(--cdx-muted); font-size: 1.03rem; line-height: 1.65; }
+  .cdx-config__privacy { max-inline-size: 42rem; margin-block-start: 1.25rem; border-inline-start: 2px solid var(--cdx-line-strong); padding-inline-start: 1rem; color: var(--cdx-dim); font-size: .82rem; line-height: 1.55; }
+  .cdx-config__open { margin-block-start: 1.7rem; }
+  .cdx-config__warning { border-block-start: 1px solid var(--cdx-line); padding: 1.2rem clamp(1rem, 3vw, 1.8rem); color: var(--cdx-muted); font-size: .84rem; line-height: 1.6; }
+  .cdx-config__warning p { max-inline-size: 66rem; }
+  .cdx-config__warning strong { color: var(--cdx-paper); font-weight: 600; }
+  .cdx-config__noscript { margin-block-start: 1rem; border: 1px solid var(--cdx-line); padding: 1.3rem; color: var(--cdx-muted); font-size: .9rem; line-height: 1.6; }
+  .cdx-config__noscript a { color: var(--cdx-copper-bright); text-underline-offset: .22rem; }
+  .cdx-config__nsCta { margin-block-start: 1rem; }
+</style>

@@ -1,0 +1,599 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ *  CONCEPTO B — Reprogramación. Maqueta interna, no es una página pública.
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Alternativa completa a `/servicios/reprogramacion` (Concepto A), creada
+ * para poder comparar dos direcciones artísticas, no para publicarse. Vive
+ * fuera de la navegación, fuera del sitemap, bloqueada en robots y con
+ * `noindex, nofollow`. Ninguna página pública enlaza aquí.
+ *
+ * La dirección, en tres frases:
+ *
+ *   1. **El único color de la página es el vehículo.** Interfaz acromática
+ *      —gris de plató, tinta, negro— y fotografía en color. El Concepto A
+ *      reparte cobre por toda la página; aquí el color es del coche.
+ *   2. **De noche a mediodía.** A es un túnel nocturno; B es carretera de
+ *      día. Es el cambio más rápido de percibir sin leer una línea.
+ *   3. **La página pregunta en vez de exponer.** A enseña una banda de
+ *      entrega y deja mirar. B hace tres preguntas y responde con la opción
+ *      que encaja y el mensaje de WhatsApp ya escrito.
+ *
+ * El razonamiento completo, las referencias y lo que queda pendiente de
+ * confirmar están en `docs/concepto-b-reprogramacion.md`.
+ */
+import { Image } from "astro:assets";
+
+import ConceptoBLayout from "../../layouts/ConceptoBLayout.astro";
+import CbWhatsApp from "../../components/concepto-b/CbWhatsApp.astro";
+import CbCaseSelector from "../../components/concepto-b/CbCaseSelector.astro";
+import CbConfigurator from "../../components/concepto-b/CbConfigurator.astro";
+import {
+  CONTACT,
+  REPRO_GOALS,
+  REPRO_MESSAGE,
+  REPRO_SEND,
+} from "../../config/site";
+
+import heroImage from "../../assets/photos/concepto-b-coche-barrido.jpg";
+import roadImage from "../../assets/photos/concepto-b-vista-conductor.jpg";
+
+/*
+ * Qué se nota al volante. Son tres de los cinco objetivos de `site.ts`, con
+ * su texto tal cual: no se reescribe contenido ya revisado. Se eligen por id
+ * —no por posición— para que reordenar la lista no cambie esta sección.
+ */
+const NOTAS = ["respuesta", "empuje", "elasticidad"]
+  .map((id) => REPRO_GOALS.find((goal) => goal.id === id))
+  .filter((goal): goal is (typeof REPRO_GOALS)[number] => goal !== undefined);
+---
+
+<ConceptoBLayout
+  title="Concepto B · Reprogramación — JM Repro Cars"
+  description="Maqueta interna: segunda dirección visual para la página de reprogramación. No es una página pública."
+>
+  <!-- ═══════════════════════════════════════════════════════════
+       PORTADA
+
+       Estructura de portada de revista: rótulo, titular, imagen y
+       entradilla debajo. El Concepto A hace lo contrario —el texto va
+       encima de la fotografía, dentro de dos velos oscuros—, y esa sola
+       diferencia ya cambia cómo se lee la página: aquí el titular se lee
+       sobre papel, con contraste 16:1, y la imagen no tiene que sostener
+       nada.
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="hero">
+    <div class="cb-wrap">
+      <p class="cb-micro hero__kicker cb-rise">
+        Reprogramación de centralita · Coches y motos · {CONTACT.area}
+      </p>
+      <h1 class="cb-mega hero__title cb-rise" style="--cb-delay: 70ms">
+        Lo que cambia, lo notas en el pedal.
+      </h1>
+    </div>
+
+    <figure class="hero__band cb-rise" style="--cb-delay: 140ms">
+      <Image
+        src={heroImage}
+        alt="Un coche circulando de día por una carretera, captado con barrido: la carrocería nítida y el entorno movido"
+        widths={[640, 1024, 1440, 1800]}
+        sizes="100vw"
+        class="hero__img"
+        loading="eager"
+        fetchpriority="high"
+      />
+    </figure>
+
+    <div class="cb-wrap hero__foot cb-rise" style="--cb-delay: 210ms">
+      <p class="cb-lead hero__deck">
+        Ajustamos el software con el que la centralita gobierna el motor,
+        partiendo de la calibración que ya lleva tu vehículo. Lo que se busca no
+        es una cifra: es cómo responde cuando lo conduces.
+      </p>
+      <div class="hero__acts">
+        <a class="cb-btn" href="#tu-caso">Ver qué opción encaja</a>
+        <CbWhatsApp
+          variant="ghost"
+          label="Consultar mi vehículo"
+          message={REPRO_MESSAGE}
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       AL VOLANTE — qué es y qué se nota, sin un párrafo largo
+       ═══════════════════════════════════════════════════════════ -->
+  <section id="al-volante" class="wheel cb-section">
+    <div class="cb-wrap">
+      <div class="wheel__top">
+        <div class="wheel__intro">
+          <p class="cb-micro cb-muted">Al volante</p>
+          <h2 class="cb-h2 wheel__title">
+            El motor es el mismo. Cambia cómo te lo entrega.
+          </h2>
+          <p class="cb-lead cb-muted wheel__lead">
+            La centralita decide en cada momento cuánto empuje da el motor y
+            cuándo. Eso es lo que se ajusta, y por eso lo que cambia se nota
+            conduciendo antes que en ningún otro sitio.
+          </p>
+        </div>
+
+        <figure class="wheel__figure">
+          <Image
+            src={roadImage}
+            alt="Vista desde el asiento del conductor: la carretera por delante, con las manos en el volante"
+            widths={[560, 840, 1200]}
+            sizes="(min-width: 64rem) 44vw, 100vw"
+            class="wheel__img"
+            loading="lazy"
+          />
+        </figure>
+      </div>
+
+      <ul class="wheel__notes">
+        {
+          NOTAS.map((nota) => (
+            <li class="wheel__note">
+              <h3 class="cb-h3">{nota.title}</h3>
+              <p class="cb-muted wheel__noteBody">{nota.body}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       EL RAÍL — «Tu caso», la condición y las cifras del proveedor.
+
+       La barra de estado acompaña este tramo y solo este: aparece al llegar
+       al selector y desaparece antes del cierre, donde la acción ya está a
+       tamaño completo. Es `position: sticky` dentro de una capa que abarca
+       exactamente estas tres secciones, así que no hay ni un observador de
+       scroll ni un estado que se pueda quedar pegado.
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="rail">
+    <section id="tu-caso" class="case cb-section">
+      <div class="cb-wrap">
+        <div class="case__head">
+          <p class="cb-micro cb-muted">Tu caso</p>
+          <h2 class="cb-h2 case__title" id="cb-caso-titulo">
+            Dinos cómo es y te decimos por dónde empezar.
+          </h2>
+          <p class="cb-lead cb-muted case__lead">
+            Tres respuestas. Ninguna te compromete a nada y todas se pueden
+            cambiar después.
+          </p>
+        </div>
+
+        <div class="case__body">
+          <CbCaseSelector />
+        </div>
+      </div>
+    </section>
+
+    <!-- La condición honesta, a tamaño de titular. No es letra pequeña. -->
+    <section class="claim cb-void">
+      <div class="cb-wrap claim__in">
+        <p class="cb-h2 claim__text">No hay dos motores iguales.</p>
+        <div class="claim__note">
+          <p class="cb-lead">
+            Lo que admite el tuyo depende de la versión, del estado, del
+            mantenimiento y de lo que lleve montado.
+          </p>
+          <p class="cb-lead cb-muted claim__noteB">
+            Por eso aquí no vas a encontrar cifras. Te decimos qué se puede
+            hacer cuando vemos el vehículo, y si no se puede, también.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="cifras" class="figures cb-void">
+      <div class="cb-wrap">
+        <div class="figures__head">
+          <p class="cb-micro cb-muted">Cifras orientativas</p>
+          <h2 class="cb-h2 figures__title" id="titulo-cifras">
+            Si quieres una referencia antes de escribir.
+          </h2>
+        </div>
+
+        <div class="figures__box">
+          <CbConfigurator headingId="titulo-cifras-caja" />
+        </div>
+      </div>
+    </section>
+
+    <!--
+      La barra de estado. Va al final del marcado para que el orden de
+      tabulación sea el natural —primero las preguntas, después la barra—
+      aunque visualmente esté abajo desde el principio.
+    -->
+    <div class="rail__layer">
+      <div class="bar">
+        <div class="cb-wrap bar__in">
+          <!--
+            Dos huecos, no uno: en un móvil de 375 px el prefijo se retira y
+            queda el nombre de la opción, que es la parte con información.
+            Recortar la frase con puntos suspensivos era esconder justo lo
+            que hay que leer.
+          -->
+          <p class="bar__label">
+            <span class="bar__pre" data-cb-bar-pre hidden>Empieza por</span>
+            <span class="bar__name" data-cb-bar-name>Cuéntanos el vehículo</span>
+          </p>
+          <CbWhatsApp
+            class="bar__cta"
+            label="WhatsApp"
+            message={REPRO_MESSAGE}
+            data-cb-link
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       EL CIERRE — qué hace falta enviar, y nada más
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="end cb-section">
+    <div class="cb-wrap end__in">
+      <div class="end__left">
+        <h2 class="cb-h2">Cuéntanos el vehículo.</h2>
+        <ul class="end__list">
+          {
+            REPRO_SEND.map((item) => (
+              <li class="end__item">
+                <span class="end__itemText">{item}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <div class="end__right">
+        <p class="cb-lead end__note">
+          Escríbenos aunque te falte algún dato: con lo que tengas ya podemos
+          empezar. Miramos el caso y te decimos qué se puede hacer.
+        </p>
+        <CbWhatsApp label="Abrir WhatsApp" message={REPRO_MESSAGE} />
+        <p class="end__phone">{CONTACT.whatsappDisplay}</p>
+      </div>
+    </div>
+  </section>
+</ConceptoBLayout>
+
+<style>
+  /* ═══════════════════════════════════════════════════
+     PORTADA
+     ═══════════════════════════════════════════════════ */
+
+  .hero {
+    padding-block: clamp(1.5rem, 0.5rem + 3vw, 3rem) 0;
+  }
+
+  .hero__kicker {
+    color: var(--cb-ink-2);
+  }
+
+  .hero__title {
+    margin-top: clamp(0.75rem, 0.4rem + 1.5vw, 1.5rem);
+    max-width: 16ch;
+  }
+
+  .hero__band {
+    margin-top: clamp(1.5rem, 0.8rem + 3vw, 3rem);
+    background-color: var(--cb-paper-3);
+  }
+
+  .hero__img {
+    inline-size: 100%;
+    /* La franja se estrecha al crecer la pantalla: en un portátil el titular
+       y la acción tienen que caber con la imagen, no debajo de ella. */
+    block-size: clamp(15rem, 12rem + 22vw, 30rem);
+    /* Tope para pantallas bajas —un móvil en horizontal—, no para las altas:
+       el `clamp` ya cierra en 30rem. En `svh` para que la barra del navegador
+       móvil no lo infle al aparecer y desaparecer. */
+    max-block-size: 52svh;
+    object-fit: cover;
+    object-position: 50% 58%;
+  }
+
+  .hero__foot {
+    display: grid;
+    gap: 1.75rem;
+    padding-block: clamp(1.75rem, 1rem + 2.5vw, 3rem);
+  }
+
+  .hero__deck {
+    max-width: 40ch;
+  }
+
+  .hero__acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 64rem) {
+    .hero__foot {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 3rem;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════
+     AL VOLANTE
+     ═══════════════════════════════════════════════════ */
+
+  .wheel {
+    background-color: var(--cb-paper-2);
+  }
+
+  .wheel__top {
+    display: grid;
+    gap: clamp(1.75rem, 1rem + 3vw, 3rem);
+  }
+
+  .wheel__title {
+    margin-top: 0.9rem;
+    max-width: 15ch;
+  }
+
+  .wheel__lead {
+    margin-top: 1.1rem;
+    max-width: 38ch;
+  }
+
+  .wheel__img {
+    inline-size: 100%;
+    aspect-ratio: 3 / 2;
+    object-fit: cover;
+    object-position: 50% 62%;
+  }
+
+  .wheel__notes {
+    display: grid;
+    gap: 0;
+    margin-top: clamp(2.5rem, 1.5rem + 3vw, 4rem);
+    border-top: 1px solid var(--cb-line);
+  }
+
+  .wheel__note {
+    border-bottom: 1px solid var(--cb-line);
+    padding-block: 1.25rem;
+  }
+
+  .wheel__noteBody {
+    margin-top: 0.4rem;
+    max-width: 34ch;
+  }
+
+  @media (min-width: 64rem) {
+    .wheel__top {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: center;
+      gap: clamp(2rem, 1rem + 4vw, 5rem);
+    }
+
+    .wheel__notes {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0 clamp(1.5rem, 1rem + 2vw, 3rem);
+    }
+
+    .wheel__note {
+      border-bottom: 0;
+      padding-block: 1.5rem 0;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════
+     TU CASO
+     ═══════════════════════════════════════════════════ */
+
+  .case__title {
+    margin-top: 0.9rem;
+    max-width: 20ch;
+  }
+
+  .case__lead {
+    margin-top: 1.1rem;
+    max-width: 42ch;
+  }
+
+  .case__body {
+    margin-top: clamp(2rem, 1rem + 3vw, 3.5rem);
+  }
+
+  /* ═══════════════════════════════════════════════════
+     LA CONDICIÓN
+     ═══════════════════════════════════════════════════ */
+
+  .claim {
+    padding-block: clamp(3.5rem, 2rem + 6vw, 7rem);
+  }
+
+  .claim__in {
+    display: grid;
+    gap: 1.75rem;
+  }
+
+  .claim__text {
+    max-width: 16ch;
+  }
+
+  .claim__note {
+    display: grid;
+    gap: 1rem;
+    max-width: 42ch;
+  }
+
+  .claim__noteB {
+    font-size: var(--cb-body);
+  }
+
+  @media (min-width: 64rem) {
+    .claim__in {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: end;
+      gap: clamp(2rem, 1rem + 4vw, 5rem);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════
+     CIFRAS
+     ═══════════════════════════════════════════════════ */
+
+  .figures {
+    border-top: 1px solid var(--cb-line-void);
+    padding-block: clamp(3rem, 2rem + 4vw, 5.5rem)
+      calc(clamp(3rem, 2rem + 4vw, 5.5rem) + var(--cb-bar));
+  }
+
+  .figures__title {
+    margin-top: 0.9rem;
+    max-width: 18ch;
+  }
+
+  .figures__box {
+    margin-top: clamp(1.75rem, 1rem + 2.5vw, 3rem);
+  }
+
+  /* ═══════════════════════════════════════════════════
+     EL RAÍL Y LA BARRA DE ESTADO
+     ═══════════════════════════════════════════════════ */
+
+  .rail {
+    position: relative;
+  }
+
+  .rail__layer {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    /* La capa no captura el puntero: solo lo hace la barra. */
+    pointer-events: none;
+  }
+
+  .bar {
+    /* `margin-top: auto` con `bottom: 0` es lo que hace que la barra
+       acompañe el tramo entero en vez de asomar y perderse arriba. */
+    margin-top: auto;
+    position: sticky;
+    bottom: 0;
+    pointer-events: auto;
+    background-color: var(--cb-ink);
+    color: var(--cb-paper);
+    border-top: 1px solid var(--cb-line-void);
+  }
+
+  .bar__in {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: var(--cb-bar);
+    /* El indicador de inicio del teléfono no puede comerse el botón. */
+    padding-block: 0.75rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .bar__label {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    min-width: 0;
+    font-size: var(--cb-small);
+    font-weight: 600;
+    font-variation-settings: "wdth" 100;
+    /* Una línea: la barra no puede cambiar de alto al cambiar la elección. */
+    white-space: nowrap;
+  }
+
+  .bar__pre {
+    display: none;
+    font-weight: 400;
+    color: var(--cb-line-strong);
+  }
+
+  .bar__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (min-width: 30rem) {
+    .bar__pre {
+      display: inline;
+    }
+  }
+
+  .bar__cta {
+    flex: none;
+    min-height: 2.75rem;
+    padding-inline: 1.1rem;
+    border-color: var(--cb-paper);
+    background-color: var(--cb-paper);
+    color: var(--cb-ink);
+  }
+
+  .bar__cta:hover {
+    background-color: transparent;
+    color: var(--cb-paper);
+  }
+
+  /* ═══════════════════════════════════════════════════
+     EL CIERRE
+     ═══════════════════════════════════════════════════ */
+
+  .end__in {
+    display: grid;
+    gap: clamp(2rem, 1rem + 3vw, 3.5rem);
+  }
+
+  .end__list {
+    margin-top: 1.75rem;
+    border-top: 2px solid var(--cb-ink);
+  }
+
+  .end__item {
+    border-bottom: 1px solid var(--cb-line);
+    padding-block: 0.85rem;
+  }
+
+  .end__itemText {
+    font-size: clamp(1.1rem, 0.95rem + 0.8vw, 1.6rem);
+    font-weight: 700;
+    font-variation-settings: "wdth" 110;
+    letter-spacing: -0.012em;
+  }
+
+  .end__right {
+    display: grid;
+    justify-items: start;
+    align-content: start;
+    gap: 1.25rem;
+  }
+
+  .end__note {
+    max-width: 34ch;
+  }
+
+  .end__phone {
+    font-size: var(--cb-h3);
+    font-weight: 700;
+    font-variation-settings: "wdth" 108;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (min-width: 64rem) {
+    .end__in {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: clamp(2rem, 1rem + 4vw, 5rem);
+    }
+  }
+</style>

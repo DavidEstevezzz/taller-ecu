@@ -1,0 +1,175 @@
+---
+/**
+ * Configurador de Tuning-shop.com, con la piel del Concepto C.
+ *
+ * **La lógica no se duplica**: el marco lo monta `src/scripts/configurator.ts`,
+ * el mismo archivo que usa el sitio, y siguen en pie las reglas de
+ * `docs/embed-tuning-shop.md`:
+ *
+ *   - no se carga hasta que el visitante lo pide: ni petición ni cookie de
+ *     tercero antes de eso;
+ *   - la atribución al proveedor está a la vista en todos los estados;
+ *   - el aviso de que sus cifras son orientativas vive en NUESTRO HTML;
+ *   - sin JavaScript se dice que no funciona y se ofrece la salida que sí.
+ *
+ * Lo único propio son los contenedores y sus estilos; los `data-*` que el
+ * script busca son exactamente los mismos.
+ */
+import { TUNING_SHOP } from "../../config/embeds";
+import { REPRO_MESSAGE } from "../../config/site";
+import CcWhatsApp from "./CcWhatsApp.astro";
+
+interface Props {
+  headingId: string;
+}
+
+const { headingId } = Astro.props;
+---
+
+<div
+  class="ccx"
+  data-configurator
+  data-src={TUNING_SHOP.src}
+  data-min-height={String(TUNING_SHOP.minHeight)}
+>
+  <div class="ccx__head">
+    <p class="cc-micro">Herramienta del proveedor</p>
+    <p class="cc-micro">
+      <a
+        class="cc-link"
+        href={TUNING_SHOP.providerUrl}
+        target="_blank"
+        rel="noopener noreferrer">{TUNING_SHOP.provider}</a
+      >
+    </p>
+  </div>
+
+  <div class="ccx__intro" data-configurator-intro>
+    <h3 id={headingId} class="cc-h3">Busca tu marca, tu modelo y tu motor</h3>
+    <p class="cc-small cc-muted ccx__text">
+      {TUNING_SHOP.provider} mantiene un listado con cifras generales por
+      motorización. Sirve para hacerse una idea del orden de magnitud; no es
+      una respuesta sobre tu vehículo.
+    </p>
+    <p class="cc-small cc-muted ccx__cookie">
+      Al abrirlo se carga contenido suyo, que deja una cookie propia de sesión.
+      Hasta que lo abres no sale ni una petición.
+    </p>
+
+    <a
+      class="cc-btn cc-btn--ghost ccx__open"
+      href={TUNING_SHOP.src}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-configurator-open
+    >
+      Abrir el configurador
+    </a>
+  </div>
+
+  <!-- `hidden` como CLASE: el script compartido revela el hueco con
+       `classList.remove("hidden")`. Está definida en `concept-c.css`. -->
+  <div class="ccx__frame hidden" data-configurator-frame></div>
+
+  <div class="ccx__warn">
+    <p class="cc-small ccx__warnText">
+      <strong>Son cifras del proveedor, no nuestras.</strong> Describen una
+      motorización en general, no tu vehículo: no son mediciones nuestras, no
+      confirman compatibilidad y no son un presupuesto.
+    </p>
+  </div>
+</div>
+
+<noscript>
+  <div class="ccx__noscript">
+    <p class="cc-small">
+      El configurador de {TUNING_SHOP.provider} necesita JavaScript: sus listas
+      y sus resultados se generan en el navegador. Puedes <a
+        class="cc-link"
+        href={TUNING_SHOP.src}
+        target="_blank"
+        rel="noopener noreferrer">abrirlo en su propia web</a
+      >, o contarnos el vehículo y te decimos qué se puede hacer.
+    </p>
+    <CcWhatsApp
+      class="ccx__nsCta"
+      label="Escribir por WhatsApp"
+      message={REPRO_MESSAGE}
+    />
+  </div>
+</noscript>
+
+<script>
+  import "../../scripts/configurator";
+</script>
+
+<style>
+  .ccx {
+    border: 1px solid var(--cc-line-strong);
+    border-radius: var(--cc-radius);
+    background-color: var(--cc-face);
+  }
+
+  .ccx__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    min-block-size: 2.75rem;
+    border-block-end: 1px solid var(--cc-line);
+    padding: 0.4rem var(--cc-pad);
+  }
+
+  /* La atribución es un enlace suelto: área pulsable propia. */
+  .ccx__head .cc-link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 1.75rem;
+  }
+
+  .ccx__intro {
+    padding: clamp(1.5rem, 1rem + 2vw, 2.5rem) var(--cc-pad);
+    max-inline-size: 46em;
+  }
+
+  .ccx__text {
+    margin-block-start: 0.7rem;
+  }
+
+  .ccx__cookie {
+    margin-block-start: 1.1rem;
+    border-inline-start: 2px solid var(--cc-line);
+    padding-inline-start: 0.9rem;
+  }
+
+  .ccx__open {
+    margin-block-start: 1.5rem;
+  }
+
+  .ccx__warn {
+    border-block-start: 1px solid var(--cc-line);
+    padding: 1.1rem var(--cc-pad);
+  }
+
+  .ccx__warnText {
+    color: var(--cc-ink-2);
+    max-inline-size: 62ch;
+  }
+
+  .ccx__warnText strong {
+    color: var(--cc-ink);
+    font-weight: 600;
+  }
+
+  .ccx__noscript {
+    margin-block-start: 1rem;
+    border: 1px solid var(--cc-line-strong);
+    border-radius: var(--cc-radius);
+    padding: 1.25rem var(--cc-pad);
+    color: var(--cc-ink-2);
+  }
+
+  .ccx__nsCta {
+    margin-block-start: 1.1rem;
+  }
+</style>

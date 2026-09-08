@@ -1,0 +1,129 @@
+---
+/**
+ * Las dos láminas de vehículo del Concepto C.
+ *
+ * Este concepto no lleva fotografía: su lenguaje gráfico es el dibujo
+ * técnico, y el vehículo se presenta como una silueta de placa —coche y
+ * moto—, dibujada a mano en SVG para esta maqueta. Son pictogramas de
+ * perfil, no un modelo ni una marca: no representan ningún vehículo real y
+ * no llevan una sola cifra, código ni medida.
+ */
+---
+
+<div class="veh cc-grid">
+  <figure class="veh__plate">
+    <svg
+      class="veh__art"
+      viewBox="0 0 340 130"
+      role="img"
+      aria-label="Silueta de perfil de un coche compacto"
+    >
+      <path
+        class="veh__body"
+        d="M 26 97 L 24 82 Q 24 72 36 70 L 52 67 Q 96 59 124 57 L 154 37 Q 196 31 226 37 Q 252 43 262 60 L 278 67 Q 284 70 285 80 L 284 90 Q 283 97 274 97 L 272 97 A 26 26 0 0 0 224 97 L 116 97 A 26 26 0 0 0 68 97 Z"
+      />
+      <path
+        class="veh__glass"
+        d="M 134 56 L 158 40 Q 194 35 220 40 Q 240 46 248 57 Q 194 62 134 56 Z"
+      />
+      <circle class="veh__tyre" cx="92" cy="93" r="19"></circle>
+      <circle class="veh__hub" cx="92" cy="93" r="7"></circle>
+      <circle class="veh__tyre" cx="248" cy="93" r="19"></circle>
+      <circle class="veh__hub" cx="248" cy="93" r="7"></circle>
+      <path class="veh__ground" d="M 12 116 H 328" />
+    </svg>
+    <figcaption class="cc-micro veh__caption">Coche</figcaption>
+  </figure>
+
+  <figure class="veh__plate">
+    <svg
+      class="veh__art"
+      viewBox="0 0 340 130"
+      role="img"
+      aria-label="Silueta de perfil de una moto deportiva"
+    >
+      <path class="veh__fork" d="M 252 90 L 228 34" />
+      <path class="veh__bar" d="M 214 30 L 240 36" />
+      <circle class="veh__lamp" cx="243" cy="41" r="6"></circle>
+      <path class="veh__fender" d="M 233 68 A 24 24 0 0 1 270 78" />
+      <path class="veh__arm" d="M 88 90 L 150 74" />
+      <path
+        class="veh__body"
+        d="M 226 46 Q 202 30 170 38 Q 146 42 126 46 L 80 36 L 90 54 L 128 55 L 152 58 L 160 80 L 198 80 L 216 58 Z"
+      />
+      <circle class="veh__tyre" cx="88" cy="90" r="21"></circle>
+      <circle class="veh__hub" cx="88" cy="90" r="8"></circle>
+      <circle class="veh__tyre" cx="252" cy="90" r="21"></circle>
+      <circle class="veh__hub" cx="252" cy="90" r="8"></circle>
+      <path class="veh__ground" d="M 12 116 H 328" />
+    </svg>
+    <figcaption class="cc-micro veh__caption">Moto</figcaption>
+  </figure>
+</div>
+
+<style>
+  .veh {
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 30rem) {
+    .veh {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .veh__plate {
+    background-color: var(--cc-face);
+    padding: clamp(0.75rem, 2vw, 1.25rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .veh__art {
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  .veh__body {
+    fill: var(--cc-ink);
+  }
+
+  .veh__glass {
+    fill: var(--cc-face);
+  }
+
+  .veh__tyre,
+  .veh__lamp {
+    fill: var(--cc-ink);
+  }
+
+  .veh__hub {
+    fill: var(--cc-face);
+  }
+
+  .veh__fork,
+  .veh__arm {
+    stroke: var(--cc-ink);
+    stroke-width: 6;
+    stroke-linecap: round;
+    fill: none;
+  }
+
+  .veh__bar,
+  .veh__fender {
+    stroke: var(--cc-ink);
+    stroke-width: 5;
+    stroke-linecap: round;
+    fill: none;
+  }
+
+  .veh__ground {
+    stroke: var(--cc-line);
+    stroke-width: 2;
+  }
+
+  .veh__caption {
+    text-align: end;
+  }
+</style>

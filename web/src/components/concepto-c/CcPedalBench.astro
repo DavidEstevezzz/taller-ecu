@@ -1,0 +1,275 @@
+---
+/**
+ * El banco de respuesta: la pieza interactiva del Concepto C.
+ *
+ * Un pedal que se mantiene pisado —con el puntero, con el dedo o con la barra
+ * espaciadora— y un registrador que dibuja en tiempo real, como un plóter,
+ * tres trazas: lo que pides y cómo llega la entrega con la calibración de
+ * serie y con la ajustada. La interacción es temporal y continua: el estado es
+ * tu pisada a lo largo del tiempo, no una opción elegida de una lista.
+ *
+ * Reparto del trabajo:
+ *
+ * - **HTML.** La figura estática con las mismas tres trazas, visible por
+ *   defecto: es lo que hay sin JavaScript y con menos movimiento, y no falta
+ *   información —la comparación completa está dibujada—.
+ * - **JavaScript** (`src/scripts/concept-c-pedal.ts`). Solo si hay `cc-motion`
+ *   (JavaScript y sin `prefers-reduced-motion`): revela el pedal, cambia la
+ *   figura por el lienzo y dibuja la pisada real del visitante.
+ *
+ * Honestidad: es una demostración conceptual, como la banda del Concepto A.
+ * No hay un solo número, ni eje con unidades, y el aviso vive aquí debajo.
+ */
+---
+
+<div class="bench" data-pedal>
+  <div class="bench__head">
+    <p class="cc-micro">Banco de respuesta</p>
+    <p class="cc-chip" data-pedal-chip>En reposo</p>
+  </div>
+
+  <div class="bench__display cc-display-zone">
+    <!--
+      La figura estática: la misma pisada, dibujada entera. Las trazas se
+      distinguen por trazo (discontinuo / fino / grueso), no solo por color.
+      Sin letras dentro del dibujo: la leyenda es HTML, debajo.
+    -->
+    <svg
+      class="bench__figure"
+      viewBox="0 0 640 250"
+      role="img"
+      aria-label="Gráfico conceptual: ante la misma pisada, la entrega ajustada llega antes y más llena que la de serie"
+      data-pedal-static
+    >
+      <!-- Retícula de papel de registro. -->
+      <g class="bench__grid" aria-hidden="true">
+        <path d="M 80 10 V 210 M 160 10 V 210 M 240 10 V 210 M 320 10 V 210 M 400 10 V 210 M 480 10 V 210 M 560 10 V 210" />
+        <path d="M 20 50 H 620 M 20 90 H 620 M 20 130 H 620 M 20 170 H 620" />
+      </g>
+      <!-- Línea de reposo. -->
+      <path class="bench__base" d="M 20 210 H 620" />
+      <!-- Lo que pides: el escalón de la pisada. -->
+      <path
+        class="bench__demand"
+        d="M 20 208 H 120 q 6 0 8 -18 l 8 -96 q 2 -22 10 -22 H 428 q 8 0 10 22 l 8 96 q 2 18 8 18 H 620"
+      />
+      <!-- De serie: llega tarde y se queda corta. -->
+      <path
+        class="bench__stock"
+        d="M 20 208 H 156 c 26 0 30 -12 44 -34 c 14 -22 20 -34 44 -36 H 448 c 24 2 30 14 44 36 c 14 22 18 34 44 34 H 620"
+      />
+      <!-- Ajustada: llega antes y más llena. -->
+      <path
+        class="bench__tuned"
+        d="M 20 208 H 132 c 18 0 22 -22 32 -62 c 10 -40 16 -56 36 -58 H 442 c 20 2 26 18 36 58 c 10 40 14 62 32 62 H 620"
+      />
+    </svg>
+
+    <canvas class="bench__canvas" data-pedal-canvas hidden></canvas>
+  </div>
+
+  <ul class="bench__legend" aria-hidden="false">
+    <li class="bench__key">
+      <span class="bench__swatch bench__swatch--demand" aria-hidden="true"></span>
+      Lo que pides
+    </li>
+    <li class="bench__key">
+      <span class="bench__swatch bench__swatch--stock" aria-hidden="true"></span>
+      Entrega de serie
+    </li>
+    <li class="bench__key">
+      <span class="bench__swatch bench__swatch--tuned" aria-hidden="true"></span>
+      Entrega ajustada
+    </li>
+  </ul>
+
+  <div class="bench__controls">
+    <button class="pedal" type="button" data-pedal-button hidden>
+      <span class="pedal__plate" aria-hidden="true"></span>
+      <span class="pedal__label">Mantén pisado</span>
+    </button>
+
+    <p class="cc-small cc-muted bench__hint" data-pedal-hint hidden>
+      Písalo con el puntero, con el dedo o con la barra espaciadora, y suéltalo
+      cuando quieras: el registrador dibuja tu pisada.
+    </p>
+
+    <p class="cc-small cc-muted bench__hint" data-pedal-fallback>
+      La figura compara cómo llega la entrega ante la misma pisada.
+    </p>
+  </div>
+
+  <p class="cc-small bench__caveat">
+    Demostración conceptual y sin cifras: no es una medición, no lleva unidades
+    y no corresponde a ningún vehículo.
+  </p>
+
+  <p class="cc-sr" role="status" data-pedal-status></p>
+</div>
+
+<script>
+  import "../../scripts/concept-c-pedal";
+</script>
+
+<style>
+  .bench {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    block-size: 100%;
+  }
+
+  .bench__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  /* La ventana del registrador: la única superficie oscura de la página.
+     Crece con el módulo —en el hero de escritorio la columna de al lado es
+     alta— y la figura o el lienzo ocupan el hueco entero. */
+  .bench__display {
+    --bench-pad: clamp(0.5rem, 1.5vw, 1rem);
+    position: relative;
+    flex: 1 1 auto;
+    min-block-size: clamp(13rem, 36vw, 19rem);
+    background-color: var(--cc-display);
+    border: 1px solid var(--cc-line-strong);
+    border-radius: var(--cc-radius);
+  }
+
+  .bench__figure,
+  .bench__canvas {
+    position: absolute;
+    inset: var(--bench-pad);
+    inline-size: calc(100% - var(--bench-pad) * 2);
+    block-size: calc(100% - var(--bench-pad) * 2);
+  }
+
+  .bench__grid path {
+    stroke: var(--cc-display-grid);
+    stroke-width: 1;
+    fill: none;
+  }
+
+  .bench__base {
+    stroke: var(--cc-display-line);
+    stroke-width: 1;
+    fill: none;
+  }
+
+  .bench__demand {
+    stroke: var(--cc-on-display-2);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 5;
+    fill: none;
+  }
+
+  .bench__stock {
+    stroke: var(--cc-trace-stock);
+    stroke-width: 1.75;
+    fill: none;
+  }
+
+  .bench__tuned {
+    stroke: var(--cc-trace-tuned);
+    stroke-width: 3;
+    fill: none;
+    stroke-linecap: round;
+  }
+
+  .bench__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+  }
+
+  .bench__key {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--cc-mono);
+    font-size: var(--cc-micro);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--cc-ink-2);
+  }
+
+  .bench__swatch {
+    inline-size: 1.6rem;
+    block-size: 0;
+    border-block-start: 3px solid;
+  }
+
+  .bench__swatch--demand {
+    border-block-start-width: 2px;
+    border-block-start-style: dashed;
+    border-color: var(--cc-ink-3);
+  }
+
+  .bench__swatch--stock {
+    border-block-start-width: 2px;
+    border-color: var(--cc-trace-stock);
+    filter: brightness(0.62);
+  }
+
+  .bench__swatch--tuned {
+    border-color: var(--cc-signal);
+  }
+
+  .bench__controls {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  /* El pedal: una placa con estrías, ancha para el pulgar y para el puntero. */
+  .pedal {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    inline-size: 100%;
+    min-block-size: 3.6rem;
+    border: 1px solid var(--cc-line-strong);
+    border-radius: var(--cc-radius);
+    background-color: var(--cc-face);
+    box-shadow: 0 3px 0 0 var(--cc-line-strong);
+    cursor: pointer;
+    /* Pisar no es seleccionar texto ni hacer zoom. */
+    user-select: none;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform var(--cc-fast) var(--cc-ease),
+      box-shadow var(--cc-fast) var(--cc-ease);
+  }
+
+  .pedal__plate {
+    inline-size: 3.2rem;
+    block-size: 1.6rem;
+    border: 1px solid var(--cc-ink);
+    border-radius: var(--cc-radius);
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--cc-ink) 0 2px,
+      transparent 2px 8px
+    );
+  }
+
+  .pedal__label {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .pedal.is-down {
+    transform: translateY(3px);
+    box-shadow: 0 0 0 0 var(--cc-line-strong);
+    background-color: var(--cc-recess);
+  }
+
+  .bench__caveat {
+    color: var(--cc-ink-3);
+    text-wrap: pretty;
+  }
+</style>

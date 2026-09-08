@@ -1,0 +1,111 @@
+---
+/**
+ * Pie del Concepto B. Local: no toca `SiteFooter.astro`.
+ *
+ * Es corto a propósito. En el sitio actual el pie es el mapa de la web —hace
+ * falta, porque hay ocho páginas—; aquí el concepto es una sola página y un
+ * mapa de sí misma sobraría. Queda lo que de verdad cierra una visita: cómo
+ * escribir, dónde está el taller y el aviso legal que el cliente ya publica.
+ */
+import CbWhatsApp from "./CbWhatsApp.astro";
+import { CONTACT, LEGAL_NOTICE, REPRO_MESSAGE } from "../../config/site";
+
+const year = new Date().getFullYear();
+---
+
+<footer class="cbf cb-void">
+  <div class="cb-wrap cbf__in">
+    <div class="cbf__lead">
+      <p class="cbf__name">JM Repro Cars</p>
+      <p class="cb-lead cb-muted cbf__claim">
+        Reprogramación, diagnóstico, reparación y clonación de centralitas.
+        Para particulares y para talleres.
+      </p>
+    </div>
+
+    <div class="cbf__contact">
+      <CbWhatsApp label="Abrir WhatsApp" message={REPRO_MESSAGE} />
+      <p class="cbf__phone">{CONTACT.whatsappDisplay}</p>
+      <p class="cb-micro cb-muted cbf__area">{CONTACT.area}</p>
+    </div>
+  </div>
+
+  <div class="cb-wrap cbf__legal">
+    <p class="cbf__notice cb-muted">{LEGAL_NOTICE}</p>
+    <p class="cb-micro cb-muted cbf__meta">
+      © {year} JM Repro Cars · Maqueta de trabajo — Concepto B
+    </p>
+  </div>
+</footer>
+
+<style>
+  .cbf {
+    padding-block: clamp(3rem, 1.5rem + 4vw, 5rem) 0;
+  }
+
+  .cbf__in {
+    display: grid;
+    gap: 2.5rem;
+    padding-bottom: clamp(2.5rem, 1.5rem + 3vw, 4rem);
+  }
+
+  .cbf__name {
+    font-size: clamp(1.75rem, 1rem + 3vw, 3.25rem);
+    font-weight: 800;
+    font-variation-settings: "wdth" 120;
+    letter-spacing: -0.025em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .cbf__claim {
+    margin-top: 1rem;
+    max-width: 28em;
+  }
+
+  .cbf__contact {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .cbf__phone {
+    font-size: var(--cb-h3);
+    font-weight: 700;
+    font-variation-settings: "wdth" 108;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cbf__legal {
+    border-top: 1px solid var(--cb-line-void);
+    padding-block: 1.5rem 2rem;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .cbf__notice {
+    font-size: var(--cb-small);
+    line-height: 1.55;
+    max-width: 62ch;
+  }
+
+  @media (min-width: 48rem) {
+    .cbf__in {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 3rem;
+    }
+
+    .cbf__contact {
+      align-items: flex-end;
+      text-align: right;
+    }
+
+    .cbf__legal {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: baseline;
+      gap: 2rem;
+    }
+  }
+</style>

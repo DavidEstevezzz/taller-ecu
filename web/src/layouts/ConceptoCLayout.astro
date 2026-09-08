@@ -1,0 +1,203 @@
+---
+/**
+ * Carcasa del CONCEPTO C. No la use ninguna página pública.
+ *
+ * Como la del Concepto B, es una copia de responsabilidades, no de código:
+ * monta su propio `<head>`, su hoja, su tipografía y sus dos raíles —cabecera
+ * y pie forman parte del chasis del instrumento, así que viven aquí y no en
+ * componentes del sitio—. No toca `PublicLayout`, `Seo`, `SiteHeader` ni
+ * `SiteFooter`: nada de lo que se pruebe aquí puede alterar el sitio.
+ *
+ * Reglas garantizadas (vigiladas por `web/test/concept-c.test.ts`):
+ *
+ *   1. `noindex, nofollow` siempre.
+ *   2. **Sin canónica**: no es una página pública definitiva y no declara
+ *      serlo, ni se declara variante de la real.
+ *   3. Fuera del sitemap y bloqueada en robots: `/conceptos` entero ya lo
+ *      está, en `astro.config.mjs` y en `robots.txt.ts`.
+ */
+import { SITE, CONTACT, LEGAL_NOTICE } from "../config/site";
+import CcWhatsApp from "../components/concepto-c/CcWhatsApp.astro";
+
+/* Tres pesos de Barlow: texto, énfasis y rotulación. Solo esta carcasa los
+   carga; ninguna página del sitio los ve. */
+import "@fontsource/barlow/400.css";
+import "@fontsource/barlow/600.css";
+import "@fontsource/barlow/800.css";
+import "../styles/concept-c.css";
+
+/*
+ * El peso 800 pinta el titular de portada, que es lo primero que se ve: se
+ * precarga para que no parpadee. Importado como URL para usar la ruta con
+ * hash del build, no una escrita a mano.
+ */
+import barlow800 from "@fontsource/barlow/files/barlow-latin-800-normal.woff2?url";
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+const year = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang={SITE.lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <!-- Maqueta interna: ni se indexa, ni se sigue, ni se declara canónica. -->
+    <meta name="robots" content="noindex, nofollow" />
+
+    <link
+      rel="preload"
+      href={barlow800}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#d8dad7" />
+
+    <!--
+      Interruptor de movimiento, antes de pintar. `cc-motion` solo se activa
+      si hay JavaScript Y no se ha pedido menos movimiento; todo lo que
+      arranca oculto o se anima cuelga de él. Sin este script la página se
+      sirve entera, visible y quieta.
+    -->
+    <script is:inline>
+      (function () {
+        var root = document.documentElement;
+        root.classList.add("cc-js");
+
+        try {
+          if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            root.classList.add("cc-motion");
+          }
+        } catch (error) {
+          /* Sin matchMedia se queda quieta, que es el lado seguro. */
+        }
+      })();
+    </script>
+  </head>
+
+  <body>
+    <a href="#contenido" class="cc-skip">Saltar al contenido</a>
+
+    <div class="cc-chassis">
+      <!-- Raíl superior: marca, identificación de la maqueta y la acción. -->
+      <header class="rail rail--top">
+        <p class="rail__brand">
+          JM Repro Cars
+          <span class="cc-micro rail__brandSub">Reprogramación de centralita</span>
+        </p>
+
+        <p class="cc-micro rail__tag">Maqueta interna · Concepto C</p>
+
+        <CcWhatsApp class="rail__cta" label="WhatsApp" />
+      </header>
+
+      <main id="contenido">
+        <slot />
+      </main>
+
+      <!-- Raíl inferior: los avisos, grabados en el canto. -->
+      <footer class="rail rail--bottom">
+        <p class="cc-small rail__legal">{LEGAL_NOTICE}</p>
+        <p class="cc-micro rail__meta">
+          {SITE.name} · {CONTACT.area} · Maqueta de trabajo — Concepto C · {year}
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
+
+<style>
+  .cc-skip {
+    position: absolute;
+    inset-inline-start: 0.75rem;
+    inset-block-start: -4rem;
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 2.75rem;
+    padding-inline: 1rem;
+    background-color: var(--cc-ink);
+    color: var(--cc-face);
+    font-size: var(--cc-small);
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: var(--cc-radius);
+    transition: inset-block-start var(--cc-fast) var(--cc-ease);
+  }
+
+  .cc-skip:focus-visible {
+    inset-block-start: 0.75rem;
+  }
+
+  .rail {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem var(--cc-pad);
+  }
+
+  .rail--top {
+    border-block-end: 1px solid var(--cc-line-strong);
+    flex-wrap: wrap;
+  }
+
+  .rail__brand {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    line-height: 1.1;
+  }
+
+  .rail__brandSub {
+    font-weight: 500;
+    letter-spacing: 0.14em;
+  }
+
+  .rail__tag {
+    margin-inline-start: auto;
+  }
+
+  .rail__cta {
+    min-block-size: 2.5rem;
+    padding-inline: 1rem;
+    font-size: var(--cc-small);
+  }
+
+  .rail--bottom {
+    border-block-start: 1px solid var(--cc-line-strong);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding-block: 1.1rem;
+  }
+
+  .rail__legal {
+    color: var(--cc-ink-2);
+    max-inline-size: 72ch;
+    text-wrap: pretty;
+  }
+
+  @media (max-width: 40rem) {
+    .rail__tag {
+      order: 3;
+      flex-basis: 100%;
+      margin-inline-start: 0;
+    }
+  }
+</style>

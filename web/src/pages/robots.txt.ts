@@ -7,12 +7,17 @@ import { SITE_URL } from "../config/domain.mjs";
  *
  * El bloqueo de /admin es una señal para buscadores, no una medida de
  * seguridad: la protección real es la sesión del backend.
+ *
+ * El de /conceptos es una señal y nada más: ahí viven maquetas internas de
+ * dirección visual, que además llevan `noindex, nofollow`, quedan fuera del
+ * sitemap y no están enlazadas desde ninguna página pública.
  */
 export const GET: APIRoute = () => {
   const body = [
     "User-agent: *",
     "Allow: /",
     "Disallow: /admin",
+    "Disallow: /conceptos",
     "",
     `Sitemap: ${new URL("/sitemap-index.xml", SITE_URL).href}`,
     "",

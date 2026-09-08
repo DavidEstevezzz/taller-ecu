@@ -21,8 +21,14 @@ export default defineConfig({
        * El panel nunca entra en el sitemap.
        * Es una de las tres barreras: aquí, `noindex` en el layout del
        * panel y `Disallow: /admin` en robots.txt.
+       *
+       * `/conceptos` va por el mismo camino y por otro motivo: son maquetas
+       * internas para comparar direcciones visuales, no páginas del sitio.
+       * Mismas tres barreras —fuera del sitemap, `noindex, nofollow` en su
+       * carcasa y `Disallow` en robots—, más una cuarta: ninguna página
+       * pública enlaza a ellas.
        */
-      filter: (page) => !page.includes("/admin"),
+      filter: (page) => !page.includes("/admin") && !page.includes("/conceptos"),
       /*
        * Nota: la integración emite la portada como el origen desnudo
        * ("https://jmreprocars.com") por la política trailingSlash "never",
