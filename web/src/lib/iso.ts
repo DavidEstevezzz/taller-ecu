@@ -154,3 +154,57 @@ export function grid(
 
   return lines;
 }
+
+export interface TracePath {
+  /** El atributo `d` del recorrido. */
+  d: string;
+  /**
+   * Fracción del recorrido (0..1) recorrida al terminar cada paso, medida en
+   * longitud de pantalla. Sirve para dibujar el trazo por tramos con
+   * `pathLength="1"` sin tener que medirlo en el navegador: la geometría ya
+   * se conoce aquí, y medir en el cliente ataría el dibujo a que el
+   * JavaScript llegue a ejecutarse.
+   */
+  stops: number[];
+}
+
+/**
+ * Igual que `trace`, pero devolviendo además dónde queda cada paso dentro del
+ * recorrido completo. Los pasos consecutivos por el mismo eje son colineales
+ * a propósito: sirven para marcar un punto intermedio sin partir la línea.
+ */
+export function tracePath(
+  ox: number,
+  oy: number,
+  u0: number,
+  v0: number,
+  steps: TraceStep[]
+): TracePath {
+  let u = u0;
+  let v = v0;
+  let x = px(ox, u, v);
+  let y = py(oy, u, v);
+
+  let d = `M ${pt(ox, oy, u, v)}`;
+  const lengths: number[] = [];
+  let total = 0;
+
+  for (const [axis, len] of steps) {
+    if (axis === 1) u += len;
+    else v += len;
+
+    const nx = px(ox, u, v);
+    const ny = py(oy, u, v);
+    total += Math.hypot(nx - x, ny - y);
+    lengths.push(total);
+
+    d += ` L ${pt(ox, oy, u, v)}`;
+    x = nx;
+    y = ny;
+  }
+
+  return {
+    d,
+    stops: lengths.map((value) => (total === 0 ? 1 : value / total)),
+  };
+}

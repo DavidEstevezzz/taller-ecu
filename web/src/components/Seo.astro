@@ -1,5 +1,6 @@
 ---
 import { SITE, SITE_URL } from "../config/site";
+import { normalisePath } from "../lib/path";
 
 /**
  * Metadatos de una página. Único sitio donde se construyen título,
@@ -16,6 +17,15 @@ interface Props {
   noindex?: boolean;
   /** Imagen social; ruta relativa al dominio. */
   image?: string;
+  /**
+   * Datos estructurados de la página, ya montados como objeto.
+   *
+   * Se serializan aquí y no en la página por la misma razón que el resto de
+   * los metadatos: un `<script type="application/ld+json">` suelto en una
+   * plantilla es una etiqueta de cabecera escrita fuera de su sitio. La
+   * página decide QUÉ declara; este componente, cómo se emite.
+   */
+  jsonLd?: Record<string, unknown> | null;
 }
 
 const {
@@ -24,34 +34,13 @@ const {
   path,
   noindex = false,
   image,
+  jsonLd = null,
 } = Astro.props;
 
 /*
- * Canonical normalizada.
- *
- * Con build.format "file", Astro.url.pathname trae ".html" durante la
- * compilación ("/admin.html"). La URL pública no lo lleva, así que se
- * limpia aquí: si no, la canónica apuntaría a una dirección que el
- * servidor no sirve.
- *
- * Política del sitio: sin barra final, salvo la portada, que es "/".
+ * Canonical normalizada: sin `.html` y sin barra final. La normalización vive
+ * en src/lib/path.ts porque la cabecera necesita exactamente la misma.
  */
-function normalisePath(value: string): string {
-  let result = value;
-
-  if (result.endsWith("/index.html")) {
-    result = result.slice(0, -"index.html".length);
-  } else if (result.endsWith(".html")) {
-    result = result.slice(0, -".html".length);
-  }
-
-  if (result.length > 1 && result.endsWith("/")) {
-    result = result.slice(0, -1);
-  }
-
-  return result === "" ? "/" : result;
-}
-
 const canonical = new URL(normalisePath(path ?? Astro.url.pathname), SITE_URL)
   .href;
 const fullTitle = title === SITE.name ? title : `${title} · ${SITE.name}`;
@@ -83,6 +72,16 @@ const imageUrl = image ? new URL(image, SITE_URL).href : undefined;
 <meta name="twitter:title" content={fullTitle} />
 <meta name="twitter:description" content={description} />
 {imageUrl && <meta name="twitter:image" content={imageUrl} />}
+
+{
+  /*
+   * `is:inline` para que Astro no lo trate como un módulo que empaquetar: no
+   * es JavaScript, es una declaración que tiene que salir tal cual en el HTML.
+   */
+  jsonLd && (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd)} />
+  )
+}
 
 <!-- Favicon provisional: sustituir junto con el logo definitivo. -->
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />

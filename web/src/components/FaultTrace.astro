@@ -1,0 +1,747 @@
+---
+import { px, py, topFace, sideFaces, box, trace, tracePath } from "../lib/iso";
+
+/**
+ * El recorrido de una señal por la placa — la firma de /servicios/reparacion-ecu.
+ *
+ * La portada abre la centralita en capas y /servicios/reprogramacion entra en
+ * la de software. Ésta baja una profundidad más: la placa, y lo que se hace
+ * sobre ella, que es **localizar**.
+ *
+ * Lo que dibuja, y por qué cada cosa:
+ *
+ * - **Un recorrido, no un panel de datos.** La reparación consiste en seguir
+ *   por dónde debería pasar la señal hasta el punto en que deja de pasar. Eso
+ *   es una línea, tres zonas y una interrupción; no hace falta nada más.
+ * - **Las zonas se marcan según se revisan.** «Claridad sobre lo que se ha
+ *   revisado» es parte del servicio, así que la marca se acumula en vez de
+ *   sustituirse: al final se ve todo lo comprobado, no solo lo último.
+ * - **La interrupción está en un punto cualquiera**, entre zona y zona. No
+ *   señala a un componente ni a un tipo de avería: eso sería inventar un
+ *   diagnóstico. El pie del dibujo lo dice con todas las letras.
+ * - **Ni una cifra, ni un código, ni una medida, ni una unidad.** Misma regla
+ *   que en `MapLayer` y `EcuExploded`.
+ *
+ * Cómo degrada, que es lo que decide toda la implementación:
+ *
+ *   sin JavaScript      → el dibujo se sirve COMPLETO (zonas revisadas,
+ *                         recorrido entero, punto de intervención marcado) y
+ *                         los seis pasos son una lista normal.
+ *   movimiento reducido → igual que sin JavaScript.
+ *   menos de 1024px     → igual que sin JavaScript: el dibujo va arriba y los
+ *                         pasos debajo. Nada pegajoso en pantallas donde no
+ *                         caben dos columnas.
+ *
+ * El paso a paso solo se activa (`.is-driven`) cuando hay JavaScript, no se
+ * ha pedido menos movimiento y hay sitio para las dos columnas.
+ */
+interface Props {
+  id?: string;
+  class?: string;
+}
+
+const { id = "fault-trace", class: className = "" } = Astro.props;
+
+/* ── La placa ──────────────────────────────────────────────
+   Misma proyección dimétrica 2:1 y mismo chaflán que el resto del sitio. */
+const OX = 380;
+const OY = 110;
+const W = 460;
+const D = 300;
+const C = 40;
+const T = 14;
+
+/* ── Zonas ─────────────────────────────────────────────────
+   Tres áreas de la placa, en el orden en que las encuentra el recorrido
+   desde el conector hacia dentro. El orden es geométrico, no un
+   procedimiento: por eso no llevan número. */
+const ZONES = [
+  { key: "alimentacion", u: 25, v: 210, du: 120, dv: 75 },
+  { key: "salidas", u: 175, v: 210, du: 130, dv: 75 },
+  { key: "nucleo", u: 190, v: 55, du: 180, dv: 140 },
+] as const;
+
+/* ── El recorrido ──────────────────────────────────────────
+   Sale del conector, cruza las dos zonas de delante, sube a la del fondo y
+   se interrumpe justo después. Los pasos consecutivos por el mismo eje son
+   colineales: marcan dónde termina cada tramo sin partir la línea. */
+const MAIN = tracePath(OX, OY, 70, 296, [
+  [2, -56], // sale del conector          → tramo del conector
+  [1, 75], //  cruza la alimentación      → tramo de la alimentación
+  [1, 30], //  entra en las salidas
+  [1, 45],
+  [2, -30], // abandona las salidas       → tramo de las salidas
+  [2, -100], // sube hacia el núcleo
+  [1, 160], // cruza el núcleo y sale     → tramo del núcleo
+]);
+
+/** Fracción del recorrido dibujada en cada paso. */
+const PROGRESS = [
+  MAIN.stops[0]!, // el conector
+  MAIN.stops[1]!, // la alimentación
+  MAIN.stops[4]!, // las salidas
+  1, // el núcleo: hasta la interrupción
+  1, // la continuidad
+  1, // el punto de intervención
+];
+
+/** El tramo que falta, y lo que hay después de él. */
+const GAP = trace(OX, OY, 380, 110, [[1, 26]]);
+const AFTER = trace(OX, OY, 406, 110, [
+  [1, 44],
+  [2, 40],
+]);
+
+const GAP_A: [number, number] = [px(OX, 380, 110), py(OY, 380, 110)];
+const GAP_B: [number, number] = [px(OX, 406, 110), py(OY, 406, 110)];
+const SPOT: [number, number] = [
+  (GAP_A[0] + GAP_B[0]) / 2,
+  (GAP_A[1] + GAP_B[1]) / 2,
+];
+
+/* ── Piezas sobre la placa ─────────────────────────────────
+   Volumen suficiente para que se lea como una placa, sin serigrafía
+   inventada. Cada una está colocada fuera del recorrido a propósito. */
+const PARTS = {
+  alimentacion: [
+    box(OX, OY, 92, 212, 44, 22, 9),
+    box(OX, OY, 26, 250, 36, 26, 11),
+    box(OX, OY, 88, 248, 42, 26, 10),
+  ],
+  salidas: [
+    box(OX, OY, 244, 214, 48, 24, 13),
+    box(OX, OY, 182, 252, 40, 26, 12),
+    box(OX, OY, 250, 250, 44, 28, 11),
+  ],
+  nucleo: [
+    box(OX, OY, 252, 66, 54, 32, 10),
+    box(OX, OY, 198, 62, 34, 30, 9),
+    box(OX, OY, 248, 128, 92, 58, 14),
+  ],
+} as const;
+
+/* Piezas fuera de toda zona. Están para que la placa no parezca hecha de
+   tres recuadros: no todo lo que hay dentro tiene nombre en esta página. */
+const LOOSE = [
+  box(OX, OY, 356, 226, 44, 26, 11),
+  box(OX, OY, 398, 172, 30, 26, 9),
+  box(OX, OY, 300, 268, 38, 22, 8),
+];
+
+/** Patillas del componente grande del núcleo, hacia el recorrido. */
+const CORE_PINS = Array.from({ length: 6 }, (_, i) =>
+  trace(OX, OY, 258 + i * 15, 128, [[2, -12]])
+);
+
+/* Conector: cabalga sobre el borde delantero, como en la unidad real. */
+const CONNECTOR = box(OX, OY, 34, 286, 72, 46, 24);
+const CONNECTOR_PINS = Array.from({ length: 5 }, (_, i) => {
+  const u = 44 + i * 14;
+  const x = px(OX, u, 332);
+  const y = py(OY, u, 332);
+  return `M ${x.toFixed(1)} ${y.toFixed(1)} L ${x.toFixed(1)} ${(y + 13).toFixed(1)}`;
+});
+
+/* Textura: pistas secundarias en grafito y una hilera de pads. Ninguna
+   forma parte del relato; están para que la placa no parezca vacía. */
+const ETCH = [
+  trace(OX, OY, 60, 30, [
+    [1, 120],
+    [2, 40],
+  ]),
+  trace(OX, OY, 400, 210, [
+    [2, 60],
+    [1, -90],
+  ]),
+  trace(OX, OY, 120, 120, [
+    [1, 40],
+    [2, -60],
+  ]),
+  trace(OX, OY, 300, 268, [[1, 110]]),
+];
+
+const PADS = Array.from({ length: 6 }, (_, i) => {
+  const u = 70 + i * 26;
+  return [px(OX, u, 22), py(OY, u, 22)] as const;
+});
+
+/* ── Los seis pasos ────────────────────────────────────────
+   Van aquí y no en site.ts porque están atados a la geometría: cambiar uno
+   sin mover su zona dejaría el dibujo diciendo otra cosa que el texto.
+
+   Ninguno afirma un diagnóstico, un plazo ni un resultado. El último dice
+   expresamente que «no se puede» también es una respuesta. */
+const STEPS = [
+  {
+    kind: "Entrada",
+    title: "Todo entra por el conector",
+    body:
+      "La alimentación, lo que mandan los sensores y las órdenes que salen " +
+      "hacia los actuadores comparten la misma puerta. El recorrido empieza " +
+      "ahí: comprobando que lo que debería llegar, llega.",
+  },
+  {
+    kind: "Zona",
+    title: "La alimentación",
+    body:
+      "Si la unidad no recibe una tensión estable, ninguna otra comprobación " +
+      "dice nada fiable. Por eso es lo primero que se mira, aunque el síntoma " +
+      "apunte a otro sitio.",
+  },
+  {
+    kind: "Zona",
+    title: "Las salidas de potencia",
+    body:
+      "La parte que manda corriente hacia fuera: inyectores, bobinas, " +
+      "electroválvulas. Aquí no basta con que la orden se genere; hay que ver " +
+      "que sale.",
+  },
+  {
+    kind: "Zona",
+    title: "El núcleo y su memoria",
+    body:
+      "El microcontrolador que decide y la memoria donde está guardada la " +
+      "configuración de ese vehículo. Interesa saber si responde y si lo que " +
+      "tiene guardado sigue siendo legible.",
+  },
+  {
+    kind: "Recorrido",
+    title: "La continuidad",
+    body:
+      "Entre zona y zona hay pistas y soldaduras. Se sigue el camino que " +
+      "debería recorrer la señal hasta donde deja de haberlo. Ese punto es lo " +
+      "que se estaba buscando.",
+  },
+  {
+    kind: "Resultado",
+    title: "El punto de intervención",
+    body:
+      "Si la interrupción está localizada y se puede abordar, se trabaja sobre " +
+      "ese punto y la unidad sigue siendo la del vehículo. Si no se puede, eso " +
+      "también es una respuesta, y se explica por qué.",
+  },
+] as const;
+
+const titleId = `${id}-t`;
+const descId = `${id}-d`;
+---
+
+<div
+  class={`ft ${className}`}
+  data-fault-trace
+  data-progress={PROGRESS.map((value) => value.toFixed(4)).join(",")}
+>
+  <div class="ft-frame">
+    <svg
+      viewBox="60 96 800 428"
+      class="ft-svg"
+      role="img"
+      aria-labelledby={`${titleId} ${descId}`}
+      fill="none"
+    >
+      <title id={titleId}>Recorrido de una señal por la placa de una centralita</title>
+      <desc id={descId}>
+        Dibujo esquemático de una placa vista en perspectiva. Una línea sale del
+        conector del borde, atraviesa tres zonas marcadas —la alimentación, las
+        salidas de potencia y el núcleo con su memoria— y se interrumpe en un
+        punto entre zonas, señalado con un círculo. No hay valores, códigos ni
+        medidas: representa el método, no una avería concreta.
+      </desc>
+
+      <!-- ── La placa ── -->
+      <g class="ft-board">
+        {sideFaces(OX, OY, W, D, C, T).map((d) => <path d={d} class="board-side" />)}
+        <path d={topFace(OX, OY, W, D, C)} class="board-top" />
+        {ETCH.map((d) => <path d={d} class="etch" />)}
+        {
+          LOOSE.map((part) => (
+            <g>
+              {part.sides.map((d) => (
+                <path d={d} class="part-side" />
+              ))}
+              <path d={part.top} class="part-top" />
+            </g>
+          ))
+        }
+        {
+          PADS.map(([x, y]) => (
+            <ellipse cx={x} cy={y} rx="6" ry="3" class="board-pad" />
+          ))
+        }
+      </g>
+
+      <!-- ── El conector ──
+           Va antes que el recorrido: dibujado después, su cara tapaba el
+           arranque de la línea y la señal parecía salir de la nada. -->
+      <g class="ft-connector" data-at="0">
+        {CONNECTOR.sides.map((d) => <path d={d} class="part-side" />)}
+        <path d={CONNECTOR.top} class="part-top" />
+        {CONNECTOR_PINS.map((d) => <path d={d} class="connector-pin" />)}
+      </g>
+
+      <!-- ── Zonas ──
+           Cada una se enciende cuando el recorrido la alcanza y se queda
+           marcada: al final se ve todo lo revisado. -->
+      {
+        ZONES.map((zone, i) => {
+          const outline = topFace(
+            px(OX, zone.u, zone.v),
+            py(OY, zone.u, zone.v),
+            zone.du,
+            zone.dv,
+            0
+          );
+
+          return (
+            <g class="ft-zone" data-zone={zone.key} data-at={i + 1}>
+              <path d={outline} class="zone-fill" />
+              <path d={outline} class="zone-ring" />
+              <path
+                d={`M ${(px(OX, zone.u, zone.v) - 7).toFixed(1)} ${py(OY, zone.u, zone.v).toFixed(1)} l 4.5 5 l 8.5 -9`}
+                class="zone-mark"
+              />
+            </g>
+          );
+        })
+      }
+
+      <!-- ── Las piezas ──
+           Fuera del grupo de la zona a propósito: lo que cambia al revisar es
+           la marca, no la placa. Atenuar los componentes daba a entender que
+           aparecen y desaparecen. -->
+      <g class="ft-parts">
+        {
+          Object.values(PARTS)
+            .flat()
+            .map((part) => (
+              <g>
+                {part.sides.map((d) => (
+                  <path d={d} class="part-side" />
+                ))}
+                <path d={part.top} class="part-top" />
+              </g>
+            ))
+        }
+        {CORE_PINS.map((d) => <path d={d} class="part-pin" />)}
+      </g>
+
+      <!-- ── El recorrido ──
+           Se dibuja el último, por encima de las piezas. Debajo, su primer
+           tramo quedaba oculto por el conector y por los componentes de la
+           primera zona, y la señal parecía empezar a mitad de la placa.
+           Sobre ellas se lee como lo que es: el camino que se está siguiendo. -->
+      <path d={MAIN.d} pathLength="1" class="trace-main trace-a" />
+      <path d={GAP} class="trace-main trace-gap" />
+      <path d={AFTER} class="trace-main trace-b" />
+      <ellipse
+        cx={px(OX, 450, 150)}
+        cy={py(OY, 450, 150)}
+        rx="7"
+        ry="3.5"
+        class="trace-end"
+      />
+
+      <!-- ── La interrupción y el punto de intervención ── -->
+      <g class="ft-spot">
+        <path
+          d={`M ${(GAP_A[0] - 6).toFixed(1)} ${(GAP_A[1] + 12).toFixed(1)} L ${(GAP_A[0] + 6).toFixed(1)} ${(GAP_A[1] - 12).toFixed(1)}`}
+          class="break-mark"
+        />
+        <path
+          d={`M ${(GAP_B[0] - 6).toFixed(1)} ${(GAP_B[1] + 12).toFixed(1)} L ${(GAP_B[0] + 6).toFixed(1)} ${(GAP_B[1] - 12).toFixed(1)}`}
+          class="break-mark"
+        />
+        <ellipse
+          cx={SPOT[0]}
+          cy={SPOT[1]}
+          rx="46"
+          ry="30"
+          class="spot-ring"
+        />
+      </g>
+    </svg>
+
+    <p class="ft-caption">
+      Dibujo esquemático: no representa ninguna unidad, ningún vehículo ni
+      ninguna avería concreta. La interrupción está puesta en un punto
+      cualquiera del recorrido porque en un caso real puede estar en otro, o no
+      estar en la centralita.
+    </p>
+  </div>
+
+  <ol class="ft-steps">
+    {
+      STEPS.map((step, i) => (
+        <li class="ft-step" data-ft-step={i}>
+          <p class="label-technical ft-step-kind">{step.kind}</p>
+          <h3 class="display ft-step-title">{step.title}</h3>
+          <p class="ft-step-body">{step.body}</p>
+        </li>
+      ))
+    }
+  </ol>
+</div>
+
+<style>
+  .ft {
+    /* Fracción del recorrido dibujada. 1 = completo, que es como se sirve
+       cuando nadie lo conduce. */
+    --ft-p: 1;
+    display: grid;
+    gap: 3rem;
+  }
+
+  @media (min-width: 64rem) {
+    .ft {
+      grid-template-columns: minmax(0, 54fr) minmax(0, 42fr);
+      gap: 4rem;
+      align-items: start;
+    }
+
+    /*
+     * Mientras el paso a paso está en marcha, el dibujo se queda quieto y
+     * centrado en el alto disponible: así queda a la altura del texto que lo
+     * explica sin tener que adivinar cuánto mide, que depende del ancho de la
+     * columna. Sin conducir vuelve a ser un bloque normal.
+     */
+    .ft.is-driven .ft-frame {
+      position: sticky;
+      top: var(--header-height);
+      display: flex;
+      min-height: calc(100vh - var(--header-height));
+      flex-direction: column;
+      justify-content: center;
+      gap: 1.75rem;
+      padding-block: 2rem;
+    }
+
+    .ft.is-driven .ft-svg {
+      /* Que no desborde en pantallas bajas: el viewBox se ajusta solo. */
+      max-height: 62vh;
+    }
+  }
+
+  .ft-caption {
+    margin-top: 1.5rem;
+    max-width: 34rem;
+    border-left: 2px solid var(--color-border-inverse);
+    padding-left: 1.25rem;
+    font-size: 0.8125rem;
+    line-height: 1.65;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  @media (min-width: 64rem) {
+    .ft.is-driven .ft-caption {
+      margin-top: 0;
+    }
+  }
+
+  .ft-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /*
+   * Sin dos columnas, el dibujo se sale del contenedor hasta el borde de la
+   * pantalla. Es lo único de la página que lo hace, y se lo gana: a 375px cada
+   * píxel de ancho es legibilidad del recorrido.
+   */
+  @media (max-width: 63.9375rem) {
+    .ft-svg {
+      width: calc(100% + 2.5rem);
+      margin-inline: -1.25rem;
+    }
+  }
+
+  @media (min-width: 40rem) and (max-width: 63.9375rem) {
+    .ft-svg {
+      width: calc(100% + 4rem);
+      margin-inline: -2rem;
+    }
+  }
+
+  /* ── Materiales ──────────────────────────────────────────
+     Los mismos que EcuExploded y ServiceDiagram: los dibujos del sitio son
+     ventanas al mismo banco de trabajo, no cuatro paletas distintas. */
+  .board-top {
+    fill: var(--jm-graphite-800);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  .board-side {
+    fill: var(--jm-graphite-950);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+
+  .etch {
+    stroke: var(--jm-graphite-700);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .board-pad {
+    fill: var(--jm-graphite-600);
+  }
+
+  .part-top {
+    fill: var(--jm-graphite-600);
+    stroke: var(--jm-graphite-400);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .part-side {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-graphite-500);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .part-pin,
+  .connector-pin {
+    stroke: var(--jm-copper-300);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .connector-pin {
+    stroke-width: 3;
+  }
+
+  /* ── El recorrido ── */
+  .trace-main {
+    stroke: var(--jm-copper-400);
+    stroke-width: 3.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .trace-a {
+    stroke-dasharray: 1;
+    stroke-dashoffset: calc(1 - var(--ft-p));
+    transition: stroke-dashoffset var(--duration-assembly) var(--ease-out);
+  }
+
+  .trace-end {
+    fill: var(--jm-copper-400);
+  }
+
+  /* ── Zonas ── */
+  /*
+   * Las zonas van por debajo del recorrido a propósito.
+   *
+   * En la primera versión eran rectángulos de cobre del mismo peso que la
+   * línea, y el dibujo se convertía en tres recuadros y una línea perdida
+   * entre ellos: justo lo contrario de lo que cuenta la página. Ahora son una
+   * mancha con un filo tenue, y el cobre pleno queda para una sola cosa, que
+   * es el recorrido.
+   */
+  .zone-fill {
+    fill: color-mix(in srgb, var(--jm-copper-500) 11%, transparent);
+  }
+
+  .zone-ring {
+    fill: none;
+    stroke: color-mix(in srgb, var(--jm-copper-300) 45%, transparent);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .zone-mark {
+    fill: none;
+    stroke: var(--jm-copper-300);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .ft-zone,
+  .ft-connector,
+  .ft-spot,
+  .zone-fill,
+  .zone-ring,
+  .zone-mark,
+  .trace-gap,
+  .trace-b,
+  .break-mark,
+  .spot-ring {
+    transition:
+      opacity var(--duration-slow) var(--ease-out),
+      stroke-width var(--duration-slow) var(--ease-out),
+      fill var(--duration-slow) var(--ease-out);
+  }
+
+  .break-mark {
+    stroke: var(--jm-copper-300);
+    stroke-width: 3;
+    stroke-linecap: round;
+    opacity: 0;
+  }
+
+  .spot-ring {
+    fill: none;
+    stroke: var(--jm-copper-400);
+    stroke-width: 2;
+    stroke-dasharray: 7 5;
+  }
+
+  /* ── Los pasos ─────────────────────────────────────────── */
+  .ft-steps {
+    display: grid;
+    gap: 2.75rem;
+  }
+
+  .ft-step {
+    border-left: 2px solid var(--color-accent-on-dark);
+    padding-left: 1.5rem;
+    transition: border-color var(--duration-slow) var(--ease-out);
+  }
+
+  .ft-step-kind {
+    color: var(--color-accent-on-dark);
+    transition: color var(--duration-slow) var(--ease-out);
+  }
+
+  .ft-step-title {
+    margin-top: 0.65rem;
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    color: var(--color-ink-inverse);
+  }
+
+  .ft-step-body {
+    margin-top: 0.7rem;
+    max-width: 34rem;
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  /* El estado del paso se marca con la linea y con la etiqueta, nunca
+     bajando el contraste del texto: lo que hay que leer se lee siempre. */
+  .ft.is-driven .ft-step {
+    border-color: var(--color-border-inverse);
+  }
+
+  .ft.is-driven .ft-step[data-state="pending"] .ft-step-kind {
+    color: var(--color-ink-inverse-muted);
+  }
+
+  .ft.is-driven .ft-step[data-state="done"] {
+    border-color: color-mix(
+      in srgb,
+      var(--color-accent-on-dark) 45%,
+      transparent
+    );
+  }
+
+  .ft.is-driven .ft-step[data-state="active"] {
+    border-color: var(--color-accent-on-dark);
+  }
+
+  @media (min-width: 64rem) {
+    /* El paso a paso necesita recorrido de desplazamiento; sin conducir, la
+       lista vuelve a ser compacta y la seccion se acorta sola. */
+    .ft.is-driven .ft-steps {
+      gap: 0;
+      /*
+       * Recorrido de sobra al final. Sin esto, el contenedor se acaba durante
+       * el último paso —justo el del punto de intervención—, el dibujo deja de
+       * estar pegado y se sube hasta meterse bajo la cabecera.
+       */
+      /* 24vh es el mínimo para que el dibujo no se despegue durante el
+         último paso; 30 deja margen y regala una pantalla más con la placa
+         entera a la vista, que es el final del relato. */
+      padding-bottom: 30vh;
+    }
+
+    .ft.is-driven .ft-step {
+      display: flex;
+      min-height: 52vh;
+      flex-direction: column;
+      justify-content: center;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     Estados conducidos por el desplazamiento.
+     Todo lo de arriba es el estado COMPLETO: es lo que se ve sin
+     JavaScript, con movimiento reducido y por debajo de 1024px.
+     ═══════════════════════════════════════════════════════ */
+
+  .ft.is-driven .ft-zone {
+    opacity: 0.24;
+  }
+
+  .ft.is-driven .ft-zone[data-state="active"],
+  .ft.is-driven .ft-zone[data-state="done"] {
+    opacity: 1;
+  }
+
+  /* Mientras se revisa, el contorno va a trazos; al terminar, se cierra. */
+  .ft.is-driven .ft-zone[data-state="active"] .zone-ring {
+    stroke: var(--jm-copper-300);
+    stroke-dasharray: 6 5;
+    stroke-width: 2;
+  }
+
+  .ft.is-driven .ft-zone[data-state="active"] .zone-fill {
+    fill: color-mix(in srgb, var(--jm-copper-500) 22%, transparent);
+  }
+
+  .ft.is-driven .ft-zone:not([data-state="done"]) .zone-mark {
+    opacity: 0;
+  }
+
+  .ft.is-driven .ft-connector[data-state="pending"] {
+    opacity: 0.35;
+  }
+
+  /* El tramo que falta no está mientras se busca. */
+  .ft.is-driven .trace-gap {
+    opacity: 0;
+  }
+
+  .ft.is-driven .trace-b,
+  .ft.is-driven .trace-end {
+    opacity: 0.16;
+  }
+
+  .ft.is-driven .spot-ring {
+    opacity: 0;
+  }
+
+  .ft.is-driven[data-step="4"] .break-mark {
+    opacity: 1;
+  }
+
+  .ft.is-driven[data-step="4"] .spot-ring,
+  .ft.is-driven[data-step="5"] .spot-ring {
+    opacity: 1;
+  }
+
+  /* La intervención: el tramo se cierra y el resto del recorrido recupera
+     continuidad, un instante después de que se lea por qué. */
+  .ft.is-driven[data-step="5"] .trace-gap {
+    opacity: 1;
+    transition-delay: 480ms;
+  }
+
+  .ft.is-driven[data-step="5"] .trace-b,
+  .ft.is-driven[data-step="5"] .trace-end {
+    opacity: 1;
+    transition-delay: 620ms;
+  }
+</style>
+
+<script>
+  import "../scripts/fault-trace";
+</script>

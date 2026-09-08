@@ -25,6 +25,16 @@
  *   carga solo: hace falta que el visitante lo active.
  * - **Solo pide recursos a `tuning-shop.com`** (su CSS, su JS y sus fuentes).
  *   Ni Google Fonts, ni analítica, ni ningún otro dominio.
+ * - **`https://tuning-shop.com/demo/` NO sirve como destino de un enlace.**
+ *   Comprobado en navegador el 2026-08-28: responde 200, pero es una página de
+ *   su tienda —cabecera comercial, carrito, muro de cookies de Cookiebot con
+ *   las cuatro categorías activadas y Google Tag Manager— y el selector que
+ *   incrusta usa **la cuenta de demostración del proveedor (`user=177`)**, no
+ *   la del cliente. El único destino honesto sería este mismo `src`.
+ * - **Un enlace saliente hacia él no puede llevar `rel="noreferrer"`**: suprime
+ *   la cabecera `Referer`, que es justo lo que el proveedor valida. Hoy no hay
+ *   ningún enlace saliente —el botón «Calcular mejora» es un ancla interna que
+ *   baja hasta el marco—, pero si alguna vez lo hay, esto es lo que rompe.
  * - **Incluye `iframe-resizer` v4** en su lado (protocolo `[iFrameSizer]`), que
  *   es el mecanismo documentado para que el marco crezca solo cuando se pasa
  *   del selector al resultado.

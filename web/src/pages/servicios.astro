@@ -12,14 +12,19 @@ import {
 } from "../config/site";
 
 /*
- * Ritmo de la página: claro · oscuro · claro.
+ * Ritmo de la página: oscuro · claro · oscuro · claro.
  *
- * Antes eran tres bloques con la misma composición y un sombreado alterno,
- * y se leían como el mismo bloque repetido. Ahora cada servicio cambia de
- * lado y el del medio invierte la sección entera: la reparación es lo que
- * distingue a este taller, así que se lleva el golpe visual de la página.
+ * Antes eran bloques con la misma composición y un sombreado alterno, y se
+ * leían como el mismo bloque repetido. Ahora cada servicio cambia de lado y
+ * la sección entera se invierte una sí y una no.
+ *
+ * El diagnóstico abre en oscuro pese a venir justo después del hero, que
+ * también lo es: entre los dos queda el raíl pegajoso, que va en papel y
+ * separa de sobra. Y abre él porque es por donde se entra: los otros tres
+ * son lo que se hace **después** de saber qué le pasa al vehículo.
  */
 const LAYOUT = {
+  "diagnostico-dtc": { side: "right", tone: "dark" },
   reprogramacion: { side: "left", tone: "light" },
   "reparacion-ecu": { side: "right", tone: "dark" },
   "clonacion-ecu": { side: "left", tone: "light" },
@@ -27,8 +32,8 @@ const LAYOUT = {
 ---
 
 <PublicLayout
-  title="Servicios: reprogramación, reparación y clonación de ECU"
-  description="Qué hacemos con una centralita: reprogramación, reparación electrónica y clonación. Cuándo tiene sentido cada servicio y qué información conviene enviarnos."
+  title="Servicios: diagnóstico DTC, reprogramación y reparación de ECU"
+  description="Diagnóstico DTC, reprogramación, reparación electrónica y clonación de centralitas. Cuándo tiene sentido cada servicio y qué información conviene enviarnos."
   path="/servicios"
 >
   <!-- ═══════════════════════════════════════════════════════════════
@@ -74,9 +79,9 @@ const LAYOUT = {
 
         <div class="lg:col-span-5 lg:pt-2">
           <p class="max-w-(--container-prose) text-lead text-ink-inverse-muted">
-            Tres intervenciones distintas sobre la misma pieza. No son fases de
-            un proceso: son tres respuestas a tres problemas, y cada una toca
-            una profundidad distinta de la unidad.
+            Cuatro trabajos distintos sobre la misma pieza, y no son fases de
+            un proceso. El primero, el diagnóstico, es el que decide cuál de
+            los otros tres hace falta; o si no hace falta ninguno.
           </p>
         </div>
       </div>
@@ -84,7 +89,7 @@ const LAYOUT = {
   </section>
 
   <!-- ═══════════════════════════════════════════════════════════════
-       LOS TRES SERVICIOS
+       LOS SERVICIOS
        El índice queda fijo mientras se recorren, y marca en cuál estás.
        Sin JavaScript sigue siendo una lista de anclas que funciona igual.
        ═══════════════════════════════════════════════════════════════ -->
@@ -228,8 +233,8 @@ const LAYOUT = {
                   </div>
 
                   <div class="mt-12 flex flex-wrap items-center gap-3">
-                    {/* Solo reprogramación tiene página propia todavía. Cuando
-                        las otras dos existan, esto las recoge sin tocar nada. */}
+                    {/* Un servicio sin página propia no enseña este botón:
+                        `page` es lo único que hay que rellenar al escribirla. */}
                     {service.page && (
                       <a
                         href={service.page}

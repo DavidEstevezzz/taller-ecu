@@ -12,6 +12,11 @@ import { PROCESS_STEPS } from "../config/site";
  * La pista y el pad de contacto son el mismo motivo del logotipo. Se dibuja
  * de izquierda a derecha al entrar en pantalla, una sola vez: no es un efecto
  * en bucle. Sin JavaScript la pista se sirve ya trazada (ver tokens.css).
+ *
+ * Desde que existe /como-trabajamos, este bloque es **el resumen**, no la
+ * explicación: cuatro pasos para situarse, y un enlace a la página que cuenta
+ * el recorrido entero. Se conserva en la portada y en /servicios porque ahí
+ * hace falta un resumen; lo que no se hace es repetirlo con más palabras.
  */
 interface Props {
   eyebrow?: string;
@@ -108,6 +113,19 @@ const stubs = PADS.map((x) => `M ${x} 26 L ${x} 66`).join(" ");
         ))
       }
     </ol>
+
+    <p class="reveal mt-12 lg:mt-14">
+      <a
+        href="/como-trabajamos"
+        class="group inline-flex min-h-11 items-center gap-2 text-sm font-medium text-accent-on-dark underline-offset-4 hover:underline"
+      >
+        Ver el recorrido completo de una consulta
+        <span
+          class="transition-transform duration-(--duration-base) group-hover:translate-x-1"
+          aria-hidden="true">→</span
+        >
+      </a>
+    </p>
   </div>
 </section>
 

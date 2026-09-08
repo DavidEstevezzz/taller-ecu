@@ -1,0 +1,224 @@
+---
+import { REPRO_OPTIONS } from "../config/site";
+
+/**
+ * El abanico de reprogramaciones, como acordeón.
+ *
+ * Antes eran cinco filas estáticas con una frase permanentemente visible.
+ * Una frase no distingue una Stage 1 de una optimización personalizada, y
+ * cinco párrafos a la vista habrían hecho de esta sección la más larga de la
+ * página. El acordeón resuelve las dos cosas: se ve el abanico entero de un
+ * vistazo y se lee solo la que es tuya.
+ *
+ * ── Por qué `<details>` y no un `<button>` con `aria-expanded` ──
+ *
+ * Porque un botón que abre un panel **necesita JavaScript para abrirlo**, y en
+ * esta web nada que haya que leer puede depender de que llegue un archivo. Con
+ * `<details>` el acordeón funciona entero sin una línea de script: se abre, se
+ * cierra, va por teclado y el contenido está en el HTML desde el principio.
+ *
+ * No se pierde nada en accesibilidad: `<summary>` tiene rol de botón de forma
+ * nativa y los navegadores exponen su estado expandido/colapsado sin que haya
+ * que declararlo. Escribir `aria-expanded` a mano encima sería duplicar —y
+ * potencialmente contradecir— lo que ya publica el propio elemento. Es el
+ * mismo criterio que ya usan los menús de `SiteHeader`.
+ *
+ * **Una sola abierta a la vez**: el atributo `name`, que es el acordeón
+ * exclusivo nativo. Donde no esté soportado se pueden abrir varias, que es
+ * una degradación sin consecuencias.
+ *
+ * ── El movimiento ──
+ *
+ * La altura y la opacidad se animan con `::details-content` e
+ * `interpolate-size: allow-keywords`, sin medir nada en JavaScript. Donde no
+ * esté soportado, el panel aparece de golpe. Y quien haya pedido menos
+ * movimiento no ve ninguna transición: la regla global de `tokens.css`
+ * colapsa todas las duraciones.
+ *
+ * ── Lo único que hace el script ──
+ *
+ * Cerrar Stage 1 por debajo de 768 px. En escritorio conviene que se vea un
+ * panel abierto —enseña que esto se despliega—; en móvil, cinco cabeceras
+ * seguidas ocupan menos y se recorren mejor. Va en línea y antes de pintar
+ * para que no haya parpadeo, y si no se ejecuta el único efecto es que Stage 1
+ * también aparece abierta en móvil.
+ */
+interface Props {
+  id?: string;
+  class?: string;
+}
+
+const { id = "opcion", class: className = "" } = Astro.props;
+---
+
+<div class={`opt ${className}`} data-service-options>
+  {
+    REPRO_OPTIONS.map((option, i) => (
+      <details
+        class="opt-item"
+        name={`${id}-abanico`}
+        open={i === 0}
+        data-opt-first={i === 0 ? "" : undefined}
+      >
+        <summary class="opt-summary">
+          <span class="display opt-name">{option.name}</span>
+          <span class="opt-mark" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+              <path d="M10 4.5v11M4.5 10h11" stroke-linecap="round" />
+            </svg>
+          </span>
+        </summary>
+
+        <div class="opt-panel">
+          <p class="opt-text">{option.body}</p>
+        </div>
+      </details>
+    ))
+  }
+</div>
+
+<script is:inline>
+  /*
+   * Stage 1 llega abierta desde el HTML. Por debajo de 768 px se cierra, para
+   * que las cinco cabeceras quepan juntas. Antes de pintar: si esperase a que
+   * cargue un módulo, se vería abrirse y cerrarse.
+   */
+  (function () {
+    try {
+      if (!matchMedia("(max-width: 47.9375rem)").matches) return;
+
+      document
+        .querySelectorAll("[data-service-options] [data-opt-first]")
+        .forEach(function (item) {
+          item.open = false;
+        });
+    } catch (error) {
+      /* Sin matchMedia se queda abierta, que no rompe nada. */
+    }
+  })();
+</script>
+
+<style>
+  .opt {
+    /* Lo que permite animar de 0 a `auto`. Se declara aquí y no en :root para
+       que no cambie el comportamiento de ninguna otra parte del sitio. */
+    interpolate-size: allow-keywords;
+
+    border-block-start: 1px solid var(--color-border-inverse);
+  }
+
+  .opt-item {
+    border-block-end: 1px solid var(--color-border-inverse);
+  }
+
+  /* ── La cabecera ───────────────────────────────────────────
+     Toda la fila es el control: ocupa el ancho completo y su zona de pulsación
+     es la fila entera, no el título. */
+  .opt-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    min-block-size: 3.75rem;
+    padding-block: 1.125rem;
+    cursor: pointer;
+    list-style: none;
+    touch-action: manipulation;
+    transition: color var(--duration-base) var(--ease-out);
+  }
+
+  .opt-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .opt-name {
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    color: var(--color-ink-inverse);
+  }
+
+  /* ── El indicador ──────────────────────────────────────────
+     Una cruz que gira 45° y se convierte en aspa. Es el gesto más pequeño que
+     dice «esto se abre» sin añadir un icono nuevo al sitio. */
+  .opt-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    inline-size: 2rem;
+    block-size: 2rem;
+    border: 1px solid var(--jm-graphite-600);
+    border-radius: var(--radius-pill);
+    color: var(--color-ink-inverse-muted);
+    transition:
+      transform var(--duration-slow) var(--ease-out),
+      border-color var(--duration-base) var(--ease-out),
+      color var(--duration-base) var(--ease-out),
+      background-color var(--duration-base) var(--ease-out);
+  }
+
+  .opt-mark svg {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+  }
+
+  .opt-summary:hover .opt-name {
+    color: var(--color-accent-on-dark);
+  }
+
+  .opt-summary:hover .opt-mark {
+    border-color: var(--color-accent-on-dark-strong);
+    color: var(--color-ink-inverse);
+  }
+
+  .opt-item[open] > .opt-summary .opt-name {
+    color: var(--color-accent-on-dark);
+  }
+
+  .opt-item[open] > .opt-summary .opt-mark {
+    transform: rotate(45deg);
+    border-color: var(--color-accent-on-dark-strong);
+    background-color: var(--color-accent-on-dark-strong);
+    color: var(--jm-graphite-950);
+  }
+
+  /* El foco se pinta sobre la fila entera, que es lo que se acciona. */
+  .opt-summary:focus-visible {
+    outline: 2px solid var(--color-accent-on-dark);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ── El panel ──────────────────────────────────────────────── */
+
+  .opt-panel {
+    padding-block-end: 1.75rem;
+  }
+
+  .opt-text {
+    max-inline-size: 46rem;
+    text-wrap: pretty;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  /*
+   * La transición. `::details-content` es lo que permite animar la apertura
+   * sin medir alturas en JavaScript; donde no está soportado, el panel
+   * aparece de golpe y no falta nada.
+   */
+  .opt-item::details-content {
+    block-size: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition:
+      block-size var(--duration-slow) var(--ease-out),
+      opacity var(--duration-slow) var(--ease-out),
+      content-visibility var(--duration-slow) allow-discrete;
+  }
+
+  .opt-item[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+</style>

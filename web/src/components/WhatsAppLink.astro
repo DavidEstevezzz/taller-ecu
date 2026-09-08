@@ -8,6 +8,9 @@ interface Props {
   size?: "md" | "lg";
   class?: string;
   label?: string;
+  /* Atributos sueltos (por ejemplo `data-*`) que llegan hasta el enlace.
+     Lo necesita el constructor de mensaje, que reescribe el href. */
+  [key: string]: unknown;
 }
 
 const {
@@ -16,6 +19,7 @@ const {
   size = "md",
   class: className = "",
   label = "Escríbenos por WhatsApp",
+  ...rest
 } = Astro.props;
 ---
 
@@ -25,6 +29,7 @@ const {
   size={size}
   class={className}
   external
+  {...rest}
 >
   <svg
     viewBox="0 0 24 24"

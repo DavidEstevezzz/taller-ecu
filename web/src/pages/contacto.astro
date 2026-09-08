@@ -1,0 +1,204 @@
+---
+import PublicLayout from "../layouts/PublicLayout.astro";
+import ContactBoard from "../components/ContactBoard.astro";
+import FinalCta from "../components/FinalCta.astro";
+import {
+  CONTACT,
+  CONTACT_FACTS,
+  CONTACT_HELP_ROUTE,
+  SITE,
+  SITE_URL,
+} from "../config/site";
+
+/*
+ * /contacto — la página más corta del sitio, y a propósito.
+ *
+ * Su único trabajo es abrir WhatsApp con la consulta ya montada. Todo lo que
+ * no sirva para eso está en otra página: qué es cada servicio lo cuenta
+ * /servicios, y cómo se trabaja un caso lo cuenta /como-trabajamos. Aquí solo
+ * se elige puerta.
+ *
+ * Tres decisiones que conviene no deshacer:
+ *
+ * - **No hay formulario.** Habría que montar un backend público, validarlo,
+ *   defenderlo del spam y avisar de que alguien lo lea. WhatsApp ya está
+ *   atendido por el orquestador, así que un formulario sería una segunda
+ *   bandeja de entrada peor que la que ya funciona.
+ * - **El selector particular/taller no duplica las rutas.** Cambia las
+ *   plantillas, nada más. Seis tarjetas dirían que hay seis caminos.
+ * - **Ni precios, ni plazos, ni urgencias, ni citas.** No hay ninguno
+ *   confirmado. Una ruta llamada «urgencias» promete una atención que hoy no
+ *   se puede sostener.
+ *
+ * Coste en JavaScript: **cero**. El conmutador es un grupo de radios resuelto
+ * con CSS, como el de /como-trabajamos.
+ */
+
+/*
+ * Datos estructurados. Solo lo verificable: nombre, dominio, teléfono, canal y
+ * zona. **Sin dirección, sin coordenadas, sin horario y sin valoraciones**,
+ * porque no hay ninguno confirmado; y sin `AutoRepair`, que sin `address` no
+ * aporta nada y sí invita a inventarla. Ver docs/site-architecture.md §11.
+ */
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organizacion`,
+      name: SITE.name,
+      url: SITE_URL,
+      description: SITE.description,
+      telephone: CONTACT.phoneE164,
+      areaServed: { "@type": "Place", name: CONTACT.area },
+      contactPoint: {
+        "@type": "ContactPoint",
+        contactType: "customer support",
+        telephone: CONTACT.phoneE164,
+        url: `https://wa.me/${CONTACT.whatsappNumber}`,
+        availableLanguage: ["es"],
+      },
+    },
+    {
+      "@type": "ContactPage",
+      "@id": `${SITE_URL}/contacto#pagina`,
+      url: `${SITE_URL}/contacto`,
+      name: `Contacto · ${SITE.name}`,
+      inLanguage: SITE.locale,
+      about: { "@id": `${SITE_URL}/#organizacion` },
+    },
+  ],
+};
+---
+
+<PublicLayout
+  title="Contacto"
+  description="Escríbenos por WhatsApp: elige diagnóstico DTC, reprogramación, reparación o clonación de ECU y se abre con la plantilla escrita. Churriana de la Vega, Granada."
+  path="/contacto"
+  jsonLd={jsonLd}
+>
+  <!-- ═══════════════════════════════════════════════════════════════
+       EL BANCO — hero y cuadro de conexiones comparten un único fondo.
+
+       El hero es tipográfico y muy corto: aquí no hay nada que explicar
+       que no diga mejor el propio cuadro, que llega inmediatamente
+       después. Es el mismo ritmo de /servicios/clonacion-ecu: la pieza
+       fuerte es lo segundo que se ve.
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="on-dark relative overflow-hidden bg-surface-bench">
+    <div
+      class="grid-technical-inverse absolute inset-0 opacity-25"
+      aria-hidden="true"
+    >
+    </div>
+    <div
+      class="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_110%_at_25%_0%,transparent_28%,var(--color-surface-bench)_100%)]"
+      aria-hidden="true"
+    >
+    </div>
+
+    <section class="relative" aria-labelledby="titulo-contacto">
+      <div
+        class="mx-auto max-w-(--container-wide) px-5 pb-20 pt-16 sm:px-8 lg:px-10 lg:pb-28 lg:pt-24 xl:px-14"
+      >
+        <p class="label-technical text-accent-on-dark">Contacto</p>
+
+        <h1
+          id="titulo-contacto"
+          class="display mt-5 max-w-4xl text-display text-ink-inverse text-balance"
+        >
+          Escríbenos con el caso ya montado
+        </h1>
+
+        <p
+          class="mt-8 max-w-(--container-prose) text-lead text-ink-inverse-muted"
+        >
+          Elige por dónde entra tu consulta y WhatsApp se abre con la plantilla
+          escrita. Todos los caminos terminan en el mismo número.
+        </p>
+
+        <!-- ═══════════════════════════════════════════════════════
+             EL CUADRO DE CONEXIONES
+             Ver src/components/ContactBoard.astro
+
+             Va dentro de la misma sección que el h1, y no en una
+             propia, para no tener que inventarle un h2: los nombres de
+             las rutas ya son los encabezados de segundo nivel de
+             esta página. Un h2 solo para lectores de pantalla habría
+             sido un título que nadie escribió porque nadie lo
+             necesitaba.
+             ═══════════════════════════════════════════════════════ -->
+        <div class="reveal mt-16 lg:mt-20">
+          <ContactBoard id="contacto" />
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       INFORMACIÓN PRÁCTICA — papel cálido, y solo datos confirmados.
+
+       No hay horario, ni plazo de respuesta, ni dirección, ni correo:
+       ninguno está confirmado por el cliente. Ver site.ts
+       (CONTACT_PENDING_CONFIRMATION) y docs/site-architecture.md §11.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="border-t border-border bg-surface"
+    aria-labelledby="titulo-practico"
+  >
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-16 sm:px-8 lg:px-10 lg:py-20 xl:px-14"
+    >
+      <h2
+        id="titulo-practico"
+        class="reveal display max-w-3xl text-h2 text-ink text-balance"
+      >
+        Lo práctico, en cuatro líneas
+      </h2>
+
+      <dl
+        class="mt-12 grid gap-x-10 gap-y-8 border-t border-border pt-9 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        {
+          CONTACT_FACTS.map((fact, i) => (
+            <div class="reveal" style={`--reveal-delay: ${i * 80}ms`}>
+              <dt class="label-technical text-accent">{fact.label}</dt>
+              <dd class="display mt-3 text-h3 text-ink">
+                {fact.href ? (
+                  <a
+                    href={fact.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="underline-offset-4 hover:text-accent hover:underline"
+                  >
+                    {fact.value}
+                  </a>
+                ) : (
+                  fact.value
+                )}
+              </dd>
+            </div>
+          ))
+        }
+      </dl>
+
+      <p class="reveal mt-10 max-w-(--container-prose) text-ink-muted">
+        ¿Prefieres mirar antes qué hacemos en cada caso? Están en{" "}
+        <a
+          href="/servicios"
+          class="font-medium text-ink underline underline-offset-4 hover:text-accent"
+        >servicios</a>, y el recorrido completo de una consulta, en{" "}
+        <a
+          href="/como-trabajamos"
+          class="font-medium text-ink underline underline-offset-4 hover:text-accent"
+        >cómo trabajamos</a>.
+      </p>
+    </div>
+  </section>
+
+  <FinalCta
+    title="Un mensaje basta para empezar."
+    body="No hace falta que esté todo: con el vehículo y lo que ocurre ya podemos decirte si es cosa nuestra y qué hace falta."
+    message={CONTACT_HELP_ROUTE.messages.particular.join("\n")}
+  />
+</PublicLayout>

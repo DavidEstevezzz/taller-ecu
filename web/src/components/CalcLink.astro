@@ -1,0 +1,165 @@
+---
+/**
+ * «Calcular mejora» — el atajo hasta el configurador de la propia página.
+ *
+ * **Es un ancla interna, no un enlace externo.** El configurador de
+ * Tuning-shop.com sigue incrustado en `/servicios/reprogramacion`
+ * (`PowerConfigurator.astro`); lo que faltaba era poder llegar hasta él sin
+ * recorrer la página entera. Eso es todo lo que hace este componente.
+ *
+ * Que no se pierda por el camino, por si alguien vuelve a plantear enlazar
+ * fuera: **`tuning-shop.com/demo/` no vale como destino** —es una página de su
+ * tienda, con muro de cookies, Tag Manager y la cuenta de demostración del
+ * proveedor, no la del cliente— y **un enlace saliente no puede llevar
+ * `rel="noreferrer"`**, porque el proveedor valida la cabecera `Referer` y sin
+ * ella responde 404. Comprobado el 2026-08-28. Detalles en
+ * `docs/embed-tuning-shop.md`.
+ *
+ * Dos presentaciones:
+ *
+ *   inline  el botón que va en la fila de acciones del hero.
+ *   rail    la pestaña que acompaña al desplazamiento, para poder saltar al
+ *           configurador desde cualquier punto del tramo central.
+ *
+ * El desplazamiento suave lo pone `scroll-behavior: smooth` de `tokens.css`,
+ * que ya se anula solo con `prefers-reduced-motion`. La sección de destino
+ * lleva `scroll-mt-24` para no quedar debajo de la cabecera fija.
+ */
+interface Props {
+  variant?: "inline" | "rail";
+  class?: string;
+}
+
+/** El configurador vive en esta misma página. Un solo sitio que lo nombra. */
+const TARGET = "#configurador";
+
+const { variant = "inline", class: className = "" } = Astro.props;
+
+const base =
+  "group inline-flex items-center gap-2.5 font-medium " +
+  "transition-colors duration-(--duration-base) ease-(--ease-out) " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2";
+
+const styles = {
+  /* Mismo aspecto que «Ver qué puedes notar»: en el hero son dos acciones
+     secundarias hermanas, y darles dos contornos distintos las enfrentaría
+     entre sí en vez de dejar mandar al WhatsApp. */
+  inline:
+    "min-h-12 rounded-md border border-border-inverse bg-surface-bench/60 px-6 " +
+    "text-base text-ink-inverse backdrop-blur-sm hover:border-ink-inverse-muted " +
+    "hover:bg-surface-inverse-raised focus-visible:outline-(--color-accent-on-dark)",
+  rail: "calc-rail-btn",
+};
+---
+
+<a href={TARGET} class={`${base} ${styles[variant]} ${className}`} data-calc-link>
+  <!-- Una curva subiendo dentro de un marco: la lectura mínima de «calcular
+       una mejora» sin recurrir a un velocímetro de stock. -->
+  <svg
+    viewBox="0 0 20 20"
+    class="size-[1.125rem] shrink-0"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.6"
+    aria-hidden="true"
+  >
+    <path d="M3 16.5V3.5" stroke-linecap="round"></path>
+    <path d="M3 16.5h14" stroke-linecap="round"></path>
+    <path
+      d="M5.5 13.5c2.6 0 3.6-2.4 5.2-4.6 1-1.4 2.2-2.4 4.3-2.6"
+      stroke-linecap="round"></path>
+    <path d="M12.6 6.1h2.6v2.6" stroke-linecap="round" stroke-linejoin="round"
+    ></path>
+  </svg>
+  <span>Calcular mejora</span>
+  {
+    /* La flecha dice que baja, como en «Ver qué puedes notar». En la pestaña
+       vertical no cabe sin quedar tumbada, así que ahí no va. */
+    variant === "inline" && <span aria-hidden="true">↓</span>
+  }
+</a>
+
+<style>
+  /* ── La pestaña que acompaña al desplazamiento ──────────────
+     No es un banner: no tiene fondo de color plano, no parpadea y ocupa el
+     canto de la página, no su contenido. */
+  .calc-rail-btn {
+    position: sticky;
+    /* Escritorio: pegada al borde derecho, a media altura, y con el texto en
+       vertical. Son dos palabras: se leen sin girar la cabeza. */
+    pointer-events: auto;
+    border: 1px solid var(--color-border-inverse);
+    border-radius: var(--radius-md);
+    background-color: color-mix(
+      in srgb,
+      var(--color-surface-bench) 88%,
+      transparent
+    );
+    backdrop-filter: blur(6px);
+    color: var(--color-ink-inverse);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .calc-rail-btn:hover {
+    border-color: var(--color-accent-on-dark-strong);
+    color: var(--color-accent-on-dark);
+  }
+
+  .calc-rail-btn:focus-visible {
+    outline: 2px solid var(--color-accent-on-dark);
+    outline-offset: 2px;
+  }
+
+  /* Móvil y tableta: pastilla horizontal, abajo a la izquierda. El botón de
+     WhatsApp de la cabecera está arriba, así que no se estorban. */
+  @media (max-width: 63.9375rem) {
+    .calc-rail-btn {
+      /*
+       * `margin-top: auto` no es decorativo: un pegajoso por abajo solo
+       * **sube** una caja que quedaría por debajo del borde inferior, nunca
+       * rescata una que ya se ha ido por arriba. Con la pastilla al final del
+       * raíl, acompaña el tramo entero; puesta al principio, desaparecía en
+       * cuanto se empezaba a desplazar.
+       */
+      margin-block-start: auto;
+      inset-block-end: calc(1rem + env(safe-area-inset-bottom, 0px));
+      margin-inline-start: 1.25rem;
+      min-block-size: 2.75rem;
+      padding-inline: 1rem;
+      font-size: 0.9375rem;
+    }
+  }
+
+  /*
+   * Escritorio: pestaña vertical apoyada en el canto derecho.
+   *
+   * **Aquí todo va en propiedades físicas, y no es un descuido.** Con
+   * `writing-mode: vertical-rl` los ejes lógicos se intercambian: `inline-size`
+   * pasa a ser el alto, `min-block-size` el ancho e `inset-block-start` el
+   * `right`. Escrito en lógicas, la pestaña salía tumbada y a 378 px del borde.
+   */
+  @media (min-width: 64rem) {
+    .calc-rail-btn {
+      /*
+       * El margen y el desplazamiento pegajoso valen lo mismo a propósito: así
+       * la pestaña queda fija desde el primer momento en que el tramo llega
+       * arriba del todo, en vez de asomar por su parte alta y meterse debajo
+       * de la cabecera.
+       */
+      margin-top: 42svh;
+      top: 42svh;
+      writing-mode: vertical-rl;
+      width: 2.75rem;
+      min-height: 9.5rem;
+      justify-content: center;
+      padding: 1.25rem 0;
+      font-size: 0.875rem;
+      letter-spacing: 0.01em;
+      /* Se apoya en el canto: la pastilla muere contra el borde derecho. */
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      border-right: 0;
+    }
+  }
+
+</style>

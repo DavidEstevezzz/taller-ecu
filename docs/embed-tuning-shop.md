@@ -1,5 +1,27 @@
 # Configurador de Tuning-shop.com
 
+> ## Nota, a 2026-08-28
+>
+> El marco **sigue montado** en `/servicios/reprogramacion`, y con las mismas
+> reglas de siempre. Lo que se añadió es un atajo para llegar hasta él:
+> **«Calcular mejora»** (`web/src/components/CalcLink.astro`), un **ancla
+> interna** a `#configurador` que va en el hero y en una pestaña lateral
+> pegajosa. Nadie sale de nuestro dominio y no se carga nada del proveedor
+> hasta que se pulsa «Abrir el configurador».
+>
+> Se evaluó y **se descartó** sustituir el marco por un enlace saliente. Dos
+> hallazgos de esa comprobación, que conviene no repetir:
+>
+> - **`https://tuning-shop.com/demo/` no sirve como destino.** Responde 200,
+>   pero es una página de su tienda: cabecera comercial, carrito, muro de
+>   cookies de Cookiebot con las cuatro categorías activadas, Google Tag Manager
+>   y el selector incrustado con **la cuenta de demostración del proveedor
+>   (`user=177`)**, no la del cliente.
+> - **Un enlace saliente no podría llevar `rel="noreferrer"`.** Suprime la
+>   cabecera `Referer`, que es justo lo que el proveedor valida: sin ella
+>   responde 404 con «Domain could not be validated». Haría falta
+>   `rel="noopener"` más `referrerpolicy="origin"`.
+
 La web pública de JM Repro Cars **no hace peticiones a terceros**: las fuentes van
 autoalojadas, las imágenes están en el repositorio y no hay analítica. Este
 documento registra la **única excepción**, por qué se acepta y con qué límites.

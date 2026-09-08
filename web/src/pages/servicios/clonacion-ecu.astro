@@ -1,0 +1,592 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import WhatsAppLink from "../../components/WhatsAppLink.astro";
+import FinalCta from "../../components/FinalCta.astro";
+import IdentityTransfer from "../../components/IdentityTransfer.astro";
+import MessageBuilder from "../../components/MessageBuilder.astro";
+import {
+  SERVICES,
+  CLONE_CASES,
+  CLONE_CHECKS,
+  CLONE_SEND,
+  CLONE_MESSAGE,
+  CLONE_MESSAGE_BASE,
+  CLONE_MESSAGE_OPTIONS,
+} from "../../config/site";
+
+/*
+ * La comparación de los tres servicios.
+ *
+ * Sustituye al bloque «¿No es esto lo que necesitas?» que cierra las otras
+ * dos páginas de servicio, y hace su trabajo mejor: quien ha llegado aquí
+ * buscando otra cosa no necesita una tarjeta bonita, necesita ver en qué se
+ * diferencian. Los enlaces laterales de docs/site-architecture.md §6 salen de
+ * aquí, así que la página no queda aislada de sus hermanas.
+ *
+ * Las filas son las tres preguntas que de verdad los separan. Nada de
+ * precios, plazos ni «ventajas»: no hay ninguno confirmado.
+ */
+const ROWS = ["Sobre qué actúa", "La unidad del vehículo", "Para qué sirve"];
+
+const COMPARISON = [
+  {
+    slug: "reprogramacion",
+    cells: [
+      "El software que la unidad ya lleva",
+      "Sigue siendo la misma",
+      "Cambiar cómo se comporta el motor",
+    ],
+  },
+  {
+    slug: "reparacion-ecu",
+    cells: [
+      "La placa: componentes, pistas y soldaduras",
+      "Sigue siendo la misma",
+      "Recuperar una unidad que ha dejado de funcionar",
+    ],
+  },
+  {
+    slug: "clonacion-ecu",
+    cells: [
+      "La información que la unidad guarda",
+      "Se sustituye por otra compatible",
+      "Que otra unidad pueda ocupar el lugar de la original",
+    ],
+  },
+] as const;
+
+const byslug = Object.fromEntries(
+  SERVICES.map((service) => [service.slug, service])
+);
+---
+
+<PublicLayout
+  title="Clonación de centralitas ECU"
+  description="Qué es clonar una centralita: qué información se traslada de la unidad original a otra compatible, cuándo tiene sentido, qué pasa si la original no responde y qué hace falta para valorar el caso."
+  path="/servicios/clonacion-ecu"
+>
+  <!-- ═══════════════════════════════════════════════════════════════
+       EL BANCO — hero y transferencia comparten un único fondo.
+
+       El hero es tipográfico y termina en la tesis de la página escrita
+       a lo ancho, unida por una pista de cobre: la idea entera cabe en
+       una línea, así que se dice en una línea. El dibujo llega
+       inmediatamente después, dentro del mismo entorno.
+
+       Ritmo distinto al de las páginas hermanas a propósito:
+       reprogramación pone su dibujo en el hero y reparación retrasa el
+       suyo hasta la mitad de la página. Aquí la pieza fuerte es lo
+       segundo que se ve.
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="on-dark relative overflow-hidden bg-surface-bench">
+    <div class="grid-technical-inverse absolute inset-0 opacity-25" aria-hidden="true">
+    </div>
+    <div
+      class="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_120%_at_20%_0%,transparent_24%,var(--color-surface-bench)_100%)]"
+      aria-hidden="true"
+    >
+    </div>
+
+    <section class="relative" aria-labelledby="titulo-clonacion">
+      <div
+        class="mx-auto max-w-(--container-wide) px-5 pb-14 pt-8 sm:px-8 lg:px-10 lg:pb-16 lg:pt-10 xl:px-14"
+      >
+        <nav aria-label="Migas de pan">
+          <ol
+            class="flex flex-wrap items-center gap-2.5 text-sm text-ink-inverse-muted"
+          >
+            <li>
+              <a
+                href="/"
+                class="underline-offset-4 hover:text-accent-on-dark hover:underline"
+              >
+                Inicio
+              </a>
+            </li>
+            <li aria-hidden="true" class="text-ink-subtle">/</li>
+            <li>
+              <a
+                href="/servicios"
+                class="underline-offset-4 hover:text-accent-on-dark hover:underline"
+              >
+                Servicios
+              </a>
+            </li>
+            <li aria-hidden="true" class="text-ink-subtle">/</li>
+            <li aria-current="page" class="text-ink-inverse">Clonación de ECU</li>
+          </ol>
+        </nav>
+
+        <p class="label-technical mt-14 text-accent-on-dark">De unidad a unidad</p>
+
+        <h1
+          id="titulo-clonacion"
+          class="display mt-5 max-w-4xl text-display text-ink-inverse text-balance"
+        >
+          Clonación de centralita
+        </h1>
+
+        <div class="mt-10 grid gap-8 lg:grid-cols-12 lg:gap-16">
+          <p class="max-w-(--container-prose) text-lead text-ink-inverse-muted lg:col-span-6">
+            Cuando hay que sustituir la centralita, el vehículo no espera una
+            caja nueva: espera la que reconoce. Clonar es leer de la unidad
+            original la información que hace falta y dejarla en otra unidad
+            compatible, para que pueda ocupar su lugar.
+          </p>
+
+          <div
+            class="flex flex-wrap items-start gap-3 lg:col-span-5 lg:col-start-8 lg:justify-end"
+          >
+            <WhatsAppLink
+              size="lg"
+              label="Contar mi caso"
+              message={CLONE_MESSAGE}
+            />
+            <a
+              href="#transferencia"
+              class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-border-inverse px-6 text-base font-medium text-ink-inverse transition-colors duration-(--duration-base) hover:border-ink-inverse-muted hover:bg-surface-inverse-raised"
+            >
+              Ver qué se traslada
+              <span aria-hidden="true">↓</span>
+            </a>
+          </div>
+        </div>
+
+        <!--
+          La tesis, a lo ancho del banco. La pista de cobre es la del
+          logotipo y se traza una sola vez al entrar en pantalla; sin
+          JavaScript se sirve ya trazada (ver tokens.css).
+        -->
+        <div
+          class="mt-16 flex flex-col gap-4 border-t border-border-inverse pt-9 lg:mt-20 lg:flex-row lg:items-center lg:gap-7"
+        >
+          <p class="display shrink-0 text-h2 text-ink-inverse">
+            La unidad cambia.
+          </p>
+
+          <svg
+            class="hidden h-6 min-w-0 flex-1 lg:block"
+            viewBox="0 0 400 24"
+            preserveAspectRatio="none"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path d="M 0 12 L 400 12" class="thesis-trace trace-draw" />
+          </svg>
+
+          <p class="display shrink-0 text-h2 text-accent-on-dark">
+            Su identidad permanece.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         LA TRANSFERENCIA — la firma de la página.
+         Ver src/components/IdentityTransfer.astro
+         ═══════════════════════════════════════════════════════════════ -->
+    <section
+      id="transferencia"
+      class="relative scroll-mt-24 border-t border-border-inverse"
+      aria-labelledby="titulo-transferencia"
+    >
+      <div
+        class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+      >
+        <div class="reveal grid gap-6 lg:grid-cols-12 lg:gap-16">
+          <div class="lg:col-span-7">
+            <p class="label-technical text-accent-on-dark">Qué se traslada</p>
+            <h2
+              id="titulo-transferencia"
+              class="display mt-5 text-h2 text-ink-inverse text-balance"
+            >
+              Una unidad compatible todavía no es la centralita de tu coche.
+            </h2>
+          </div>
+          <p
+            class="max-w-(--container-prose) text-lead text-ink-inverse-muted lg:col-span-5 lg:pt-2"
+          >
+            Lo que hace que el vehículo reconozca a su centralita no es la
+            caja: es lo que lleva escrito dentro. Eso es lo que se traslada, y
+            se traslada por capas.
+          </p>
+        </div>
+
+        <div class="mt-14 lg:mt-20">
+          <IdentityTransfer id="clonacion-transferencia" />
+        </div>
+
+        <!-- Dos advertencias que no caben en el dibujo y no pueden faltar. -->
+        <div class="mt-16 grid gap-10 lg:mt-20 lg:grid-cols-12 lg:gap-16">
+          <div class="reveal lg:col-span-6">
+            <p class="label-technical text-ink-inverse-muted">
+              No todas las unidades se clonan igual
+            </p>
+            <p class="mt-3.5 max-w-(--container-prose) leading-relaxed text-ink-inverse-muted">
+              No todas guardan lo mismo ni se leen de la misma manera: unas
+              admiten lectura por la toma de diagnosis y otras obligan a
+              trabajar sobre la propia unidad. Por eso hay que ver el caso
+              antes de decir qué se puede hacer, y por eso no afirmamos que se
+              copie siempre absolutamente todo.
+            </p>
+          </div>
+
+          <div class="reveal lg:col-span-6">
+            <p class="label-technical text-ink-inverse-muted">
+              Parte puede estar ligada al antirrobo
+            </p>
+            <p class="mt-3.5 max-w-(--container-prose) leading-relaxed text-ink-inverse-muted">
+              Según la unidad, algo de esa información está vinculada al
+              sistema antirrobo del vehículo, y eso condiciona qué se puede
+              hacer y por qué vía. El trabajo se hace siempre sobre el vehículo
+              de su titular y sobre sus propias unidades.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       LAS TRES INTERVENCIONES — una comparación, no tres tarjetas.
+
+       Ocupa el lugar del bloque «¿No es esto lo que necesitas?» de las
+       páginas hermanas: los enlaces laterales están aquí, y además dicen
+       en qué se diferencia cada uno en lugar de repetir su descripción.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="bg-canvas" aria-labelledby="titulo-comparacion">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="reveal grid gap-6 lg:grid-cols-12 lg:gap-16">
+        <div class="lg:col-span-7">
+          <p class="label-technical text-accent">No es lo mismo</p>
+          <h2
+            id="titulo-comparacion"
+            class="display mt-5 text-h2 text-ink text-balance"
+          >
+            Clonar, reprogramar y reparar no son la misma cosa.
+          </h2>
+        </div>
+        <p
+          class="max-w-(--container-prose) text-lead text-ink-muted lg:col-span-5 lg:pt-2"
+        >
+          Se confunden porque las tres tocan la misma pieza. La diferencia
+          está en sobre qué actúan y en si, al terminar, la centralita del
+          vehículo sigue siendo la misma.
+        </p>
+      </div>
+
+      <div class="cmp reveal mt-14">
+        {
+          COMPARISON.map((column) => {
+            const service = byslug[column.slug]!;
+            const current = column.slug === "clonacion-ecu";
+
+            return (
+              <article
+                class="cmp-col"
+                data-current={current ? "" : undefined}
+                aria-labelledby={`cmp-${column.slug}`}
+              >
+                <div class="cmp-head">
+                  <p class="label-technical cmp-depth">{service.depth}</p>
+                  <h3 id={`cmp-${column.slug}`} class="display cmp-name">
+                    {service.name}
+                  </h3>
+                </div>
+
+                {column.cells.map((cell, i) => (
+                  <div class="cmp-cell">
+                    <p class="label-technical cmp-key">{ROWS[i]}</p>
+                    <p class="cmp-val">{cell}</p>
+                  </div>
+                ))}
+
+                <p class="cmp-foot">
+                  {current ? (
+                    <span class="cmp-here">Estás en esta página</span>
+                  ) : (
+                    <a class="cmp-link" href={service.page!}>
+                      <span>Ver la página de {service.nameLower}</span>
+                      <span aria-hidden="true">→</span>
+                    </a>
+                  )}
+                </p>
+              </article>
+            );
+          })
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ANTES DE CONFIRMAR — el contrapeso honesto, en un sitio visible
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="on-dark bg-surface-inverse" aria-labelledby="titulo-antes">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-16 sm:px-8 lg:px-10 lg:py-24 xl:px-14"
+    >
+      <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="reveal lg:col-span-5">
+          <p class="label-technical text-accent-on-dark">Antes de confirmar</p>
+          <h2
+            id="titulo-antes"
+            class="display mt-5 text-h2 text-ink-inverse text-balance"
+          >
+            Ninguna clonación se confirma sin ver las dos unidades.
+          </h2>
+          <p
+            class="mt-8 max-w-(--container-prose) border-l-2 border-accent-on-dark pl-5 leading-relaxed text-ink-inverse-muted"
+          >
+            Por eso no damos compatibilidad, resultado, precio ni plazo antes
+            de identificarlas. Sería inventarlo.
+          </p>
+        </div>
+
+        <div class="lg:col-span-6 lg:col-start-7">
+          <div class="divide-y divide-border-inverse border-y border-border-inverse">
+            {
+              CLONE_CHECKS.map((check, i) => (
+                <div
+                  class="reveal py-7 first:pt-0 lg:py-8"
+                  style={`--reveal-delay: ${i * 80}ms`}
+                >
+                  <h3 class="display text-h3 text-ink-inverse">{check.title}</h3>
+                  <p class="mt-2.5 max-w-(--container-prose) text-sm leading-relaxed text-ink-inverse-muted">
+                    {check.body}
+                  </p>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SITUACIONES — escritas en primera persona, con el rótulo colgando
+       en el margen. Sin filetes: el ritmo lo llevan los rótulos.
+       ═══════════════════════════════════════════════════════════════ -->
+  <section class="bg-canvas" aria-labelledby="titulo-casos">
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="reveal max-w-3xl">
+        <p class="label-technical text-accent">Situaciones</p>
+        <h2 id="titulo-casos" class="display mt-5 text-h2 text-ink text-balance">
+          No hace falta tenerlo resuelto para preguntar.
+        </h2>
+        <p class="mt-6 max-w-(--container-prose) text-lead text-ink-muted">
+          Estas son situaciones normales al plantear una sustitución, y
+          ninguna impide abrir la conversación. Si te reconoces en alguna,
+          escríbela tal cual.
+        </p>
+      </div>
+
+      <div class="mt-16 space-y-12 lg:mt-20 lg:space-y-14">
+        {
+          CLONE_CASES.map((item, i) => (
+            <div
+              class="reveal grid gap-3 lg:grid-cols-12 lg:gap-10"
+              style={`--reveal-delay: ${i * 60}ms`}
+            >
+              <p class="label-technical text-accent lg:col-span-3 lg:pt-2">
+                {item.label}
+              </p>
+              <div class="lg:col-span-8">
+                <p class="display text-h3 text-ink text-balance">
+                  «{item.question}»
+                </p>
+                <p class="mt-3 max-w-(--container-prose) leading-relaxed text-ink-muted">
+                  {item.answer}
+                </p>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EL MENSAJE — se arma aquí y se ve antes de enviarlo.
+       Ver src/components/MessageBuilder.astro
+       ═══════════════════════════════════════════════════════════════ -->
+  <section
+    class="border-t border-border bg-surface-sunken"
+    aria-labelledby="titulo-mensaje"
+  >
+    <div
+      class="mx-auto max-w-(--container-wide) px-5 py-20 sm:px-8 lg:px-10 lg:py-28 xl:px-14"
+    >
+      <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="reveal lg:col-span-5">
+          <p class="label-technical text-accent">Para valorar tu caso</p>
+          <h2
+            id="titulo-mensaje"
+            class="display mt-5 text-h2 text-ink text-balance"
+          >
+            Esto es lo que nos hace falta saber.
+          </h2>
+          <p class="mt-6 text-lead text-ink-muted">
+            La plantilla pide solo lo que puedes saber sin desmontar nada.
+            Marca lo que tengas a mano y el mensaje se completa solo; lo que
+            falte se ve por el camino.
+          </p>
+
+          <ul class="mt-9 space-y-3.5">
+            {
+              CLONE_SEND.map((item) => (
+                <li class="flex gap-3.5 text-ink">
+                  <span
+                    class="mt-2.5 h-px w-4 shrink-0 bg-accent"
+                    aria-hidden="true"
+                  />
+                  <span class="text-sm leading-relaxed">{item}</span>
+                </li>
+              ))
+            }
+          </ul>
+
+          <p class="mt-8 max-w-(--container-prose) text-sm leading-relaxed text-ink-muted">
+            <strong class="font-medium text-ink">
+              No desmontes nada solo para escribirnos.
+            </strong>
+            Si las etiquetas no están a la vista, se ven después; y si no sabes
+            cuál de las dos unidades es la original, dilo y ya está.
+          </p>
+        </div>
+
+        <div class="reveal lg:col-span-6 lg:col-start-7">
+          <MessageBuilder
+            base={CLONE_MESSAGE_BASE}
+            options={CLONE_MESSAGE_OPTIONS}
+          />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <FinalCta
+    title="¿Tienes que sustituir una centralita?"
+    body="Cuéntanos el vehículo, por qué hay que cambiarla y qué unidades tienes delante. Te decimos si la clonación es la vía o si conviene otra cosa."
+    message={CLONE_MESSAGE}
+  />
+</PublicLayout>
+
+<style>
+  /* La pista de la tesis: el mismo cobre y el mismo trazo del proceso.
+     El viewBox tiene exactamente el alto del elemento, así que estirarlo a lo
+     ancho no engorda la línea. */
+  .thesis-trace {
+    stroke: var(--color-accent-on-dark);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  /* ── La comparación ──────────────────────────────────────
+     Tres columnas con las filas alineadas entre sí (`subgrid`), no tres
+     tarjetas sueltas: lo que se compara tiene que quedar a la misma altura.
+     Donde no haya `subgrid`, cada columna se apila por su cuenta y sigue
+     leyéndose; solo se pierde la alineación entre columnas. */
+  .cmp {
+    display: grid;
+    gap: 2.5rem;
+  }
+
+  @media (min-width: 64rem) {
+    .cmp {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: repeat(5, auto);
+      gap: 0 2.5rem;
+    }
+
+    .cmp-col {
+      display: grid;
+      grid-row: span 5;
+      grid-template-rows: subgrid;
+    }
+  }
+
+  /* El filete de arriba es lo que marca la columna de esta página. */
+  .cmp-col {
+    border-top: 2px solid var(--color-border-strong);
+    padding-top: 1.5rem;
+  }
+
+  .cmp-col[data-current] {
+    border-top-color: var(--color-accent);
+  }
+
+  .cmp-depth {
+    color: var(--color-ink-muted);
+  }
+
+  .cmp-col[data-current] .cmp-depth {
+    color: var(--color-accent);
+  }
+
+  .cmp-name {
+    margin-top: 0.6rem;
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    color: var(--color-ink);
+  }
+
+  .cmp-cell {
+    padding-block: 1.25rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .cmp-head + .cmp-cell {
+    margin-top: 1.5rem;
+  }
+
+  .cmp-key {
+    color: var(--color-ink-subtle);
+  }
+
+  .cmp-val {
+    margin-top: 0.5rem;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--color-ink);
+  }
+
+  .cmp-foot {
+    align-self: end;
+    border-top: 1px solid var(--color-border);
+    padding-top: 1.25rem;
+  }
+
+  .cmp-link {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-accent);
+    text-underline-offset: 4px;
+  }
+
+  .cmp-link:hover {
+    color: var(--color-accent-hover);
+    text-decoration: underline;
+  }
+
+  .cmp-here {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: var(--text-label);
+    letter-spacing: var(--text-label--letter-spacing);
+    text-transform: uppercase;
+    color: var(--color-ink-subtle);
+  }
+</style>

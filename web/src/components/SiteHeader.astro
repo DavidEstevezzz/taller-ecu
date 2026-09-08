@@ -2,51 +2,80 @@
 import BrandMark from "./BrandMark.astro";
 import WhatsAppLink from "./WhatsAppLink.astro";
 import { SERVICES } from "../config/site";
+import { normalisePath } from "../lib/path";
 
-const path = Astro.url.pathname;
+/*
+ * Normalizada: durante la compilación `pathname` trae el `.html`, así que
+ * comparar en crudo no acertaba nunca y la página actual se quedaba sin
+ * marcar en el HTML generado. Ver src/lib/path.ts.
+ */
+const path = normalisePath(Astro.url.pathname);
 
 /*
  * La cabecera solo enseña destinos que son una página pública de verdad.
  *
- * «Cómo trabajamos» y «Preguntas» se han quitado: eran anclas dentro de
- * /servicios disfrazadas de páginas, y competían con ellas en la barra
- * principal. Siguen alcanzables desde el pie y desde el propio contenido.
+ * «Preguntas habituales» no está: es un ancla dentro de /servicios, y un
+ * enlace en la barra principal promete una página. Sigue alcanzable desde el
+ * pie, desde el menú de móvil y desde el propio contenido. «Cómo trabajamos»
+ * estuvo en la misma situación y salió de ella al escribirse la página: ahora
+ * es un destino real y por eso vuelve a la barra.
  *
- * De los tres servicios, solo Reprogramación tiene página propia, así que solo
- * él aparece aquí; los otros dos son secciones de /servicios. Tampoco hay
- * desplegable: con dos destinos reales, un menú que se abre para enseñar uno
- * solo es peor que una lista plana. Cuando existan las otras dos páginas se
- * replantea.
+ * **Con las tres páginas de servicio escritas, la lista plana dejó de
+ * caber.** Cuatro destinos más el botón de WhatsApp no entran a 1024px sin
+ * partir una etiqueta en dos líneas, y eso rompe `--header-height`, que es lo
+ * que usan el índice pegajoso de /servicios y todos los `scroll-margin`. La
+ * salida no es encoger nombres —«Reparación» a secas dice menos— sino agrupar
+ * lo que ya es un grupo: los servicios cuelgan de /servicios.
  *
- * "Trabajos" existe en la arquitectura pero NO se muestra hasta que haya
- * casos reales autorizados. Ver docs/site-architecture.md §4.
+ * El desplegable es un <details>, igual que el menú de móvil: funciona sin
+ * JavaScript, es accesible por teclado de serie, no depende de `hover` —lo
+ * que lo haría inservible en táctil— y expone `aria-expanded` solo. El script
+ * de la web pública añade lo que el elemento no trae: cerrar con Escape, al
+ * pulsar fuera y al salir el foco.
+ *
+ * Al lado del desplegable van las páginas de nivel 1 que ya existen: «Cómo
+ * trabajamos», «Sobre nosotros» y «Contacto». Ninguna aparece antes de tener
+ * archivo, y hay una prueba que lo comprueba. Lo que NO entra ahí es un ancla:
+ * «Preguntas habituales» sigue siendo una sección de /servicios, y sigue
+ * viviendo en el pie y en el menú de móvil, no en la barra principal.
+ *
+ * **Con tres destinos sueltos la barra está llena.** A 1024px caben porque el
+ * relleno horizontal de los enlaces baja de 0,875rem a 0,5rem entre 1024 y
+ * 1280, y vuelve a su sitio a partir de ahí; encoger el espacio en blanco es
+ * reversible, encoger un nombre no. La siguiente página de nivel 1 ya no cabe:
+ * habrá que agruparla bajo un desplegable, como se hizo con los servicios, y
+ * no partir etiquetas en dos líneas, que es lo que rompe `--header-height`.
  */
-const links = [
-  { href: "/servicios", label: "Servicios" },
-  ...SERVICES.filter((service) => service.page !== null).map((service) => ({
-    href: service.page!,
-    label: service.name,
-  })),
+const servicePages = SERVICES.filter((service) => service.page !== null);
+
+/** Páginas de nivel 1 con archivo propio. Añadir una aquí es todo el trabajo. */
+const PAGES = [
+  { href: "/como-trabajamos", label: "Cómo trabajamos" },
+  { href: "/sobre-nosotros", label: "Sobre nosotros" },
+  { href: "/contacto", label: "Contacto" },
 ] as const;
 
+/** El desplegable se marca cuando estás en cualquier página de servicios. */
+const inServices = path === "/servicios" || path.startsWith("/servicios/");
+
 /*
- * Coincidencia exacta y nada más. Con `startsWith` la página de reprogramación
- * marcaba «Servicios» y «Reprogramación» a la vez, y `aria-current="page"`
- * significa esta página, no esta sección.
+ * Coincidencia exacta y nada más. Con `startsWith`, la página de
+ * reprogramación marcaba «Servicios» y «Reprogramación» a la vez, y
+ * `aria-current="page"` significa esta página, no esta sección.
  */
 function isCurrent(href: string): boolean {
   if (href.includes("#")) {
     return false;
   }
 
-  return path === href || path === `${href}/`;
+  return path === normalisePath(href);
 }
 ---
 
 <!--
   La cabecera va siempre en grafito, no en papel.
 
-  Dos motivos, y ninguno es estético a secas: los heros de las dos páginas
+  Dos motivos, y ninguno es estético a secas: los heros de las páginas
   públicas son oscuros, así que una barra clara encima partía la composición
   en dos justo en el primer pantallazo; y sobre grafito la marca —cobre sobre
   oscuro— tiene la presencia que le faltaba. Con el pie también oscuro, la
@@ -67,22 +96,66 @@ function isCurrent(href: string): boolean {
   >
     <BrandMark tone="inverse" />
 
-    <nav aria-label="Principal" class="hidden items-center gap-1 md:flex">
-      {
-        links.map((link) => (
-          <a
-            href={link.href}
-            aria-current={isCurrent(link.href) ? "page" : undefined}
-            class="relative rounded-md px-3.5 py-2.5 text-sm text-ink-inverse-muted transition-colors duration-(--duration-base) hover:text-ink-inverse aria-[current=page]:font-medium aria-[current=page]:text-ink-inverse"
+    <nav aria-label="Principal" class="hidden items-center gap-1 lg:flex">
+      <details class="nav-menu" data-nav-menu>
+        <summary
+          class="nav-summary"
+          data-current={inServices ? "" : undefined}
+        >
+          <span>Servicios</span>
+          <svg
+            viewBox="0 0 20 20"
+            class="nav-chevron"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            aria-hidden="true"
           >
-            {link.label}
+            <path d="m5 8 5 5 5-5" stroke-linecap="round" stroke-linejoin="round"
+            ></path>
+          </svg>
+          {/* La sección actual se marca con un pad de cobre, no con un fondo */}
+          {inServices && <span class="nav-pad" aria-hidden="true" />}
+        </summary>
+
+        <div class="nav-panel">
+          <a
+            href="/servicios"
+            class="nav-item"
+            aria-current={isCurrent("/servicios") ? "page" : undefined}
+          >
+            <span class="nav-item-name">Todos los servicios</span>
+            <span class="nav-item-note">Los tres, y cuándo tiene sentido cada uno</span>
+          </a>
+
+          <div class="nav-rule" role="presentation"></div>
+
+          {
+            servicePages.map((service) => (
+              <a
+                href={service.page!}
+                class="nav-item"
+                aria-current={isCurrent(service.page!) ? "page" : undefined}
+              >
+                <span class="label-technical nav-item-depth">{service.depth}</span>
+                <span class="nav-item-name">{service.name}</span>
+                <span class="nav-item-note">{service.short}</span>
+              </a>
+            ))
+          }
+        </div>
+      </details>
+
+      {
+        PAGES.map((page) => (
+          <a
+            href={page.href}
+            class="nav-link"
+            aria-current={isCurrent(page.href) ? "page" : undefined}
+          >
+            {page.label}
             {/* La página actual se marca con un pad de cobre, no con un fondo */}
-            {isCurrent(link.href) && (
-              <span
-                class="absolute inset-x-3.5 -bottom-px h-0.5 bg-accent-on-dark"
-                aria-hidden="true"
-              />
-            )}
+            {isCurrent(page.href) && <span class="nav-pad" aria-hidden="true" />}
           </a>
         ))
       }
@@ -95,7 +168,7 @@ function isCurrent(href: string): boolean {
         Navegación móvil con <details>: funciona sin JavaScript, es accesible
         por teclado de serie y no necesita ninguna librería.
       -->
-      <details class="relative md:hidden">
+      <details class="relative lg:hidden" data-nav-menu>
         <summary
           class="flex min-h-11 min-w-11 cursor-pointer list-none items-center justify-center rounded-md border border-border-inverse px-3 text-sm text-ink-inverse marker:hidden [&::-webkit-details-marker]:hidden"
           aria-label="Abrir menú de navegación"
@@ -114,43 +187,42 @@ function isCurrent(href: string): boolean {
 
         <nav
           aria-label="Principal (móvil)"
-          class="absolute right-0 mt-3 w-64 rounded-md border border-border-inverse bg-surface-inverse p-2 shadow-lg"
+          class="absolute right-0 mt-3 w-72 rounded-md border border-border-inverse bg-surface-inverse p-2 shadow-lg"
         >
+          <a
+            href="/servicios"
+            aria-current={isCurrent("/servicios") ? "page" : undefined}
+            class="block rounded-md px-3 py-3 text-sm text-ink-inverse hover:bg-surface-inverse-raised aria-[current=page]:font-medium"
+          >
+            Todos los servicios
+          </a>
+
           {
-            links.map((link) => (
+            servicePages.map((service) => (
               <a
-                href={link.href}
-                aria-current={isCurrent(link.href) ? "page" : undefined}
+                href={service.page!}
+                aria-current={isCurrent(service.page!) ? "page" : undefined}
                 class="block rounded-md px-3 py-3 text-sm text-ink-inverse hover:bg-surface-inverse-raised aria-[current=page]:font-medium"
-              >
-                {link.label}
-              </a>
-            ))
-          }
-
-          <div class="my-2 h-px bg-border-inverse" role="presentation"></div>
-
-          <p class="px-3 pb-1 pt-2 label-technical text-ink-subtle">
-            Dentro de servicios
-          </p>
-
-          {
-            SERVICES.filter((service) => service.page === null).map((service) => (
-              <a
-                href={service.href}
-                class="block rounded-md px-3 py-3 text-sm text-ink-inverse-muted hover:bg-surface-inverse-raised hover:text-ink-inverse"
               >
                 {service.name}
               </a>
             ))
           }
 
-          <a
-            href="/servicios#proceso"
-            class="block rounded-md px-3 py-3 text-sm text-ink-inverse-muted hover:bg-surface-inverse-raised hover:text-ink-inverse"
-          >
-            Cómo trabajamos
-          </a>
+          {
+            PAGES.map((page) => (
+              <a
+                href={page.href}
+                aria-current={isCurrent(page.href) ? "page" : undefined}
+                class="block rounded-md px-3 py-3 text-sm text-ink-inverse hover:bg-surface-inverse-raised aria-[current=page]:font-medium"
+              >
+                {page.label}
+              </a>
+            ))
+          }
+
+          <div class="my-2 h-px bg-border-inverse" role="presentation"></div>
+
           <a
             href="/servicios#preguntas"
             class="block rounded-md px-3 py-3 text-sm text-ink-inverse-muted hover:bg-surface-inverse-raised hover:text-ink-inverse"
@@ -164,3 +236,151 @@ function isCurrent(href: string): boolean {
     </div>
   </div>
 </header>
+
+<style>
+  .nav-menu {
+    position: relative;
+  }
+
+  .nav-summary {
+    position: relative;
+    display: flex;
+    min-height: 2.75rem;
+    cursor: pointer;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: var(--radius-md);
+    padding-inline: 0.875rem;
+    font-size: 0.875rem;
+    color: var(--color-ink-inverse-muted);
+    list-style: none;
+    transition: color var(--duration-base) var(--ease-out);
+  }
+
+  .nav-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .nav-summary:hover,
+  .nav-menu[open] .nav-summary {
+    color: var(--color-ink-inverse);
+  }
+
+  .nav-summary[data-current],
+  .nav-link[aria-current="page"] {
+    font-weight: 500;
+    color: var(--color-ink-inverse);
+  }
+
+  /* Enlace suelto de nivel 1: mismo tamaño y mismo pad que el desplegable. */
+  .nav-link {
+    position: relative;
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    border-radius: var(--radius-md);
+    padding-inline: 0.875rem;
+    font-size: 0.875rem;
+    color: var(--color-ink-inverse-muted);
+    transition: color var(--duration-base) var(--ease-out);
+  }
+
+  .nav-link:hover {
+    color: var(--color-ink-inverse);
+  }
+
+  /*
+   * Entre 1024 y 1280 la barra va justa: tres destinos sueltos, el
+   * desplegable y el botón de WhatsApp. Lo que cede es el espacio en blanco
+   * de los enlaces, no el tamaño de la letra ni los nombres.
+   */
+  @media (min-width: 64rem) and (max-width: 79.9375rem) {
+    .nav-summary,
+    .nav-link {
+      padding-inline: 0.5rem;
+    }
+
+    .nav-pad {
+      inset-inline: 0.5rem;
+    }
+  }
+
+  .nav-chevron {
+    inline-size: 1rem;
+    block-size: 1rem;
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+
+  .nav-menu[open] .nav-chevron {
+    transform: rotate(180deg);
+  }
+
+  /* El pad de cobre que marca la sección actual, igual que antes marcaba la
+     página: va pegado al borde inferior de la cabecera. */
+  .nav-pad {
+    position: absolute;
+    inset-inline: 0.875rem;
+    bottom: calc(-1rem - 1px);
+    block-size: 2px;
+    background-color: var(--color-accent-on-dark);
+  }
+
+  .nav-panel {
+    position: absolute;
+    inset-inline-start: 0;
+    top: calc(100% + 0.75rem);
+    z-index: var(--z-modal);
+    inline-size: 21rem;
+    border: 1px solid var(--color-border-inverse);
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface-inverse);
+    padding: 0.5rem;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .nav-item {
+    display: block;
+    border-radius: var(--radius-md);
+    padding: 0.7rem 0.875rem;
+    transition: background-color var(--duration-base) var(--ease-out);
+  }
+
+  .nav-item:hover {
+    background-color: var(--color-surface-inverse-raised);
+  }
+
+  .nav-item-depth {
+    display: block;
+    color: var(--color-accent-on-dark);
+  }
+
+  .nav-item-name {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.9375rem;
+    color: var(--color-ink-inverse);
+  }
+
+  .nav-item[aria-current="page"] .nav-item-name {
+    font-weight: 600;
+  }
+
+  .nav-item-note {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  /* El primero no lleva etiqueta de profundidad: no es un servicio. */
+  .nav-item:first-child .nav-item-name {
+    margin-top: 0;
+  }
+
+  .nav-rule {
+    margin: 0.5rem 0.875rem;
+    block-size: 1px;
+    background-color: var(--color-border-inverse);
+  }
+</style>

@@ -126,8 +126,13 @@ taller-ecu/
 │   │   ├── layouts/             PublicLayout, AdminLayout
 │   │   ├── lib/api/             capa HTTP tipada del panel
 │   │   ├── assets/photos/       fotografías (ver docs/image-sources.md)
-│   │   └── pages/               index, servicios, 404, robots.txt, admin/
-│   └── test/                    pruebas de cliente HTTP, login y dashboard
+│   │   └── pages/               index, servicios, servicios/{diagnostico-dtc,
+│   │                            reprogramacion, reparacion-ecu,
+│   │                            clonacion-ecu}, como-trabajamos, contacto,
+│   │                            sobre-nosotros, 404, robots.txt, admin/
+│   └── test/                    pruebas de cliente HTTP, login, dashboard,
+│                                proxy de desarrollo, navegación, contacto,
+│                                sobre-nosotros y diagnóstico DTC
 ├── docs/
 │   ├── site-architecture.md
 │   ├── frontend-design.md
@@ -138,8 +143,10 @@ taller-ecu/
     └── backup-postgres.sh       SOLO para producción, no ejecutar en desarrollo
 ```
 
-El frontend en `web/` cubre la portada pública, el login y el resumen del panel.
-**No está desplegado.**
+El frontend en `web/` cubre la portada pública, el hub de servicios, las cuatro
+páginas de servicio —diagnóstico DTC, reprogramación, reparación de ECU y
+clonación de ECU—, `/como-trabajamos`, `/contacto`, `/sobre-nosotros`, el login
+y el resumen del panel. **No está desplegado.**
 
 ---
 
@@ -397,18 +404,53 @@ Ahora bien, **no está en marcha en ningún sitio**:
 Aplicación **Astro 5 + TypeScript + React + Tailwind 4** en `web/`, **sin
 desplegar**:
 
-- Portada pública en `/`, hub de servicios en `/servicios` y **página completa de
-  `/servicios/reprogramacion`**, con el configurador orientativo de
-  Tuning-shop.com incrustado bajo activación explícita. Es la **única petición a
-  terceros** de toda la web, y está documentada en
-  [embed-tuning-shop.md](docs/embed-tuning-shop.md). Estáticas, con
-  **~2,4 kB de JavaScript en línea** que solo aporta movimiento: revelado al
-  entrar en pantalla, trazado de la pista del proceso, paralaje del despiece e
-  índice activo. **Ninguna línea es necesaria para leer la página**, y todo se
-  desactiva con `prefers-reduced-motion`. Sin librería de animación.
+- Portada pública en `/`, hub de servicios en `/servicios`, **las tres páginas
+  completas de servicio** y `/como-trabajamos`, una página corta a propósito
+  —titular, esquema y qué enviar— pensada para que empezar sea fácil, con un
+  esquema propio y un selector de recorrido (particular o taller) **resuelto
+  sin JavaScript**. Es la única con el hero en claro.
+- **`/contacto`**, varias páginas en una: una entrada por servicio —diagnóstico
+  DTC, reprogramación, reparación y clonación— que abre WhatsApp con una
+  plantilla escrita para ese servicio, un conmutador «soy particular / soy un
+  taller» que cambia las plantillas sin duplicar las tarjetas, y una salida
+  secundaria para quien no sabe qué servicio necesita. **Sin formulario y sin
+  una línea de JavaScript**: los diez enlaces van en el HTML y el conmutador es
+  un grupo de radios resuelto con CSS. Publica solo datos confirmados —canal, zona, primer contacto y
+  visitas con cita previa—; la dirección y el correo provisionales están
+  guardados aparte, marcados `PENDING_CLIENT_CONFIRMATION` y **sin publicar**.
+- **`/servicios/diagnostico-dtc`**, la puerta de entrada del sitio para quien
+  llega con un testigo encendido, un código o un vehículo limitado. Su tesis es
+  que **un código indica dónde mirar, no qué cambiar**, y está construida sobre
+  una sola regla: *una necesidad, una interacción, un abanico de soluciones y
+  una llamada a la acción*. **Cinco secciones y 320 palabras visibles.** La
+  interacción es el tablero de síntomas: seis situaciones reconocibles, seis
+  caminos distintos y una sola respuesta de dos líneas cada vez. Elegir el caso
+  es un grupo de radios resuelto con CSS; el JavaScript solo traza el camino y
+  enciende la unidad al llegar. **No publica ningún código de avería concreto**,
+  ni real ni de ejemplo, y hay una prueba que lo impide en todo el sitio.
+- Las otras tres de servicio: `/servicios/reprogramacion`, con el configurador
+  orientativo de Tuning-shop.com incrustado bajo activación explícita —la
+  **única petición a terceros** de toda la web, documentada en
+  [embed-tuning-shop.md](docs/embed-tuning-shop.md)—, y
+  `/servicios/reparacion-ecu` y `/servicios/clonacion-ecu`, que no hacen
+  ninguna. Estáticas, con **2,9 kB de JavaScript en línea** comunes (4,4 kB en
+  la de diagnóstico, 4,3 kB en la de reparación y 5,0 kB en la de clonación) que
+  solo aporta movimiento y control: revelado al entrar en pantalla, trazado de la
+  pista del proceso, paralaje del despiece, cierre de los menús de la cabecera,
+  índice activo, el camino del síntoma hasta la unidad, el paso a paso del
+  recorrido por la placa y el traslado entre unidades.
+  **Ninguna línea es necesaria para leer la página**, y todo se desactiva con
+  `prefers-reduced-motion`. Sin librería de animación.
 - Identidad visual propia: un **despiece de centralita** dibujado a medida como
-  firma de la portada, y un diagrama por servicio, todos calculados desde la
-  misma proyección (`src/lib/iso.ts`). Ningún dibujo lleva cifras ni códigos
+  firma de la portada, un diagrama por servicio y una pieza propia por página de
+  servicio —el mapa de calibración, el recorrido por la placa y el traslado
+  entre dos unidades—, todos calculados desde la misma proyección
+  (`src/lib/iso.ts`). Tres piezas no dibujan una centralita y por eso no pasan
+  por esa proyección: el esquema de cableado de `/como-trabajamos` y el corte
+  estratigráfico de `/sobre-nosotros`. Y `/contacto` lleva un cuadro de conexiones que
+  conduce todas las rutas hasta un único contacto de WhatsApp —hecho con cajas de
+  CSS, no con SVG, para que los conductores caigan por el centro exacto de unas
+  tarjetas cuyo ancho decide la rejilla—. Ningún dibujo lleva cifras ni códigos
   inventados.
 - Acceso al panel en `/admin/login`.
 - Resumen del panel en `/admin`, consumiendo `GET /api/admin/dashboard`.
@@ -431,7 +473,7 @@ Sin esa variable no se configura ningún proxy y la web pública funciona igual.
 
 ### Sin empezar
 
-Las páginas individuales de cada servicio, el listado y el detalle de solicitudes
+La página individual de clonación de ECU, el listado y el detalle de solicitudes
 en el panel, y todos los endpoints de escritura (cambio de estado, notas
 internas, urgencia).
 
@@ -444,7 +486,7 @@ internas, urgencia).
 | **3** | ✅ *escrita, sin desplegar* — Proyecto en `web/` (Astro, no Next.js), login funcional, tokens y SEO |
 | **4** | Panel en modo lectura: **resumen hecho**; faltan listado y detalle |
 | **5** | Panel en modo escritura: cambio de estado, notas internas, `is_urgent`, devolver la conversación al bot |
-| **6** | Web pública: las siete páginas, SEO y JSON-LD |
+| **6** | Web pública: **siete de las ocho páginas escritas** (falta `/sobre-nosotros` y las legales), SEO hecho, JSON-LD en `/contacto` |
 | **7** | Reverse proxy, TLS, DNS y despliegue |
 
 Reverse proxy, TLS y DNS quedan deliberadamente para el final: primero se construyen

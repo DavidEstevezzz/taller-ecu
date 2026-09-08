@@ -13,12 +13,22 @@ interface Props {
   title?: string;
   body?: string;
   message?: string;
+  /**
+   * Salida secundaria, opcional. Va como enlace de texto y no como segundo
+   * botón: sobre cobre, dos botones claros compiten y ninguno gana. La usa
+   * /sobre-nosotros para ofrecer también /contacto sin restarle al WhatsApp,
+   * que sigue siendo la acción principal de todo el sitio.
+   */
+  secondaryHref?: string;
+  secondaryLabel?: string;
 }
 
 const {
   title = "Cuéntanos qué le pasa al vehículo.",
   body = "Marca, modelo, motor y qué síntoma tiene. Si tienes el código de error o una foto de la centralita, mejor todavía.",
   message = "Hola, os escribo por un vehículo. Marca y modelo:",
+  secondaryHref,
+  secondaryLabel,
 } = Astro.props;
 ---
 
@@ -67,6 +77,20 @@ const {
       <p class="mt-4 text-sm text-on-accent/85">
         {CONTACT.whatsappDisplay}
       </p>
+
+      {
+        secondaryHref && secondaryLabel && (
+          <p class="mt-3">
+            <a
+              href={secondaryHref}
+              class="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-on-accent underline underline-offset-4 decoration-on-accent/40 hover:decoration-on-accent"
+            >
+              {secondaryLabel}
+              <span aria-hidden="true">→</span>
+            </a>
+          </p>
+        )
+      }
     </div>
   </div>
 </section>

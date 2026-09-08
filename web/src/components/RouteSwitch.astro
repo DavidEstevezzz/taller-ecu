@@ -1,0 +1,204 @@
+---
+import WhatsAppLink from "./WhatsAppLink.astro";
+import { CASE_ROUTES } from "../config/site";
+
+/**
+ * Los dos recorridos: particular y taller.
+ *
+ * **Sin una línea de JavaScript.** Es un grupo de radios con sus etiquetas y
+ * dos paneles; el que se ve lo decide `:checked` con un combinador de
+ * hermanos. Las ventajas no son de peso, son de comportamiento:
+ *
+ * - Funciona con el navegador apagado del todo: si el módulo de la web pública
+ *   no llega, el selector sigue cambiando de panel.
+ * - El teclado ya funciona: un grupo de radios se recorre con las flechas y se
+ *   anuncia como grupo, sin `role="tablist"` ni gestión de foco a mano.
+ * - No hay parpadeo al cargar. Un panel oculto por JavaScript se ve un
+ *   instante antes de que el script llegue; éste nace en su sitio.
+ * - No guarda nada. Sin `localStorage`, sin cookies y sin enviar nada: lo
+ *   único que sale de aquí es el enlace de WhatsApp que el visitante decide
+ *   abrir, con la plantilla ya escrita en el `href`.
+ *
+ * Los radios van ocultos y **el foco se pinta sobre la etiqueta**, que es lo
+ * que se ve. Sin eso, tabular hasta aquí no se notaría.
+ *
+ * Está escrito para exactamente dos opciones: el CSS empareja el radio n con
+ * el panel n por `nth-of-type`. Si algún día hay una tercera, hay que añadir
+ * su par de reglas.
+ *
+ * Cada panel son cuatro puntos y el botón. Ni párrafo de introducción, ni nota
+ * al pie, ni título: la pestaña ya dice quién eres, y todo lo demás repetía. La
+ * advertencia de que no es una lista de requisitos se dice **una vez**, en la
+ * página y debajo del selector.
+ */
+interface Props {
+  id?: string;
+  class?: string;
+}
+
+const { id = "recorridos", class: className = "" } = Astro.props;
+---
+
+<fieldset class={`rs ${className}`}>
+  <legend class="label-technical rs-legend">¿Quién consulta?</legend>
+
+  {
+    CASE_ROUTES.map((route, i) => (
+      <input
+        type="radio"
+        name={`${id}-ruta`}
+        id={`${id}-${route.id}`}
+        class="rs-radio"
+        checked={i === 0}
+      />
+    ))
+  }
+
+  <div class="rs-control">
+    {
+      CASE_ROUTES.map((route) => (
+        <label class="rs-tab" for={`${id}-${route.id}`}>
+          {route.tab}
+        </label>
+      ))
+    }
+  </div>
+
+  <div class="rs-panels">
+    {
+      CASE_ROUTES.map((route) => (
+        <div class="rs-panel">
+          <ul class="rs-list">
+            {route.brings.map((item) => (
+              <li class="rs-item">
+                <span class="rs-dash" aria-hidden="true" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+
+          <WhatsAppLink
+            class="rs-cta"
+            size="lg"
+            label="Abrir WhatsApp con esta plantilla"
+            message={route.message.join("\n")}
+          />
+        </div>
+      ))
+    }
+  </div>
+</fieldset>
+
+<style>
+  .rs {
+    margin: 0;
+    border: 0;
+    padding: 0;
+    min-inline-size: 0;
+  }
+
+  .rs-legend {
+    padding: 0;
+    color: var(--color-ink-muted);
+  }
+
+  /*
+   * Los radios se apartan de la vista, no del teclado ni del lector: siguen
+   * siendo un grupo de radios de verdad.
+   */
+  .rs-radio {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .rs-control {
+    margin-top: 1rem;
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface);
+    padding: 0.375rem;
+  }
+
+  .rs-tab {
+    display: inline-flex;
+    min-height: 2.75rem;
+    cursor: pointer;
+    align-items: center;
+    border-radius: var(--radius-sm);
+    padding-inline: 1.25rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-ink-muted);
+    transition:
+      background-color var(--duration-base) var(--ease-out),
+      color var(--duration-base) var(--ease-out);
+  }
+
+  .rs-tab:hover {
+    color: var(--color-ink);
+  }
+
+  .rs-panel {
+    display: none;
+    margin-top: 2.5rem;
+  }
+
+  .rs-list {
+    display: grid;
+    gap: 0.875rem;
+  }
+
+  @media (min-width: 40rem) {
+    .rs-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.875rem 2.5rem;
+    }
+  }
+
+  .rs-item {
+    display: flex;
+    gap: 0.875rem;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--color-ink);
+  }
+
+  .rs-dash {
+    margin-top: 0.7rem;
+    block-size: 1px;
+    inline-size: 1rem;
+    flex-shrink: 0;
+    background-color: var(--color-accent);
+  }
+
+  .rs-cta {
+    margin-top: 2rem;
+  }
+
+  /* ── El emparejamiento ───────────────────────────────────
+     Radio n ↔ pestaña n ↔ panel n. Dos opciones, dos pares de reglas. */
+  .rs-radio:nth-of-type(1):checked ~ .rs-control > .rs-tab:nth-child(1),
+  .rs-radio:nth-of-type(2):checked ~ .rs-control > .rs-tab:nth-child(2) {
+    background-color: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+
+  .rs-radio:nth-of-type(1):checked ~ .rs-panels > .rs-panel:nth-child(1),
+  .rs-radio:nth-of-type(2):checked ~ .rs-panels > .rs-panel:nth-child(2) {
+    display: block;
+  }
+
+  /* El foco se pinta sobre la etiqueta: el radio no se ve. */
+  .rs-radio:nth-of-type(1):focus-visible ~ .rs-control > .rs-tab:nth-child(1),
+  .rs-radio:nth-of-type(2):focus-visible ~ .rs-control > .rs-tab:nth-child(2) {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+</style>

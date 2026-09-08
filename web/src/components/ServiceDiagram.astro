@@ -4,16 +4,28 @@ import { px, py, topFace, sideFaces, box, trace, grid } from "../lib/iso";
 /**
  * Un dibujo por servicio, en la misma proyección que el despiece del hero.
  *
- * Existen porque los tres servicios NO son una secuencia: son tres
- * intervenciones distintas sobre la misma pieza. Numerarlos 01/02/03 decía
- * algo falso. Tres dibujos distintos dicen lo verdadero de un vistazo:
+ * Existen porque los servicios NO son una secuencia: son intervenciones
+ * distintas sobre la misma pieza. Numerarlos 01/02/03 decía algo falso.
+ * Cuatro dibujos distintos dicen lo verdadero de un vistazo:
  *
+ *   diagnostico-dtc lo que la unidad registra sale de ella y apunta a varios
+ *                   sitios por comprobar
  *   reprogramacion  el software entra en una unidad cerrada
  *   reparacion-ecu  la unidad se abre y se interviene un componente
  *   clonacion-ecu   lo que hay dentro de una unidad pasa a otra
+ *
+ * El del diagnóstico es el reverso exacto del de reprogramación —misma
+ * unidad, misma posición, flecha en sentido contrario— y eso es justamente
+ * lo que los distingue: uno escribe en la unidad, el otro lee de ella.
+ * Los círculos punteados a los que llega no están resueltos a propósito: un
+ * código señala dónde mirar, no qué cambiar.
  */
 interface Props {
-  variant: "reprogramacion" | "reparacion-ecu" | "clonacion-ecu";
+  variant:
+    | "diagnostico-dtc"
+    | "reprogramacion"
+    | "reparacion-ecu"
+    | "clonacion-ecu";
   id: string;
   class?: string;
 }
@@ -30,12 +42,17 @@ const T = 24;
 const IN = 22;
 
 const NAMES = {
+  "diagnostico-dtc": "Diagnóstico DTC",
   reprogramacion: "Reprogramación",
   "reparacion-ecu": "Reparación de ECU",
   "clonacion-ecu": "Clonación de ECU",
 } as const;
 
 const DESCRIPTIONS = {
+  "diagnostico-dtc":
+    "Dibujo de una centralita cerrada de la que sale una señal hacia arriba; " +
+    "al llegar arriba se abre en tres ramas que terminan en círculos " +
+    "punteados, sin resolver.",
   reprogramacion:
     "Dibujo de una centralita cerrada con un plano de datos descendiendo " +
     "hacia ella: el mapa nuevo entra en la unidad.",
@@ -53,6 +70,7 @@ const DESCRIPTIONS = {
  * de aire, y las tres tarjetas parecían de tamaños distintos.
  */
 const VIEW_BOX = {
+  "diagnostico-dtc": "-2 68 540 386",
   reprogramacion: "18 26 501 358",
   "reparacion-ecu": "2 -6 564 402",
   "clonacion-ecu": "42 10 524 374",
@@ -86,6 +104,46 @@ const descId = `${id}-d`;
       <path d="M 1 1 L 10 6 L 1 11 z" class="arrow-head" />
     </marker>
   </defs>
+
+  {
+    variant === "diagnostico-dtc" && (
+      <>
+        {/* La unidad, cerrada. La misma que en reprogramación. */}
+        <g class="part" style="--step: 0">
+          {sideFaces(230, 240, W, D, C, T).map((d) => (
+            <path d={d} class="face-side" />
+          ))}
+          <path d={topFace(230, 240, W, D, C)} class="face-top" />
+          <path d={trace(230, 240, 40, 34, [[1, 130]])} class="etch" />
+          <path d={trace(230, 240, 40, 58, [[1, 130]])} class="etch" />
+        </g>
+
+        {/* Lo registrado sale de la unidad: la flecha sube, no baja. */}
+        <g class="part" style="--step: 1">
+          <path
+            d="M 268 268 L 268 176"
+            class="arrow"
+            marker-end={`url(#${id}-head)`}
+          />
+        </g>
+
+        {/* Y se reparte: un registro apunta a más de un sitio. */}
+        <g class="part" style="--step: 2">
+          <path d="M 168 152 L 368 152" class="arrow" />
+          {[168, 268, 368].map((x) => (
+            <path d={`M ${x} 152 L ${x} 132`} class="arrow" />
+          ))}
+        </g>
+
+        {/* Sin resolver: punteados, como el círculo de reparación. */}
+        <g class="part" style="--step: 3">
+          {[168, 268, 368].map((x) => (
+            <ellipse cx={x} cy={112} rx="26" ry="17" class="ring" />
+          ))}
+        </g>
+      </>
+    )
+  }
 
   {
     variant === "reprogramacion" && (

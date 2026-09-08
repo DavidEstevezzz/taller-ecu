@@ -17,8 +17,8 @@ const year = new Date().getFullYear();
       <div class="md:col-span-4">
         <BrandMark tone="inverse" size="lg" />
         <p class="mt-5 max-w-xs text-sm leading-relaxed text-ink-inverse-muted">
-          Electrónica del automóvil: reprogramación, reparación y clonación de
-          centralitas para talleres y particulares.
+          Software de automoción: diagnóstico DTC, reprogramación, reparación
+          y clonación de centralitas para talleres y particulares.
         </p>
       </div>
 
@@ -57,10 +57,18 @@ const year = new Date().getFullYear();
         <ul class="mt-4 space-y-2.5">
           <li>
             <a
-              href="/servicios#proceso"
+              href="/como-trabajamos"
               class="text-sm text-ink-inverse-muted underline-offset-4 hover:text-accent-on-dark hover:underline"
             >
               Cómo trabajamos
+            </a>
+          </li>
+          <li>
+            <a
+              href="/sobre-nosotros"
+              class="text-sm text-ink-inverse-muted underline-offset-4 hover:text-accent-on-dark hover:underline"
+            >
+              Sobre nosotros
             </a>
           </li>
           <li>
@@ -87,6 +95,17 @@ const year = new Date().getFullYear();
         >
           {CONTACT.whatsappDisplay}
         </a>
+
+        <!-- La página de contacto va en esta columna, no en «Empresa»: quien
+             busca cómo escribir mira aquí, no en la lista de páginas. -->
+        <p>
+          <a
+            href="/contacto"
+            class="inline-flex min-h-11 items-center text-sm text-ink-inverse-muted underline-offset-4 hover:text-accent-on-dark hover:underline"
+          >
+            Plantillas por servicio
+          </a>
+        </p>
       </div>
     </div>
 

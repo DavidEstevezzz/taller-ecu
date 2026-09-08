@@ -1,0 +1,518 @@
+---
+import { topFace, sideFaces, box, trace } from "../lib/iso";
+import { DTC_SITUATIONS, DTC_CAVEAT } from "../config/site";
+
+/**
+ * «¿Te ocurre algo de esto?» — la pieza central de /servicios/diagnostico-dtc.
+ *
+ * Sustituye a una versión anterior que dibujaba **los cinco tramos del
+ * análisis** —síntoma, código, condiciones, comprobaciones, decisión— con una
+ * línea de texto por tramo y por escenario. Estaba bien construida y contaba
+ * lo que no había que contar: el procedimiento interno. Quince líneas para
+ * explicar cómo razonamos, cuando quien llega solo quiere saber si su caso
+ * encaja.
+ *
+ * Lo que dibuja ahora cabe en una frase: **lo que notas entra por la
+ * izquierda y llega a la unidad.** Seis situaciones, seis caminos distintos,
+ * un solo destino. Ni un rótulo de procedimiento dentro del dibujo.
+ *
+ * Por qué los caminos son distintos y no uno solo repintado: es lo único que
+ * hace memorable el gesto de cambiar de caso. Cada recorrido tiene su forma
+ * —uno sube, otro baja, otro va en escalera— así que elegir se nota, y se
+ * nota que tu caso no es el mismo que el de al lado.
+ *
+ * Qué NO hace, deliberadamente:
+ *
+ * - **No enseña pasos.** Los nudos intermedios desaparecieron con el texto que
+ *   los explicaba.
+ * - **No promete.** El destino es la unidad, no «la solución». Lo que se puede
+ *   valorar lo dice la respuesta de al lado, en dos líneas, y la advertencia
+ *   del pie se dice **una vez en toda la página**.
+ * - **No esconde nada en un acordeón.** Se ve una respuesta cada vez porque
+ *   solo una es la tuya, no para meter más contenido del que cabe.
+ * - **No lleva textura propia.** Tres pistas decorativas sueltas en el campo
+ *   se leían como marcas arbitrarias. El fondo de placa lo pone la sección
+ *   con la rejilla técnica del sitio, que ya existe y es la misma en todas
+ *   partes.
+ *
+ * ── Cómo funciona ───────────────────────────────────────────
+ *
+ * El control es un **grupo de radios**, como `RouteSwitch` y `ContactBoard`:
+ * funciona sin JavaScript, se recorre con las flechas, se anuncia como grupo
+ * y no parpadea al cargar. Elegir caso cambia el camino vivo y la respuesta,
+ * todo con `:checked ~`.
+ *
+ * El JavaScript (`src/scripts/symptom-route.ts`) añade **una sola cosa**: que
+ * el camino se trace en lugar de aparecer hecho, y que la unidad se encienda
+ * al llegar. Usa la Web Animations API sobre `stroke-dashoffset`, que se
+ * cancela y reinicia limpiamente al cambiar de caso —con transiciones CSS
+ * había que forzar un reflujo para reiniciarlas—.
+ *
+ * ── Cómo degrada ────────────────────────────────────────────
+ *
+ *   sin JavaScript      → camino trazado entero y unidad encendida. No falta
+ *                         nada y el selector sigue mandando.
+ *   movimiento reducido → igual.
+ *   cualquier anchura   → **el tablero se queda**. No lleva ningún rótulo
+ *                         dentro, así que no hay nada que se vuelva ilegible
+ *                         al escalar; es la ventaja de haberle quitado el
+ *                         texto.
+ */
+interface Props {
+  id?: string;
+  class?: string;
+}
+
+const { id = "sintomas", class: className = "" } = Astro.props;
+
+/* ── La unidad ─────────────────────────────────────────────
+   Misma proyección dimétrica y mismo chaflán que el resto del sitio: es la
+   misma centralita que se despieza en la portada. */
+const OX = 520;
+const OY = 176;
+const W = 180;
+const D = 118;
+const C = 24;
+const T = 22;
+
+/** Entrada de la señal, y punto por el que aterriza en la unidad. */
+const ENTRY: [number, number] = [56, 208];
+/** El vértice izquierdo de la cara superior: la arista por la que entra. */
+const LAND: [number, number] = [402, 235];
+
+/** Conector: cabalga sobre esa arista, justo donde aterriza la pista. */
+const CONNECTOR = box(OX, OY, 0, 84, 34, 34, 14);
+
+/** El pad que se enciende cuando la señal llega. */
+const PAD: [number, number] = [551, 250];
+
+type Point = [number, number];
+
+/** Polilínea ortogonal, como una pista de placa. Nunca en diagonal libre. */
+const line = (points: Point[]): string =>
+  points.map(([x, y], i) => `${i === 0 ? "M" : "L"} ${x} ${y}`).join(" ");
+
+/*
+ * Un camino por situación, en el mismo orden que `DTC_SITUATIONS`.
+ *
+ * Todos salen del mismo sitio y llegan al mismo sitio; lo que cambia es por
+ * dónde pasan. Ninguno es recto, ni siquiera el primero: el caso que se ve al
+ * entrar tiene que enseñar ya que aquí hay un recorrido.
+ *
+ * Las alturas están elegidas para no cruzarse con la unidad (x ≥ 402) ni
+ * salirse del encuadre, que está ajustado al contenido y no al revés.
+ */
+const ROUTES: string[] = [
+  line([ENTRY, [200, 208], [200, 150], [300, 150], [300, 235], LAND]),
+  line([ENTRY, [140, 208], [140, 300], [310, 300], [310, 235], LAND]),
+  line([ENTRY, [176, 208], [176, 100], [340, 100], [340, 235], LAND]),
+  line([
+    ENTRY,
+    [116, 208],
+    [116, 158],
+    [216, 158],
+    [216, 272],
+    [326, 272],
+    [326, 235],
+    LAND,
+  ]),
+  line([ENTRY, [92, 208], [92, 74], [362, 74], [362, 235], LAND]),
+  line([ENTRY, [92, 208], [92, 328], [362, 328], [362, 235], LAND]),
+];
+
+const titleId = `${id}-t`;
+const descId = `${id}-d`;
+---
+
+<div class={`sr ${className}`} data-symptom-route>
+  <fieldset class="sr-set">
+    <legend class="label-technical sr-legend">Elige tu caso</legend>
+
+    {
+      DTC_SITUATIONS.map((item, i) => (
+        <input
+          type="radio"
+          name={`${id}-caso`}
+          id={`${id}-${item.id}`}
+          value={item.id}
+          class="sr-radio"
+          checked={i === 0}
+        />
+      ))
+    }
+
+    <div class="sr-tabs">
+      {
+        DTC_SITUATIONS.map((item) => (
+          <label class="sr-tab" for={`${id}-${item.id}`}>
+            {item.tab}
+          </label>
+        ))
+      }
+    </div>
+
+    <div class="sr-body">
+      <!-- ── El tablero ──
+           Supletorio: lo que dice está en la respuesta de al lado. Por eso es
+           role="img" y por eso no lleva ni un rótulo dentro. -->
+      <div class="sr-board">
+        <svg
+          viewBox="0 44 760 316"
+          class="sr-svg"
+          role="img"
+          aria-labelledby={`${titleId} ${descId}`}
+          fill="none"
+        >
+          <title id={titleId}>Del síntoma a la centralita</title>
+          <desc id={descId}>
+            Dibujo esquemático: una señal entra por la izquierda, recorre una
+            pista y llega a una centralita vista en perspectiva, que se
+            enciende al recibirla. Cada situación sigue un camino distinto. No
+            hay códigos, cifras ni medidas.
+          </desc>
+
+          <!-- La unidad, cerrada. Es el destino, no una promesa. -->
+          <g class="sr-unit">
+            {sideFaces(OX, OY, W, D, C, T).map((d) => (
+              <path d={d} class="face-side" />
+            ))}
+            <path d={topFace(OX, OY, W, D, C)} class="face-top" />
+            <path d={trace(OX, OY, 36, 26, [[1, 104]])} class="etch" />
+            <path d={trace(OX, OY, 36, 50, [[1, 104]])} class="etch" />
+
+            {CONNECTOR.sides.map((d) => <path d={d} class="part-side" />)}
+            <path d={CONNECTOR.top} class="part-top" />
+          </g>
+
+          <!-- Los seis caminos. Solo se dibuja el del caso elegido. -->
+          <g class="sr-routes">
+            {ROUTES.map((d) => <path d={d} pathLength="1" />)}
+          </g>
+
+          <!-- La entrada: lo que notas, llegando. -->
+          <g class="sr-entry">
+            <path d="M 14 208 L 40 208" class="sr-feed" />
+            <path d="M 22 192 L 40 192" class="sr-feed" />
+            <path d="M 22 224 L 40 224" class="sr-feed" />
+            <circle cx={ENTRY[0]} cy={ENTRY[1]} r="20" class="sr-pulse" />
+            <circle cx={ENTRY[0]} cy={ENTRY[1]} r="13" class="sr-entry-ring" />
+            <circle cx={ENTRY[0]} cy={ENTRY[1]} r="5.5" class="sr-entry-core" />
+          </g>
+
+          <!-- La llegada: la unidad recibe la señal. -->
+          <g class="sr-arrive">
+            <ellipse cx={PAD[0]} cy={PAD[1]} rx="30" ry="17" class="sr-halo" />
+            <ellipse cx={PAD[0]} cy={PAD[1]} rx="9" ry="5" class="sr-pad" />
+          </g>
+        </svg>
+      </div>
+
+      <div class="sr-answer">
+        {
+          DTC_SITUATIONS.map((item) => (
+            <div class={`sr-only-${item.id}`}>
+              <h3 class="display sr-answer-title">{item.title}</h3>
+              <p class="sr-answer-text">{item.answer}</p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </fieldset>
+
+  <p class="sr-caveat">{DTC_CAVEAT}</p>
+</div>
+
+<style>
+  .sr-set {
+    margin: 0;
+    border: 0;
+    padding: 0;
+    min-inline-size: 0;
+  }
+
+  .sr-legend {
+    padding: 0;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  /* Los radios se apartan de la vista, no del teclado ni del lector. */
+  .sr-radio {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* ── El selector ───────────────────────────────────────── */
+
+  .sr-tabs {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /*
+   * El contorno va en grafito 400 y no en `--color-border-inverse`, que es el
+   * borde de las superficies: sobre esta sección da 1,4:1 y **un control
+   * necesita 3:1** para que se vea que es un control (WCAG 1.4.11). En
+   * grafito 400 son 5,3:1. Es la única razón por la que estas seis pastillas
+   * no llevan el mismo borde que las cajas del resto del sitio.
+   */
+  .sr-tab {
+    display: inline-flex;
+    min-height: 2.75rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    align-items: center;
+    border: 1px solid var(--jm-graphite-400);
+    border-radius: var(--radius-md);
+    padding-inline: 1.125rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-ink-inverse-muted);
+    transition:
+      background-color var(--duration-base) var(--ease-out),
+      border-color var(--duration-base) var(--ease-out),
+      color var(--duration-base) var(--ease-out);
+  }
+
+  .sr-tab:hover {
+    border-color: var(--color-accent-on-dark-strong);
+    color: var(--color-ink-inverse);
+  }
+
+  /* ── Tablero y respuesta ───────────────────────────────── */
+
+  .sr-body {
+    margin-top: 2.5rem;
+    display: grid;
+    gap: 2rem;
+  }
+
+  @media (min-width: 64rem) {
+    .sr-body {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+      gap: 3.5rem;
+      align-items: center;
+    }
+  }
+
+  .sr-svg {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  /*
+   * A 375 px el tablero se sale hasta el borde de la pantalla. Se lo gana:
+   * no lleva ningún rótulo dentro, así que cada píxel de ancho es recorrido
+   * que se ve.
+   */
+  @media (max-width: 63.9375rem) {
+    .sr-svg {
+      inline-size: calc(100% + 2.5rem);
+      margin-inline: -1.25rem;
+    }
+  }
+
+  @media (min-width: 40rem) and (max-width: 63.9375rem) {
+    .sr-svg {
+      inline-size: calc(100% + 4rem);
+      margin-inline: -2rem;
+    }
+  }
+
+  .sr-answer-title {
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    color: var(--color-ink-inverse);
+    text-wrap: balance;
+  }
+
+  .sr-answer-text {
+    margin-top: 1rem;
+    max-inline-size: 34rem;
+    text-wrap: pretty;
+    font-size: var(--text-lead);
+    line-height: var(--text-lead--line-height);
+    color: var(--color-ink-inverse-muted);
+  }
+
+  .sr-only-testigo,
+  .sr-only-emergencia,
+  .sr-only-vuelve,
+  .sr-only-intermitente,
+  .sr-only-programacion,
+  .sr-only-comunica {
+    display: none;
+  }
+
+  .sr-caveat {
+    margin-top: 2.5rem;
+    max-inline-size: var(--container-prose);
+    border-inline-start: 2px solid var(--color-accent-on-dark-strong);
+    padding-inline-start: 1.25rem;
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--color-ink-inverse-muted);
+  }
+
+  /* ── El emparejamiento ─────────────────────────────────────
+     Radio n ↔ pestaña n ↔ camino n ↔ respuesta n. Seis, así que seis
+     selectores por regla y una sola regla por propiedad. */
+  .sr-radio:nth-of-type(1):checked ~ .sr-tabs > .sr-tab:nth-child(1),
+  .sr-radio:nth-of-type(2):checked ~ .sr-tabs > .sr-tab:nth-child(2),
+  .sr-radio:nth-of-type(3):checked ~ .sr-tabs > .sr-tab:nth-child(3),
+  .sr-radio:nth-of-type(4):checked ~ .sr-tabs > .sr-tab:nth-child(4),
+  .sr-radio:nth-of-type(5):checked ~ .sr-tabs > .sr-tab:nth-child(5),
+  .sr-radio:nth-of-type(6):checked ~ .sr-tabs > .sr-tab:nth-child(6) {
+    border-color: var(--color-accent-on-dark-strong);
+    background-color: var(--color-accent-on-dark-strong);
+    color: var(--jm-graphite-950);
+  }
+
+  /* El foco se pinta sobre la etiqueta: el radio no se ve. */
+  .sr-radio:nth-of-type(1):focus-visible ~ .sr-tabs > .sr-tab:nth-child(1),
+  .sr-radio:nth-of-type(2):focus-visible ~ .sr-tabs > .sr-tab:nth-child(2),
+  .sr-radio:nth-of-type(3):focus-visible ~ .sr-tabs > .sr-tab:nth-child(3),
+  .sr-radio:nth-of-type(4):focus-visible ~ .sr-tabs > .sr-tab:nth-child(4),
+  .sr-radio:nth-of-type(5):focus-visible ~ .sr-tabs > .sr-tab:nth-child(5),
+  .sr-radio:nth-of-type(6):focus-visible ~ .sr-tabs > .sr-tab:nth-child(6) {
+    outline: 2px solid var(--color-accent-on-dark);
+    outline-offset: 2px;
+  }
+
+  .sr-radio:nth-of-type(1):checked ~ .sr-body .sr-only-testigo,
+  .sr-radio:nth-of-type(2):checked ~ .sr-body .sr-only-emergencia,
+  .sr-radio:nth-of-type(3):checked ~ .sr-body .sr-only-vuelve,
+  .sr-radio:nth-of-type(4):checked ~ .sr-body .sr-only-intermitente,
+  .sr-radio:nth-of-type(5):checked ~ .sr-body .sr-only-programacion,
+  .sr-radio:nth-of-type(6):checked ~ .sr-body .sr-only-comunica {
+    display: block;
+  }
+
+  .sr-routes > path {
+    display: none;
+    stroke: var(--color-accent-on-dark-strong);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .sr-radio:nth-of-type(1):checked ~ .sr-body .sr-routes > path:nth-child(1),
+  .sr-radio:nth-of-type(2):checked ~ .sr-body .sr-routes > path:nth-child(2),
+  .sr-radio:nth-of-type(3):checked ~ .sr-body .sr-routes > path:nth-child(3),
+  .sr-radio:nth-of-type(4):checked ~ .sr-body .sr-routes > path:nth-child(4),
+  .sr-radio:nth-of-type(5):checked ~ .sr-body .sr-routes > path:nth-child(5),
+  .sr-radio:nth-of-type(6):checked ~ .sr-body .sr-routes > path:nth-child(6) {
+    display: block;
+  }
+
+  /* ── Materiales ──────────────────────────────────────────
+     Los mismos que EcuExploded, ServiceDiagram y FaultTrace: los dibujos del
+     sitio son ventanas al mismo banco de trabajo, no cinco paletas. */
+  .face-top {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-graphite-500);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  .face-side {
+    fill: var(--jm-graphite-800);
+    stroke: var(--jm-graphite-600);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  .part-top {
+    fill: var(--jm-graphite-600);
+    stroke: var(--jm-graphite-400);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .part-side {
+    fill: var(--jm-graphite-700);
+    stroke: var(--jm-graphite-500);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+  }
+
+  .etch {
+    stroke: var(--jm-graphite-600);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .sr-feed {
+    stroke: color-mix(in srgb, var(--jm-copper-300) 55%, transparent);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .sr-entry-ring {
+    fill: var(--color-surface-bench);
+    stroke: var(--color-accent-on-dark-strong);
+    stroke-width: 2.5;
+  }
+
+  .sr-entry-core {
+    fill: var(--color-accent-on-dark-strong);
+  }
+
+  .sr-pulse {
+    fill: none;
+    stroke: var(--color-accent-on-dark-strong);
+    stroke-width: 2;
+    opacity: 0;
+    /* Para que el script pueda escalarlo desde su propio centro. */
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .sr-halo {
+    fill: color-mix(in srgb, var(--jm-copper-400) 18%, transparent);
+    stroke: var(--color-accent-on-dark-strong);
+    stroke-width: 1.5;
+  }
+
+  .sr-pad {
+    fill: var(--color-accent-on-dark-strong);
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     Lo que solo ocurre cuando el script conduce el trazado.
+     Sin `.is-driven` —sin JavaScript, o con movimiento reducido— el camino
+     se sirve entero y la unidad, encendida.
+     ═══════════════════════════════════════════════════════ */
+
+  /*
+   * El punto de partida es «sin trazar», no «trazado». Es lo que evita el
+   * salto: el dibujo nace vacío en lugar de pintarse entero y borrarse de
+   * golpe cuando arranca la animación, que es un cambio de `stroke-dasharray`
+   * y no interpola.
+   */
+  .sr.is-driven .sr-routes > path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+
+  .sr.is-driven .sr-arrive {
+    opacity: 0;
+    transition: opacity var(--duration-slow) var(--ease-out);
+  }
+
+  .sr.is-driven[data-arrived] .sr-arrive {
+    opacity: 1;
+  }
+</style>
+
+<script>
+  import "../scripts/symptom-route";
+</script>

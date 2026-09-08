@@ -1,12 +1,13 @@
 /**
  * Movimiento de la web pública.
  *
- * Cuatro cosas, ninguna imprescindible:
+ * Cinco cosas, ninguna imprescindible:
  *
  *   1. Revelado al entrar en pantalla (`.reveal`, diagramas, trazados).
  *   2. Medida y trazado de la pista de cobre del proceso.
  *   3. Paralaje por puntero sobre el despiece del hero.
- *   4. Marcado de la profundidad activa en el raíl de /servicios.
+ *   4. Cierre de los menús de la cabecera al pulsar fuera o con Escape.
+ *   5. Marcado de la profundidad activa en el raíl de /servicios.
  *
  * Reglas que se respetan aquí:
  *
@@ -27,7 +28,7 @@ const animated = root.classList.contains("js-anim");
 
 function setUpReveals(): void {
   const targets = document.querySelectorAll<HTMLElement | SVGElement>(
-    ".reveal, .svc-diagram, .map-svg, .trace-draw"
+    ".reveal, .svc-diagram, .ch-svg, .ss-svg, .trace-draw"
   );
 
   if (targets.length === 0) return;
@@ -99,7 +100,51 @@ function setUpParallax(): void {
   window.addEventListener("blur", reset);
 }
 
-/* ── 4. Profundidad activa en /servicios ────────────────────── */
+/* ── 4. Cierre de los menús de la cabecera ──────────────────── */
+
+/**
+ * Lo que `<details>` no trae y un menú sí necesita: cerrarse al pulsar fuera,
+ * con Escape y al salir el foco.
+ *
+ * El menú funciona sin esto —abrir y cerrar con el propio control, con ratón
+ * y con teclado—, así que es una mejora, no un requisito. Por eso vive aquí y
+ * no en la cabecera: un menú desplegable no puede depender de que llegue un
+ * archivo JavaScript.
+ */
+function setUpNavMenus(): void {
+  const menus = Array.from(
+    document.querySelectorAll<HTMLDetailsElement>("[data-nav-menu]")
+  );
+
+  if (menus.length === 0) return;
+
+  document.addEventListener("click", (event) => {
+    const target = event.target as Node;
+    for (const menu of menus) {
+      if (menu.open && !menu.contains(target)) menu.open = false;
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+
+    for (const menu of menus) {
+      if (!menu.open) continue;
+      menu.open = false;
+      // El foco vuelve al control que lo abrió, no al principio del documento.
+      menu.querySelector("summary")?.focus();
+    }
+  });
+
+  for (const menu of menus) {
+    menu.addEventListener("focusout", (event) => {
+      const next = (event as FocusEvent).relatedTarget as Node | null;
+      if (menu.open && next && !menu.contains(next)) menu.open = false;
+    });
+  }
+}
+
+/* ── 5. Profundidad activa en /servicios ────────────────────── */
 
 /**
  * Marca en el raíl qué servicio se está leyendo. Es orientación, no
@@ -171,7 +216,9 @@ if (animated) {
   setUpParallax();
 }
 
-// El raíl orienta al lector: se marca aunque se haya pedido menos movimiento.
+// Estas dos no son movimiento: orientan y controlan. Se ejecutan siempre,
+// aunque se haya pedido menos movimiento.
+setUpNavMenus();
 setUpDepthRail();
 
 // Marca el archivo como módulo: si no, sus constantes viven en el ámbito

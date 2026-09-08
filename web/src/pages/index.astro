@@ -36,8 +36,8 @@ const METHOD = [
 ---
 
 <PublicLayout
-  title="Reprogramación, reparación y clonación de centralitas"
-  description="Reprogramación, reparación y clonación de centralitas ECU. Diagnóstico preciso y soluciones adaptadas a tu vehículo, explicadas con claridad."
+  title="Diagnóstico DTC, reprogramación y reparación de centralitas"
+  description="Especialistas en software de centralitas ECU: diagnóstico DTC, reprogramación, reparación electrónica y clonación. Consulta tu caso por WhatsApp."
   path="/"
 >
   <!-- ═══════════════════════════════════════════════════════════════
@@ -83,9 +83,9 @@ const METHOD = [
           </h1>
 
           <p class="mt-8 max-w-xl text-lead text-ink-inverse-muted">
-            Reprogramación, reparación y clonación de centralitas ECU. Miramos
-            qué está haciendo la gestión del motor antes de intervenir, y
-            actuamos sobre la causa.
+            Diagnóstico DTC, reprogramación, reparación y clonación de
+            centralitas ECU. Miramos qué está haciendo la gestión del motor
+            antes de intervenir, y actuamos sobre la causa.
           </p>
 
           <div class="mt-10 flex flex-wrap items-center gap-3">
@@ -95,7 +95,7 @@ const METHOD = [
               message="Hola, tengo un vehículo con un problema de centralita."
             />
             <Button href="/servicios" variant="onDark" size="lg">
-              Ver los tres servicios
+              Ver todos los servicios
             </Button>
           </div>
         </div>
@@ -195,8 +195,10 @@ const METHOD = [
 
   <!-- ═══════════════════════════════════════════════════════════════
        SERVICIOS
-       Tres alternativas, no tres pasos: fuera la numeración, y cada una
-       con su propio dibujo de la capa sobre la que se actúa.
+       Alternativas, no pasos: fuera la numeración, y cada una con su
+       propio dibujo. Los tres primeros dicen sobre qué capa se actúa; el
+       del diagnóstico dice lo contrario —que todavía no se sabe—, y por eso
+       llega a círculos sin resolver.
        ═══════════════════════════════════════════════════════════════ -->
   <section
     id="servicios"
@@ -215,7 +217,7 @@ const METHOD = [
             id="titulo-servicios"
             class="display mt-5 text-h2 text-ink text-balance"
           >
-            La misma pieza, tres profundidades.
+            Un diagnóstico y tres intervenciones.
           </h2>
         </div>
 
@@ -223,7 +225,7 @@ const METHOD = [
           href="/servicios"
           class="group inline-flex min-h-11 items-center gap-2 text-sm font-medium text-accent hover:text-accent-hover"
         >
-          Ver los tres en detalle
+          Ver los cuatro en detalle
           <span
             class="transition-transform duration-(--duration-base) group-hover:translate-x-1"
             aria-hidden="true">→</span
@@ -231,7 +233,7 @@ const METHOD = [
         </a>
       </div>
 
-      <div class="mt-14 grid gap-8 lg:grid-cols-3 lg:gap-7">
+      <div class="mt-14 grid gap-8 sm:grid-cols-2 sm:gap-7 xl:grid-cols-4">
         {
           SERVICES.map((service, i) => (
             <article

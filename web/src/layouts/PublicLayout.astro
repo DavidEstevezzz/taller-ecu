@@ -17,9 +17,17 @@ interface Props {
   path?: string;
   /** Páginas que no deben indexarse, como la 404. */
   noindex?: boolean;
+  /** Datos estructurados, si la página los declara. Ver Seo.astro. */
+  jsonLd?: Record<string, unknown> | null;
 }
 
-const { title, description, path, noindex = false } = Astro.props;
+const {
+  title,
+  description,
+  path,
+  noindex = false,
+  jsonLd = null,
+} = Astro.props;
 ---
 
 <!doctype html>
@@ -30,6 +38,7 @@ const { title, description, path, noindex = false } = Astro.props;
       description={description}
       path={path}
       noindex={noindex}
+      jsonLd={jsonLd}
     />
 
     <!--
